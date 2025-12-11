@@ -17,11 +17,11 @@
 
 * **WebUI管理界面**
   通过浏览器管理代理、启动或关闭等。
-  
+
 * **分应用控制**
   支持黑名单模式 / **白名单模式**
   可精确指定哪些应用走代理。
-  
+
 * **透明代理**
   自动配置 iptables，实现系统级 TCP 流量代理。
 
@@ -38,6 +38,13 @@
 
 ---
 
+## 📢 官方 Telegram 群组
+
+欢迎加入讨论、交流与反馈：
+
+👉 **[https://t.me/NetProxy_Magisk](https://t.me/NetProxy_Magisk)**
+
+---
 
 ## ⚙️ 默认配置文件路径
 
@@ -78,7 +85,7 @@
 2. 打开
 
    ```
-   /data/adb/modules/netproxy/xrayCore/Clconfig/default.json
+   /data/adb/modules/netproxy/xrayCore/config/default.json
    ```
 3. 将原有 `"inbounds"` 配置替换为上述推荐内容
 
