@@ -11,7 +11,6 @@
     <img src="https://img.shields.io/github/downloads/Fanju6/NetProxy-Magisk/total?style=flat-square&color=green" alt="Downloads" />
   </a>
   <img src="https://img.shields.io/badge/Xray-Core-blueviolet?style=flat-square" alt="Xray Core" />
-  <img src="https://img.shields.io/github/license/Fanju6/NetProxy-Magisk?style=flat-square" alt="License MIT" />
 </p>
 
 ---
@@ -77,7 +76,7 @@
 /data/adb/modules/netproxy/xraycore/config/default.json
 ```
 
-你可以参考这里的 `inbounds / outbounds`配置。
+你可以参考这里的 `inbounds`配置。
 
 ---
 
