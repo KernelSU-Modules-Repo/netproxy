@@ -432,6 +432,15 @@ class UI {
 
     init() {
         console.log('Initializing UI...');
+        // 确保DOM加载完成后初始化MDUI组件
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.initializeMDUI();
+            });
+        } else {
+            this.initializeMDUI();
+        }
+        
         console.log('Step: setupNavigation');
         this.setupNavigation();
         console.log('Step: setupFAB');
@@ -483,6 +492,25 @@ class UI {
         }, 100);
 
         console.log('=== init() completed ===');
+    }
+    
+    // 初始化MDUI组件
+    initializeMDUI() {
+        console.log('Initializing MDUI components...');
+        // MDUI 2.x使用Web Components，通常会自动初始化
+        // 这里添加一些确保组件正确加载的逻辑
+        
+        // 检查关键组件是否已定义
+        const requiredComponents = ['mdui-layout', 'mdui-top-app-bar', 'mdui-card', 'mdui-button'];
+        requiredComponents.forEach(component => {
+            if (customElements.get(component)) {
+                console.log(`✅ Component ${component} is defined`);
+            } else {
+                console.warn(`⚠️ Component ${component} is not defined yet`);
+            }
+        });
+        
+        console.log('MDUI components initialization check completed');
     }
 
     setupNavigation() {

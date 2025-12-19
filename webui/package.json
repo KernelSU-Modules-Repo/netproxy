@@ -5,11 +5,11 @@
   "source": "src/index.html",
   "scripts": {
     "start": "parcel",
-    "build": "parcel build"
+    "build": "parcel build --no-source-maps"
   },
   "dependencies": {
     "mdui": "^2.0.0",
-    "kernelsu": "^0.0.7"
+    "kernelsu": "^2.1.1"
   },
   "devDependencies": {
     "parcel": "^2.14.0"
