@@ -10,12 +10,112 @@
   <meta http-equiv="Expires" content="0">
   <meta name="app-version" content="v1.0.1-20251210-1714">
   <title>NetProxy</title>
-  <link rel="stylesheet" href="https://unpkg.com/mdui@2/mdui.css">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+
+  <!-- 防止 FOUC (Flash of Unstyled Content) - 关键CSS必须内联 -->
+  <style>
+    /* 遮罩层样式 */
+    #fouc-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 99999;
+      transition: opacity 0.15s ease-out;
+    }
+    #fouc-overlay.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+  </style>
+
+  <!-- 预先应用主题并设置遮罩颜色 -->
+  <script>
+    (function() {
+      try {
+        var savedTheme = localStorage.getItem('theme') || 'auto';
+        var html = document.documentElement;
+
+        // 移除所有主题类
+        html.classList.remove('mdui-theme-light', 'mdui-theme-dark', 'mdui-theme-auto');
+
+        // 判断是否为亮色主题
+        var isLight = savedTheme === 'light' ||
+          (savedTheme === 'auto' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches);
+
+        // 设置主题类
+        if (savedTheme === 'light') {
+          html.classList.add('mdui-theme-light');
+        } else if (savedTheme === 'dark') {
+          html.classList.add('mdui-theme-dark');
+        } else {
+          html.classList.add('mdui-theme-auto');
+        }
+
+        // 动态创建遮罩层的背景色样式
+        var style = document.createElement('style');
+        style.textContent = '#fouc-overlay { background-color: ' + (isLight ? '#fafafa' : '#1a1a1a') + '; }';
+        document.head.appendChild(style);
+      } catch (e) {
+        document.documentElement.classList.add('mdui-theme-auto');
+      }
+    })();
+  </script>
+
+  <link rel="stylesheet" href="./assets/mdui.css">
+  <link rel="stylesheet" href="./assets/material-icons.css">
   <link rel="stylesheet" href="./style.css">
 </head>
 
 <body>
+  <!-- 遮罩层：覆盖页面直到样式加载完成 -->
+  <div id="fouc-overlay"></div>
+
+  <script>
+    // 样式加载完成后淡出遮罩层
+    (function() {
+      function hideOverlay() {
+        var overlay = document.getElementById('fouc-overlay');
+        if (overlay) {
+          overlay.classList.add('fade-out');
+          setTimeout(function() {
+            overlay.remove();
+          }, 150);
+        }
+      }
+
+      // 检测样式是否已加载
+      function checkStylesLoaded() {
+        // 检查 mdui 的 CSS 变量是否已定义
+        var testEl = document.createElement('div');
+        testEl.style.cssText = 'position:absolute;visibility:hidden;';
+        document.body.appendChild(testEl);
+        var computed = getComputedStyle(testEl);
+        var mduiLoaded = computed.getPropertyValue('--mdui-color-primary') !== '';
+        testEl.remove();
+        return mduiLoaded;
+      }
+
+      // 使用 requestAnimationFrame 确保在渲染后检查
+      function tryHideOverlay() {
+        if (checkStylesLoaded()) {
+          hideOverlay();
+        } else {
+          requestAnimationFrame(tryHideOverlay);
+        }
+      }
+
+      // DOM 准备好后开始检查
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', tryHideOverlay);
+      } else {
+        requestAnimationFrame(tryHideOverlay);
+      }
+
+      // 超时保护：最多等待 2 秒
+      setTimeout(hideOverlay, 2000);
+    })();
+  </script>
   <mdui-layout>
     <!-- Top App Bar -->
     <mdui-top-app-bar>

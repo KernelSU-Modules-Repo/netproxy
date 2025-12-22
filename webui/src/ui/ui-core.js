@@ -1,0 +1,396 @@
+import { setTheme } from 'mdui';
+import { KSUService } from '../services/ksu-service.js';
+import { toast } from '../utils/toast.js';
+import { StatusPageManager } from './status-page.js';
+import { ConfigPageManager } from './config-page.js';
+import { UIDPageManager } from './uid-page.js';
+import { LogsPageManager } from './logs-page.js';
+
+/**
+ * UI 核心管理器
+ */
+export class UI {
+    constructor() {
+        this.currentPage = 'status';
+        // 从localStorage读取主题，如果不存在则使用auto
+        this.currentTheme = localStorage.getItem('theme') || 'auto';
+        
+        // 初始化页面管理器
+        this.statusPage = new StatusPageManager(this);
+        this.configPage = new ConfigPageManager(this);
+        this.uidPage = new UIDPageManager(this);
+        this.logsPage = new LogsPageManager(this);
+        
+        // 立即应用主题，避免闪烁
+        this.applyTheme(this.currentTheme);
+        
+        this.init();
+    }
+
+    init() {
+        console.log('Initializing UI...');
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', () => {
+                this.initializeMDUI();
+            });
+        } else {
+            this.initializeMDUI();
+        }
+        
+        console.log('Step: setupNavigation');
+        this.setupNavigation();
+        console.log('Step: setupFAB');
+        this.setupFAB();
+        console.log('Step: setupThemeToggle');
+        this.setupThemeToggle();
+        console.log('Step: setupDialogs');
+        this.setupDialogs();
+        console.log('Step: setupAppSelector');
+        this.setupAppSelector();
+
+        console.log('Step: calling updateAllPages()');
+        try {
+            this.updateAllPages();
+            console.log('updateAllPages() called successfully');
+        } catch (error) {
+            console.error('ERROR calling updateAllPages():', error);
+        }
+
+        console.log('Step: setting up auto-refresh interval');
+        setInterval(() => {
+            const statusPage = document.getElementById('status-page');
+            if (statusPage && statusPage.classList.contains('active')) {
+                this.statusPage.update();
+            }
+        }, 5000);
+
+        console.log('Step: setting up latency button');
+        setTimeout(() => {
+            const latencyBtn = document.getElementById('refresh-latency-btn');
+            if (latencyBtn) {
+                latencyBtn.addEventListener('click', () => {
+                    console.log('Refreshing latency...');
+                    latencyBtn.disabled = true;
+                    latencyBtn.loading = true;
+                    setTimeout(() => {
+                        this.statusPage.refreshLatency();
+                    }, 50);
+                });
+                console.log('Latency button bound successfully');
+            } else {
+                console.error('Latency button not found!');
+            }
+        }, 100);
+
+        console.log('=== init() completed ===');
+    }
+    
+    initializeMDUI() {
+        console.log('Initializing MDUI components...');
+        const requiredComponents = ['mdui-layout', 'mdui-top-app-bar', 'mdui-card', 'mdui-button'];
+        requiredComponents.forEach(component => {
+            if (customElements.get(component)) {
+                console.log(`✅ Component ${component} is defined`);
+            } else {
+                console.warn(`⚠️ Component ${component} is not defined yet`);
+            }
+        });
+        console.log('MDUI components initialization check completed');
+    }
+
+    setupNavigation() {
+        const navBar = document.getElementById('nav-bar');
+        navBar.addEventListener('change', (e) => {
+            const pageName = e.target.value;
+            this.switchPage(pageName);
+        });
+
+        const clearDebugBtn = document.getElementById('clear-debug-btn');
+        if (clearDebugBtn) {
+            clearDebugBtn.addEventListener('click', () => {
+                if (typeof debugLogger !== 'undefined') {
+                    debugLogger.clear();
+                }
+                toast('调试日志已清除');
+            });
+        }
+    }
+
+    switchPage(pageName) {
+        document.querySelectorAll('.page').forEach(page => {
+            page.classList.remove('active');
+        });
+        document.getElementById(`${pageName}-page`).classList.add('active');
+        this.currentPage = pageName;
+
+        if (pageName === 'status') this.statusPage.update();
+        if (pageName === 'config') this.configPage.update();
+        if (pageName === 'uid') this.uidPage.update();
+        if (pageName === 'logs') this.logsPage.update();
+        if (pageName === 'debug' && typeof debugLogger !== 'undefined') {
+            debugLogger.updateUI();
+        }
+    }
+
+    setupFAB() {
+        console.log('Step: setupFAB');
+        const fab = document.getElementById('service-fab');
+
+        fab.addEventListener('click', async () => {
+            fab.disabled = true;
+
+            try {
+                const { status } = await KSUService.getStatus();
+
+                if (status === 'running') {
+                    fab.icon = 'sync';
+                    fab.classList.add('rotating');
+                    toast('正在停止服务...');
+
+                    setTimeout(async () => {
+                        try {
+                            await KSUService.stopService();
+                            toast('服务已停止');
+                            await this.statusPage.update();
+                        } catch (error) {
+                            toast('停止失败: ' + error.message);
+                        } finally {
+                            fab.classList.remove('rotating');
+                            fab.disabled = false;
+                        }
+                    }, 100);
+                } else {
+                    fab.icon = 'sync';
+                    fab.classList.add('rotating');
+                    toast('正在启动服务...');
+
+                    setTimeout(async () => {
+                        try {
+                            await KSUService.startService();
+                            toast('服务已启动');
+                            await this.statusPage.update();
+                        } catch (error) {
+                            toast('启动失败: ' + error.message);
+                        } finally {
+                            fab.classList.remove('rotating');
+                            fab.disabled = false;
+                        }
+                    }, 100);
+                }
+            } catch (error) {
+                console.error('FAB error:', error);
+                toast('操作失败: ' + error.message);
+                fab.disabled = false;
+            }
+        });
+    }
+
+    setupThemeToggle() {
+        const themeBtn = document.getElementById('theme-toggle');
+        this.applyTheme(this.currentTheme);
+
+        themeBtn.addEventListener('click', () => {
+            const themes = ['light', 'dark', 'auto'];
+            const currentIndex = themes.indexOf(this.currentTheme);
+            this.currentTheme = themes[(currentIndex + 1) % themes.length];
+            localStorage.setItem('theme', this.currentTheme);
+            this.applyTheme(this.currentTheme);
+            toast(`切换到${this.currentTheme === 'auto' ? '自动' : this.currentTheme === 'light' ? '浅色' : '深色'}主题`);
+        });
+    }
+
+    applyTheme(theme) {
+        if (theme === 'auto') {
+            setTheme('auto');
+        } else {
+            setTheme(theme);
+        }
+    }
+
+    setupDialogs() {
+        const importMenu = document.getElementById('import-menu');
+
+        document.getElementById('import-node-link').addEventListener('click', () => {
+            importMenu.open = false;
+            document.getElementById('node-link-dialog').open = true;
+        });
+
+        document.getElementById('import-full-config').addEventListener('click', () => {
+            importMenu.open = false;
+            this.showConfigDialog();
+        });
+
+        document.getElementById('node-link-cancel').addEventListener('click', () => {
+            document.getElementById('node-link-dialog').open = false;
+        });
+
+        document.getElementById('node-link-save').addEventListener('click', async () => {
+            await this.configPage.importNodeLink();
+        });
+
+        document.getElementById('config-cancel-btn').addEventListener('click', () => {
+            document.getElementById('config-dialog').open = false;
+        });
+
+        document.getElementById('uid-cancel-btn').addEventListener('click', () => {
+            document.getElementById('uid-dialog').open = false;
+        });
+
+        document.getElementById('config-save-btn').addEventListener('click', async () => {
+            await this.configPage.saveConfig();
+        });
+
+        document.getElementById('app-selector-cancel').addEventListener('click', () => {
+            document.getElementById('app-selector-dialog').open = false;
+        });
+
+        document.getElementById('app-selector-search').addEventListener('input', (e) => {
+            this.uidPage.filterApps(e.target.value);
+        });
+
+        const serviceLogBtn = document.getElementById('refresh-service-log');
+        if (serviceLogBtn) {
+            serviceLogBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.logsPage.loadServiceLog();
+            });
+        }
+
+        const xrayLogBtn = document.getElementById('refresh-xray-log');
+        if (xrayLogBtn) {
+            xrayLogBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.logsPage.loadXrayLog();
+            });
+        }
+
+        const checkUpdateBtn = document.getElementById('check-update-btn');
+        if (checkUpdateBtn) {
+            checkUpdateBtn.addEventListener('click', () => {
+                checkUpdateBtn.disabled = true;
+                checkUpdateBtn.loading = true;
+
+                setTimeout(async () => {
+                    try {
+                        const result = await KSUService.updateXray();
+
+                        if (result.success) {
+                            toast(result.message, true);
+                            if (!result.isLatest) {
+                                setTimeout(() => this.statusPage.update(), 1500);
+                            }
+                        } else {
+                            toast('更新失败: ' + (result.error || result.message), true);
+                        }
+                    } catch (error) {
+                        toast('检查失败: ' + error.message, true);
+                    } finally {
+                        checkUpdateBtn.disabled = false;
+                        checkUpdateBtn.loading = false;
+                    }
+                }, 50);
+            });
+        }
+    }
+
+    setupAppSelector() {
+        console.log('>> setupAppSelector: START');
+        try {
+            const searchInput = document.getElementById('app-search');
+            console.log('   searchInput:', searchInput ? 'FOUND' : 'NOT FOUND');
+
+            if (searchInput) {
+                searchInput.addEventListener('input', (e) => {
+                    this.uidPage.filterApps(e.target.value);
+                });
+            }
+
+            const addAppBtn = document.getElementById('add-uid-btn');
+            console.log('   addAppBtn:', addAppBtn ? 'FOUND' : 'NOT FOUND');
+
+            if (addAppBtn) {
+                addAppBtn.addEventListener('click', () => {
+                    this.uidPage.showAppSelector();
+                });
+            }
+
+            console.log('>> setupAppSelector: COMPLETED');
+        } catch (error) {
+            console.error('>> setupAppSelector: ERROR -', error);
+        }
+    }
+
+    async confirm(message) {
+        console.log('=== confirm() START ===');
+        console.log('confirm called with message:', message);
+
+        return new Promise((resolve) => {
+            console.log('Inside Promise executor');
+
+            const dialog = document.getElementById('confirm-dialog');
+            const messageEl = document.getElementById('confirm-message');
+            const okBtn = document.getElementById('confirm-ok-btn');
+            const cancelBtn = document.getElementById('confirm-cancel-btn');
+
+            if (!dialog || !messageEl || !okBtn || !cancelBtn) {
+                console.error('Some dialog elements not found!');
+                resolve(false);
+                return;
+            }
+
+            messageEl.innerHTML = message.replace(/\n/g, '<br>');
+
+            const newOkBtn = okBtn.cloneNode(true);
+            const newCancelBtn = cancelBtn.cloneNode(true);
+            okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+
+            newOkBtn.addEventListener('click', () => {
+                console.log('OK button clicked - User confirmed');
+                dialog.open = false;
+                resolve(true);
+            });
+
+            newCancelBtn.addEventListener('click', () => {
+                console.log('Cancel button clicked - User cancelled');
+                dialog.open = false;
+                resolve(false);
+            });
+
+            console.log('Opening dialog...');
+            dialog.open = true;
+        });
+    }
+
+    showSkeleton(container, count = 3) {
+        container.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const item = document.createElement('mdui-list-item');
+            item.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 0;">
+                    <div class="skeleton skeleton-circle" style="width: 40px; height: 40px;"></div>
+                    <div style="flex: 1;">
+                        <div class="skeleton skeleton-text" style="width: 60%; height: 16px; margin-bottom: 8px;"></div>
+                        <div class="skeleton skeleton-text" style="width: 40%; height: 12px;"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(item);
+        }
+    }
+
+    updateAllPages() {
+        console.log('=== updateAllPages() called ===');
+        try {
+            console.log('Calling updateStatusPage...');
+            this.statusPage.update();
+            console.log('updateStatusPage call completed (async)');
+        } catch (error) {
+            console.error('Error in updateAllPages:', error);
+        }
+    }
+
+    async showConfigDialog(filename = null) {
+        await this.configPage.showDialog(filename);
+    }
+}

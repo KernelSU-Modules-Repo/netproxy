@@ -15,6 +15,13 @@ body {
   overflow-x: hidden;
   margin: 0;
   padding: 0;
+  /* 避免主题切换时的闪烁 */
+  transition: background-color 0.2s ease;
+}
+
+/* 确保HTML元素也有正确的背景色 */
+html {
+  background-color: var(--mdui-color-background);
 }
 
 mdui-layout {

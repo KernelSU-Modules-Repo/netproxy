@@ -1,11 +1,267 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>KernelSU 模块</title><link rel="stylesheet" href="/netproxy.56933ac1.css"></head><body> <header class="top-nav"> <div class="top-nav-content"> <h1 id="pageTitle">配置文件管理</h1> <div class="action-buttons"> <span onclick="createConfig()" class="action-icon" id="createButton">➕</span> </div> </div> </header> <div class="container"> <div id="home" class="active page"> <div class="status-bar"> <div class="status-item"> <span class="status-label">运行状态：</span> <span id="runningStatus" class="status-value">加载中...</span> </div> <div class="status-item"> <span class="status-label">当前配置：</span> <span id="currentConfig" class="status-value">加载中...</span> </div> </div> <div class="config-list" id="configList">  </div> </div> <div id="editor" class="page"> <div class="card"> <div class="editor-header"> <h2 id="editorFileName">文件名</h2> <button onclick="saveConfig()" class="save-button">保存</button> </div> <textarea id="editorContent" class="editor-textarea"></textarea> </div> </div> <div id="system" class="page"> <div class="card"> <h2>系统信息</h2> <div id="systemInfo">加载中...</div> </div> <div class="card"> <h2>执行命令</h2> <input type="text" id="commandInput" placeholder="输入命令..."> <button onclick="executeCommand()">执行</button> <pre id="commandOutput"></pre> </div> </div> <div id="page3" class="page"> </div> <div id="page4" class="page"> </div> <div id="create" class="page"> <div class="card"> <div class="editor-header"> <h2>新建配置</h2> <button onclick="saveNewConfig()" class="save-button">保存</button> </div> <input type="text" id="newConfigName" class="config-name-input" placeholder="输入配置文件名..."> <textarea id="newConfigContent" class="editor-textarea" placeholder="输入配置文件内容..."></textarea> </div> </div> </div> <nav class="bottom-nav"> <div class="active nav-item" onclick="switchPage('home')"> <span class="nav-icon">⚙️</span> <span class="nav-text">配置</span> </div> <div class="nav-item" onclick="switchPage('system')"> <span class="nav-icon">💻</span> <span class="nav-text">系统</span> </div> <div class="nav-item" onclick="switchPage('page3')"> <span class="nav-icon">📊</span> <span class="nav-text">统计</span> </div> <div class="nav-item" onclick="switchPage('page4')"> <span class="nav-icon">⚡</span> <span class="nav-text">状态</span> </div> </nav> <div id="toggleButton" class="toggle-button" onclick="toggleService()"> <span class="toggle-icon">▶️</span> </div> <script type="module">let t=0;function e(e,n){return void 0===n&&(n={}),new Promise((o,a)=>{let s=`exec_callback_${Date.now()}_${t++}`;function c(t){delete window[t]}window[s]=(t,e,n)=>{o({errno:t,stdout:e,stderr:n}),c(s)};try{ksu.exec(e,JSON.stringify(n),s)}catch(t){a(t),c(s)}})}function n(){this.listeners={}}function o(){this.listeners={},this.stdin=new n,this.stdout=new n,this.stderr=new n}function a(t){ksu.toast(t)}n.prototype.on=function(t,e){this.listeners[t]||(this.listeners[t]=[]),this.listeners[t].push(e)},n.prototype.emit=function(t,...e){this.listeners[t]&&this.listeners[t].forEach(t=>t(...e))},o.prototype.on=function(t,e){this.listeners[t]||(this.listeners[t]=[]),this.listeners[t].push(e)},o.prototype.emit=function(t,...e){this.listeners[t]&&this.listeners[t].forEach(t=>t(...e))};let s="",c="",i=null,r=null;async function d(){try{let{stdout:t}=await e(`find /data/adb/modules/netproxy/xraycore/config/ -type f -printf "%f\\n"`),n=t.split("\n").filter(t=>""!==t.trim()),o=document.getElementById("configList");if(o.innerHTML="",0===n.length){o.innerHTML='<div class="no-files">暂无配置文件</div>';return}n.forEach(t=>{let e=document.createElement("div");e.className="config-card",e.innerHTML=`
-              <div class="config-card-header">
-                <h3>${t}</h3>
-                <div class="config-card-actions">
-                  <button onclick="editConfig('${t}')" class="icon-button">\u{270F}\u{FE0F}</button>
-                  <button onclick="handleDelete('${t}')" class="icon-button delete-button">\u{1F5D1}\u{FE0F}</button>
+<!DOCTYPE html><html lang=zh-CN><meta charset=UTF-8><meta name=viewport content="width=device-width, initial-scale=1.0"><meta http-equiv=Cache-Control content="no-cache, no-store, must-revalidate"><meta http-equiv=Pragma content=no-cache><meta http-equiv=Expires content=0><meta name=app-version content=v1.0.1-20251210-1714><title>NetProxy</title><style>#fouc-overlay{z-index:99999;transition:opacity .15s ease-out;position:fixed;inset:0}#fouc-overlay.fade-out{opacity:0;pointer-events:none}</style><script>!function(){try{var e=localStorage.getItem("theme")||"auto",t=document.documentElement;t.classList.remove("mdui-theme-light","mdui-theme-dark","mdui-theme-auto");var a="light"===e||"auto"===e&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches;"light"===e?t.classList.add("mdui-theme-light"):"dark"===e?t.classList.add("mdui-theme-dark"):t.classList.add("mdui-theme-auto");var d=document.createElement("style");d.textContent="#fouc-overlay { background-color: "+(a?"#fafafa":"#1a1a1a")+"; }",document.head.appendChild(d)}catch(e){document.documentElement.classList.add("mdui-theme-auto")}}();</script><link rel=stylesheet href=/webui.5bccf37b.css><link rel=stylesheet href=/webui.25d4b49e.css><link rel=stylesheet href=/webui.3f1241d4.css><body>
+  
+  <div id=fouc-overlay></div>
+
+  <script>!function(){function e(){var e=document.getElementById("fouc-overlay");e&&(e.classList.add("fade-out"),setTimeout(function(){e.remove()},150))}function t(){var o,n;((o=document.createElement("div")).style.cssText="position:absolute;visibility:hidden;",document.body.appendChild(o),n=""!==getComputedStyle(o).getPropertyValue("--mdui-color-primary"),o.remove(),n)?e():requestAnimationFrame(t)}"loading"===document.readyState?document.addEventListener("DOMContentLoaded",t):requestAnimationFrame(t),setTimeout(e,2e3)}();</script>
+  <mdui-layout>
+    
+    <mdui-top-app-bar>
+      <div style=width:24px></div>
+      <mdui-top-app-bar-title>NetProxy</mdui-top-app-bar-title>
+      <div style=flex-grow:1></div>
+      <mdui-button-icon icon=brightness_6 id=theme-toggle></mdui-button-icon>
+    </mdui-top-app-bar>
+
+    
+    <mdui-layout-main id=main-content>
+      
+      <div id=status-page class="active page">
+        <div class=container>
+          
+          <mdui-card variant=elevated class="compact-card status-card-new">
+            
+            <div class=status-main>
+              <div class=status-left>
+                <div class=status-badge id=status-badge>
+                  <div class=status-badge-dot id=status-badge-dot></div>
+                  <span id=status-badge-text>检测中</span>
+                </div>
+                <div class=status-detail id=status-detail>运行时间 --</div>
+              </div>
+              <mdui-chip id=status-chip-new>--</mdui-chip>
+            </div>
+
+            
+            <div class=info-grid>
+              <div class=info-item>
+                <mdui-icon name=settings class=info-icon></mdui-icon>
+                <div class=info-content>
+                  <div class=info-label>配置</div>
+                  <div class=info-value id=current-config-new>--</div>
                 </div>
               </div>
-              <div class="config-card-status"></div>
-            `,e.querySelector(".icon-button:not(.delete-button)").addEventListener("click",t=>{t.stopPropagation()});let n=e.querySelector(".delete-button");n.addEventListener("click",o=>{if(o.stopPropagation(),c===t)l(t),c="",i=null;else{c=t,i=n,n.classList.add("delete-pending");let o=e.querySelector(".config-card-status");o.textContent="再次点击删除文件",o.classList.add("show")}}),o.appendChild(e)})}catch(t){console.error("加载配置文件列表失败:",t),document.getElementById("configList").innerHTML='<div class="error-message">加载配置文件列表失败</div>',a("加载配置文件列表失败")}}async function l(t){try{await e(`rm /data/adb/modules/netproxy/xraycore/config/${t}`),a("删除成功"),d()}catch(t){a("删除失败")}}async function u(){try{let{stdout:t}=await e("getprop ro.product.model");document.getElementById("systemInfo").textContent=`\u{8BBE}\u{5907}\u{578B}\u{53F7}: ${t}`}catch(t){a("获取系统信息失败")}}async function m(){try{let{stdout:t}=await e("cat /data/adb/modules/netproxy/xraycore/xray_status.yaml"),n=t.match(/status:\s*"([^"]+)"/),o=t.match(/config:\s*"([^"]+)"/),a=n?n[1]:"unknown",s=o?o[1].split("/").pop():"unknown",c=document.getElementById("runningStatus"),i=document.getElementById("currentConfig"),d=document.getElementById("toggleButton"),l=d.querySelector(".toggle-icon");c.textContent="running"===a?"运行中":"已停止",c.className=`status-value ${"running"===a?"running":"stopped"}`,i.textContent=s,"running"===a?(d.classList.add("running"),l.textContent="⏹️"):(d.classList.remove("running"),l.textContent="▶️"),document.querySelectorAll(".config-card").forEach(t=>{t.querySelector("h3").textContent===s?(t.classList.add("selected"),r=t):t.classList.remove("selected")})}catch(t){console.error("获取运行状态失败:",t),document.getElementById("runningStatus").textContent="获取失败",document.getElementById("currentConfig").textContent="获取失败"}}async function y(t){try{let{stdout:n}=await e("cat /data/adb/modules/netproxy/xraycore/xray_status.yaml"),o=n.match(/status:\s*"([^"]+)"/),s=o?o[1]:"stopped";"running"===s&&(await e("su -c /data/adb/modules/netproxy/stop.sh"),a("服务已停止"));let c=`status: "stopped"
-config: "/data/adb/modules/netproxy/xraycore/config/${t}"`;await e(`echo '${c}' > /data/adb/modules/netproxy/xraycore/xray_status.yaml`),m()}catch(t){console.error("更新配置文件路径失败:",t),a("更新配置文件路径失败")}}document.addEventListener("click",t=>{if(!t.target.closest(".delete-button")&&i){i.classList.remove("delete-pending");let t=i.closest(".config-card").querySelector(".config-card-status");t.classList.remove("show"),t.textContent="",c="",i=null}if(t.target.closest(".config-card")){let e=t.target.closest(".config-card");r&&r!==e&&r.classList.remove("selected"),e.classList.toggle("selected"),(r=e.classList.contains("selected")?e:null)&&y(r.querySelector("h3").textContent)}}),window.editConfig=async function(t){try{let{stdout:n}=await e(`cat /data/adb/modules/netproxy/xraycore/config/${t}`);s=t,document.getElementById("editorFileName").textContent=t,document.getElementById("editorContent").value=n,switchPage("editor")}catch(t){a("加载配置文件失败")}},window.saveConfig=async function(){let t=document.getElementById("editorContent").value;await e(`echo '${t}' > /data/adb/modules/netproxy/xraycore/config/${s}`),a("保存成功"),switchPage("home")},window.executeCommand=async function(){let t=document.getElementById("commandInput").value;if(!t)return void a("请输入命令");try{let{stdout:n,stderr:o}=await e(t);document.getElementById("commandOutput").textContent=n||o}catch(t){a("命令执行失败")}},window.createConfig=function(){document.getElementById("newConfigName").value="",document.getElementById("newConfigContent").value="",switchPage("create")},window.saveNewConfig=async function(){let t="/data/adb/modules/netproxy/xraycore/config/",n=document.getElementById("newConfigName").value.trim(),o=document.getElementById("newConfigContent").value;if(!n)return void a("请输入配置文件名");let{stdout:s}=await e(`ls ${t}${n}`);if(s.trim()===n)return void a("配置文件已存在");await e(`echo '${o}' > ${t}${n}`),a("创建成功"),document.getElementById("pageTitle").textContent="配置文件管理",document.querySelectorAll(".page").forEach(t=>{t.classList.remove("active")}),document.getElementById("home").classList.add("active"),document.querySelectorAll(".nav-item").forEach(t=>{t.classList.remove("active")}),document.querySelector(".nav-item").classList.add("active"),document.getElementById("createButton").style.display="flex",d()},window.switchPage=function(t){document.querySelectorAll(".page").forEach(t=>{t.classList.remove("active")}),document.getElementById(t).classList.add("active"),document.querySelectorAll(".nav-item").forEach(t=>{t.classList.remove("active")}),"editor"!==t&&"create"!==t&&event.currentTarget.classList.add("active"),document.getElementById("pageTitle").textContent=({home:"配置文件管理",system:"系统信息",page3:"统计信息",page4:"运行状态",create:"新建配置"})[t]||"配置文件管理";let e=document.getElementById("createButton");"home"===t?e.style.display="flex":e.style.display="none"},window.toggleService=async function(){try{let{stdout:t}=await e("cat /data/adb/modules/netproxy/xraycore/xray_status.yaml"),n=t.match(/status:\s*"([^"]+)"/),o=n?n[1]:"unknown";"running"===o?(await e("su -c /data/adb/modules/netproxy/stop.sh"),a("服务已停止")):(await e("su -c /data/adb/modules/netproxy/start.sh"),a("服务已启动")),m()}catch(t){console.error("切换服务状态失败:",t),a("操作失败")}},d(),u(),m();</script> </body></html>
+              <div class=info-divider></div>
+              <div class=info-item>
+                <mdui-icon name=memory class=info-icon></mdui-icon>
+                <div class=info-content>
+                  <div class=info-label>内存</div>
+                  <div class=info-value id=status-memory>--</div>
+                </div>
+              </div>
+              <div class=info-divider></div>
+              <div class=info-item>
+                <mdui-icon name=download class=info-icon></mdui-icon>
+                <div class=info-content>
+                  <div class=info-label>下载</div>
+                  <div class=info-value id=download-new>-- KB/s</div>
+                </div>
+              </div>
+              <div class=info-divider></div>
+              <div class=info-item>
+                <mdui-icon name=upload class=info-icon></mdui-icon>
+                <div class=info-content>
+                  <div class=info-label>上传</div>
+                  <div class=info-value id=upload-new>-- KB/s</div>
+                </div>
+              </div>
+              <div class=info-divider></div>
+              <div class=info-item>
+                <mdui-icon name=code class=info-icon></mdui-icon>
+                <div class=info-content>
+                  <div class=info-label>内核</div>
+                  <div class=info-value id=xray-version>--</div>
+                </div>
+                <mdui-button-icon id=check-update-btn icon=system_update style=margin-left:auto></mdui-button-icon>
+              </div>
+            </div>
+          </mdui-card>
+
+          
+          <mdui-card variant=elevated class=compact-card>
+            <div class=compact-header>
+              <span class=card-compact-title>延迟检测</span>
+              <mdui-button-icon id=refresh-latency-btn icon=refresh></mdui-button-icon>
+            </div>
+            <div class=latency-row>
+              <div class=latency-cell>
+                <span class=latency-label>百度</span>
+                <span class=latency-value-horizontal id=latency-baidu-compact>--</span>
+              </div>
+              <div class=latency-cell>
+                <span class=latency-label>谷歌</span>
+                <span class=latency-value-horizontal id=latency-google-compact>--</span>
+              </div>
+              <div class=latency-cell>
+                <span class=latency-label>GitHub</span>
+                <span class=latency-value-horizontal id=latency-github-compact>--</span>
+              </div>
+            </div>
+          </mdui-card>
+        </div>
+      </div>
+
+      
+      <div id=config-page class=page>
+        <div class=container>
+          <mdui-card variant=elevated>
+            <div style=padding:20px>
+              <div style=align-items:center;justify-content:between;margin-bottom:16px;display:flex>
+                <h2 style=flex-grow:1;margin:0;font-size:20px>配置文件</h2>
+                <mdui-dropdown id=import-menu>
+                  <mdui-button slot=trigger icon=add id=add-config-btn>添加</mdui-button>
+                  <mdui-menu>
+                    <mdui-menu-item id=import-node-link>
+                      <mdui-icon slot=icon name=link></mdui-icon>
+                      节点链接导入
+                    </mdui-menu-item>
+                    <mdui-menu-item id=import-full-config>
+                      <mdui-icon slot=icon name=description></mdui-icon>
+                      完整配置导入
+                    </mdui-menu-item>
+                  </mdui-menu>
+                </mdui-dropdown>
+              </div>
+              <mdui-list id=config-list>
+                <mdui-list-item>
+                  <mdui-circular-progress></mdui-circular-progress>
+                  <div slot=headline>加载中...</div>
+                </mdui-list-item>
+              </mdui-list>
+            </div>
+          </mdui-card>
+        </div>
+      </div>
+
+      
+      <div id=uid-page class=page>
+        <div class=container>
+          <mdui-card variant=elevated>
+            <div style=padding:20px>
+              <div style=align-items:center;margin-bottom:16px;display:flex>
+                <h2 style=flex-grow:1;margin:0;font-size:20px>UID 白名单</h2>
+                <mdui-button icon=add id=add-uid-btn>添加</mdui-button>
+              </div>
+              <mdui-text-field label=搜索应用 icon=search id=app-search style=width:100%;margin-bottom:16px>
+              </mdui-text-field>
+              <mdui-list id=uid-list>
+                <mdui-list-item>
+                  <mdui-circular-progress></mdui-circular-progress>
+                  <div slot=headline>加载中...</div>
+                </mdui-list-item>
+              </mdui-list>
+            </div>
+          </mdui-card>
+        </div>
+      </div>
+
+      
+      <div id=logs-page class=page>
+        <div class=container>
+          
+          <mdui-collapse accordion>
+            <mdui-collapse-item>
+              <mdui-list-item slot=header icon=description>
+                服务日志
+                <mdui-button-icon slot=end-icon icon=refresh id=refresh-service-log></mdui-button-icon>
+              </mdui-list-item>
+              <div style=padding:16px>
+                <div class=log-container id=service-log>
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+
+          
+          <mdui-collapse accordion style=margin-top:16px>
+            <mdui-collapse-item>
+              <mdui-list-item slot=header icon=description>
+                Xray 日志
+                <mdui-button-icon slot=end-icon icon=refresh id=refresh-xray-log></mdui-button-icon>
+              </mdui-list-item>
+              <div style=padding:16px>
+                <div class=log-container id=xray-log>
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+        </div>
+      </div>
+    </mdui-layout-main>
+
+    
+    <mdui-navigation-bar value=status id=nav-bar>
+      <mdui-navigation-bar-item icon=home value=status>状态</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon=settings value=config>配置</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon=people value=uid>白名单</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon=description value=logs>日志</mdui-navigation-bar-item>
+    </mdui-navigation-bar>
+  </mdui-layout>
+
+  
+  <mdui-fab id=service-fab icon=play_arrow style=z-index:150;position:fixed;bottom:96px;right:16px></mdui-fab>
+
+  
+  <mdui-dialog id=confirm-dialog close-on-esc close-on-overlay-click>
+    <mdui-card variant=elevated style=box-shadow:none;margin:0>
+      <div style="padding:24px 24px 16px">
+        <h3 id=confirm-title style="margin:0 0 12px;font-size:18px">确认操作</h3>
+        <div id=confirm-message style=color:var(--mdui-color-on-surface-variant);line-height:1.6>
+        </div>
+      </div>
+      <mdui-card-actions align=end style="padding:8px 16px 16px">
+        <mdui-button id=confirm-cancel-btn>取消</mdui-button>
+        <mdui-button id=confirm-ok-btn variant=text style=color:var(--mdui-color-error)>确定</mdui-button>
+      </mdui-card-actions>
+    </mdui-card>
+  </mdui-dialog>
+
+
+
+  
+  <mdui-dialog id=node-link-dialog headline=节点链接导入>
+    <mdui-text-field label=节点链接 placeholder="例如: vless://... 或 vmess://... 等" id=node-link-input rows=3 helper="支持: vless://, vmess://, trojan://, ss://, socks://, http://, https://"></mdui-text-field>
+    <mdui-button slot=action variant=text id=node-link-cancel>取消</mdui-button>
+    <mdui-button slot=action variant=filled id=node-link-save>导入</mdui-button>
+  </mdui-dialog>
+
+  
+  <mdui-dialog id=config-dialog headline=编辑配置 close-on-overlay-click=false>
+    <mdui-text-field label=文件名 id=config-filename style=width:100%;margin-bottom:16px>
+    </mdui-text-field>
+    <mdui-text-field label=配置内容 id=config-content rows=15 variant=outlined style=width:100%;font-family:monospace>
+    </mdui-text-field>
+    <mdui-button slot=action variant=text id=config-cancel-btn>取消</mdui-button>
+    <mdui-button slot=action variant=text id=config-save-btn>保存</mdui-button>
+  </mdui-dialog>
+
+  
+  <mdui-dialog id=uid-dialog headline="添加 UID" close-on-overlay-click=false>
+    <mdui-text-field label="应用 UID" type=number id=uid-input helper="输入应用的 UID 编号" style=width:100%>
+    </mdui-text-field>
+    <mdui-button slot=action variant=text id=uid-cancel-btn>取消</mdui-button>
+    <mdui-button slot=action variant=text id=uid-add-confirm-btn>添加</mdui-button>
+  </mdui-dialog>
+
+  
+  <mdui-dialog id=app-selector-dialog headline=选择应用 close-on-overlay-click=false style=--mdui-dialog-max-width:500px>
+    <mdui-text-field label=搜索应用 icon=search id=app-selector-search style=width:100%;margin-bottom:16px>
+    </mdui-text-field>
+
+    <div style=max-height:400px;overflow-y:auto>
+      <mdui-list id=app-selector-list>
+        <mdui-list-item style=padding:16px>
+          <mdui-circular-progress style="margin:0 auto"></mdui-circular-progress>
+          <div slot=headline style=text-align:center>加载应用列表...</div>
+        </mdui-list-item>
+      </mdui-list>
+    </div>
+
+    <mdui-button slot=action variant=text id=app-selector-cancel>取消</mdui-button>
+  </mdui-dialog>
+
+  <script type=module src=/webui.f0e718cf.js></script>
+
+
+
