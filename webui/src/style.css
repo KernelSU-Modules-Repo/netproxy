@@ -1,6 +1,17 @@
 :root {
   --md-sys-color-primary: rgb(103, 80, 164);
   --md-sys-color-on-primary: rgb(255, 255, 255);
+
+  /* KernelSU WebUI 边到边适配 - Insets 回退默认值 */
+  /* 在 KernelSU Manager 中运行时，这些值会被 internal/insets.css 覆盖 */
+  --safe-area-inset-top: 0px;
+  --safe-area-inset-right: 0px;
+  --safe-area-inset-bottom: 0px;
+  --safe-area-inset-left: 0px;
+  --window-inset-top: var(--safe-area-inset-top, 0px);
+  --window-inset-bottom: var(--safe-area-inset-bottom, 0px);
+  --window-inset-left: var(--safe-area-inset-left, 0px);
+  --window-inset-right: var(--safe-area-inset-right, 0px);
 }
 
 * {
@@ -36,17 +47,23 @@ mdui-top-app-bar {
   left: 0;
   right: 0;
   z-index: 200;
-  /* Android status bar with extra spacing */
-  padding-top: 40px;
-  min-height: calc(56px + 40px);
+  /* KernelSU WebUI 边到边适配：使用系统动态 insets */
+  padding-top: var(--window-inset-top, 0px);
+  padding-left: var(--window-inset-left, 0px);
+  padding-right: var(--window-inset-right, 0px);
+  min-height: calc(56px + var(--window-inset-top, 0px));
 }
 
 mdui-layout-main {
   flex: 1;
   overflow-y: auto;
-  /* Account for top bar (56px + 40px status bar) and bottom nav (80px) */
-  padding-top: 96px;
-  padding-bottom: 80px;
+  /* KernelSU WebUI 边到边适配：基于系统 insets 的动态内边距 */
+  /* 顶部：应用栏高度 (56px) + 系统 inset */
+  padding-top: calc(56px + var(--window-inset-top, 0px));
+  /* 底部：导航栏高度 (80px) + 系统 inset */
+  padding-bottom: calc(80px + var(--window-inset-bottom, 0px));
+  padding-left: var(--window-inset-left, 0px);
+  padding-right: var(--window-inset-right, 0px);
 }
 
 mdui-navigation-bar {
@@ -55,6 +72,10 @@ mdui-navigation-bar {
   left: 0;
   right: 0;
   z-index: 100;
+  /* KernelSU WebUI 边到边适配：为导航栏添加系统 insets */
+  padding-bottom: var(--window-inset-bottom, 0px);
+  padding-left: var(--window-inset-left, 0px);
+  padding-right: var(--window-inset-right, 0px);
 }
 
 .container {
@@ -957,7 +978,16 @@ mdui-card {
     animation: shake 0.5s;
   }
 
-/* FAB loading animation */
+/* 悬浮操作按钮 - 边到边适配 */
+#service-fab {
+  position: fixed;
+  right: calc(16px + var(--window-inset-right, 0px));
+  /* 底部：导航栏高度 (80px) + 额外间距 (16px) + 系统 inset */
+  bottom: calc(96px + var(--window-inset-bottom, 0px));
+  z-index: 150;
+}
+
+/* FAB 加载动画 */
 .rotating {
   animation: rotate 1s linear infinite;
 }

@@ -65,6 +65,10 @@
   <link rel="stylesheet" href="./assets/mdui.css">
   <link rel="stylesheet" href="./assets/material-icons.css">
   <link rel="stylesheet" href="./style.css">
+  <!-- KernelSU WebUI 边到边适配支持 -->
+  <!-- 此 CSS 由 KernelSU Manager 在运行时动态提供 -->
+  <!-- 必须在 style.css 之后加载，以覆盖默认回退值 -->
+  <link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
 </head>
 
 <body>
@@ -314,8 +318,7 @@
   </mdui-layout>
 
   <!-- Floating Action Button -->
-  <mdui-fab id="service-fab" icon="play_arrow"
-    style="position: fixed; right: 16px; bottom: 96px; z-index: 150;"></mdui-fab>
+  <mdui-fab id="service-fab" icon="play_arrow"></mdui-fab>
 
   <!-- 确认删除对话框 -->
   <mdui-dialog id="confirm-dialog" close-on-esc close-on-overlay-click>
