@@ -211,9 +211,9 @@ export class StatusPageManager {
         const match = latencyText.match(/(\d+)/);
         if (match) {
             const latency = parseInt(match[1]);
-            if (latency < 50) {
+            if (latency < 300) {
                 valueEl.className = 'latency-value-horizontal excellent';
-            } else if (latency < 150) {
+            } else if (latency < 500) {
                 valueEl.className = 'latency-value-horizontal good';
             } else {
                 valueEl.className = 'latency-value-horizontal poor';
