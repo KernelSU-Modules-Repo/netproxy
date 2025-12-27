@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo.png" alt="NetProxy Logo" width="120" />
+  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/logo.png" alt="NetProxy Logo" width="120" />
 </p>
 
 <h1 align="center">NetProxy</h1>
@@ -38,9 +38,9 @@
 ## 🖼️ 界面预览
 
 <div align="center">
-  <img src="Screenshots/Screenshot1.png" width="30%" alt="状态页面" />
-  <img src="Screenshots/Screenshot2.png" width="30%" alt="配置管理" />
-  <img src="Screenshots/Screenshot3.png" width="30%" alt="应用控制" />
+  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/Screenshots/Screenshot1.png" width="30%" alt="状态页面" />
+  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/Screenshots/Screenshot2.png" width="30%" alt="配置管理" />
+  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/Screenshots/Screenshot3.png" width="30%" alt="应用控制" />
 </div>
 
 ---
@@ -139,3 +139,4 @@ vless://... 或 vmess://... 或 trojan://... 等
 ## 📜 许可证
 
 [GPL-3.0 License](LICENSE)
+
