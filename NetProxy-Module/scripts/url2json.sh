@@ -8,25 +8,18 @@
 
 set -e
 
-# 颜色输出
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
 # 路径配置
 readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
-readonly ADDCONFIG_FILE="$MODDIR/config/xray/"
+readonly ADDCONFIG_FILE="$MODDIR/config/xray/outbounds/"
 
 # 显示帮助信息
 show_help() {
     cat << EOF
 用法: $0 [选项] <PROXY_URL>
 
-将代理 URL 转换为 V2Ray JSON 配置文件
+将代理 URL 转换为 Xray 出站配置文件（仅 outbounds）
 
-${BLUE}支持的协议:${NC}
+支持的协议:
     - VLESS   (vless://...)
     - VMess   (vmess://...)
     - Trojan  (trojan://...)
@@ -35,9 +28,7 @@ ${BLUE}支持的协议:${NC}
     - HTTP    (http://... 或 https://...)
 
 选项:
-    -o, --output <file>     输出文件路径 (默认: ../config/<备注名>.json)
-    -p, --port <port>       本地 SOCKS 端口 (默认: 1080)
-    -s, --simple            生成简化配置（不含复杂路由和DNS）
+    -o, --output <file>     输出文件路径 (默认: outbounds/<备注名>.json)
     -h, --help              显示此帮助信息
 
 示例:
@@ -487,6 +478,7 @@ parse_query_params() {
             headerType) HEADER_TYPE="$value" ;;
             seed) SEED="$value" ;;
             flow) FLOW="$value" ;;
+            spx) SPIDER_X="$value" ;;
             insecure|allowInsecure) 
                 if [ "$value" = "1" ]; then
                     ALLOW_INSECURE="true"
@@ -538,9 +530,8 @@ generate_stream_settings() {
         \"allowInsecure\": $ALLOW_INSECURE
       }"
     elif [ "$SECURITY" = "reality" ]; then
-        # Reality 配置 - 需要特定字段
+        # Reality 配置
         stream_settings="$stream_settings,
-      \"security\": \"reality\",
       \"realitySettings\": {
         \"allowInsecure\": $ALLOW_INSECURE"
         
@@ -567,7 +558,28 @@ generate_stream_settings() {
         fi
         
         stream_settings="$stream_settings,
-        \"show\": false
+        \"show\": false"
+        
+        # spiderX
+        if [ -n "$SPIDER_X" ]; then
+            stream_settings="$stream_settings,
+        \"spiderX\": \"$SPIDER_X\""
+        fi
+        
+        stream_settings="$stream_settings
+      },
+      \"security\": \"reality\""
+        
+        # 添加 sockopt 配置 (用于 Reality 协议优化)
+        stream_settings="$stream_settings,
+      \"sockopt\": {
+        \"domainStrategy\": \"UseIP\",
+        \"happyEyeballs\": {
+          \"interleave\": 2,
+          \"maxConcurrentTry\": 4,
+          \"prioritizeIPv6\": false,
+          \"tryDelayMs\": 250
+        }
       }"
     fi
     
@@ -617,19 +629,9 @@ generate_stream_settings() {
         xhttp)
             stream_settings="$stream_settings,
       \"xhttpSettings\": {
-        \"path\": \"${PATH_VALUE:-/}\""
-            
-            if [ -n "$MODE" ]; then
-                stream_settings="$stream_settings,
-        \"mode\": \"$MODE\""
-            fi
-            
-            if [ -n "$HOST" ]; then
-                stream_settings="$stream_settings,
-        \"host\": \"$HOST\""
-            fi
-            
-            stream_settings="$stream_settings
+        \"host\": \"${HOST:-}\",
+        \"mode\": \"${MODE:-auto}\",
+        \"path\": \"${PATH_VALUE:-/}\"
       }"
             ;;
         
@@ -687,20 +689,6 @@ generate_stream_settings() {
             ;;
     esac
     
-    # 添加 sockopt 配置 (用于 Reality 协议优化)
-    if [ "$SECURITY" = "reality" ]; then
-        stream_settings="$stream_settings,
-      \"sockopt\": {
-        \"domainStrategy\": \"UseIP\",
-        \"happyEyeballs\": {
-          \"interleave\": 2,
-          \"maxConcurrentTry\": 4,
-          \"prioritizeIPv6\": false,
-          \"tryDelayMs\": 250
-        }
-      }"
-    fi
-    
     echo "$stream_settings"
 }
 
@@ -713,8 +701,11 @@ generate_outbound() {
         VLESS)
             cat << EOF
     {
+      "mux": {
+        "concurrency": -1,
+        "enabled": false
+      },
       "protocol": "vless",
-      "tag": "proxy",
       "settings": {
         "vnext": [
           {
@@ -722,10 +713,9 @@ generate_outbound() {
             "port": $PORT,
             "users": [
               {
-                "id": "$UUID",
                 "encryption": "$ENCRYPTION",
-                "level": 8$(if [ -n "$FLOW" ]; then echo ",
-                \"flow\": \"$FLOW\""; fi)
+                "id": "$UUID",
+                "level": 8
               }
             ]
           }
@@ -733,7 +723,8 @@ generate_outbound() {
       },
       "streamSettings": {
         $(generate_stream_settings)
-      }
+      },
+      "tag": "proxy"
     }
 EOF
             ;;
@@ -858,169 +849,14 @@ EOF
 }
 
 #############################################################################
-# 生成简化配置
+# 生成出站配置（仅 outbounds）
 #############################################################################
 
-generate_simple_config() {
+generate_outbounds_config() {
     local output_file="$1"
-    local socks_port="$2"
     
     cat > "$output_file" << EOF
 {
-  "log": {
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "port": $socks_port,
-      "protocol": "dokodemo-door",
-      "settings": {
-        "network": "tcp,udp",
-        "followRedirect": true
-      },
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls", "fakedns"]
-      }
-    }
-  ],
-  "outbounds": [
-$(generate_outbound),
-    {
-      "protocol": "freedom",
-      "tag": "direct"
-    },
-    {
-      "protocol": "blackhole",
-      "tag": "block"
-    }
-  ],
-  "routing": {
-    "domainStrategy": "AsIs",
-    "rules": [
-      {
-        "type": "field",
-        "domain": ["geosite:private"],
-        "outboundTag": "direct"
-      },
-      {
-        "type": "field",
-        "ip": ["geoip:private"],
-        "outboundTag": "direct"
-      }
-    ]
-  },
-  "remarks": "$REMARK"
-}
-EOF
-}
-
-#############################################################################
-# 生成完整配置
-#############################################################################
-
-generate_full_config() {
-    local output_file="$1"
-    local socks_port="$2"
-    
-    cat > "$output_file" << EOF
-{
-  "dns": {
-    "hosts": {
-      "geosite:category-ads-all": "127.0.0.1",
-      "domain:googleapis.cn": "googleapis.com",
-      "dns.alidns.com": [
-        "223.5.5.5",
-        "223.6.6.6",
-        "2400:3200::1",
-        "2400:3200:baba::1"
-      ],
-      "one.one.one.one": [
-        "1.1.1.1",
-        "1.0.0.1",
-        "2606:4700:4700::1111",
-        "2606:4700:4700::1001"
-      ],
-      "dns.cloudflare.com": [
-        "104.16.132.229",
-        "104.16.133.229",
-        "2606:4700::6810:84e5",
-        "2606:4700::6810:85e5"
-      ],
-      "cloudflare-dns.com": [
-        "104.16.248.249",
-        "104.16.249.249",
-        "2606:4700::6810:f8f9",
-        "2606:4700::6810:f9f9"
-      ],
-      "dot.pub": [
-        "1.12.12.12",
-        "120.53.53.53"
-      ],
-      "dns.google": [
-        "8.8.8.8",
-        "8.8.4.4",
-        "2001:4860:4860::8888",
-        "2001:4860:4860::8844"
-      ],
-      "dns.quad9.net": [
-        "9.9.9.9",
-        "149.112.112.112",
-        "2620:fe::fe",
-        "2620:fe::9"
-      ],
-      "common.dot.dns.yandex.net": [
-        "77.88.8.8",
-        "77.88.8.1",
-        "2a02:6b8::feed:0ff",
-        "2a02:6b8:0:1::feed:0ff"
-      ]
-    },
-    "servers": [
-      "8.8.8.8",
-      {
-        "address": "8.8.8.8",
-        "domains": [
-          "domain:googleapis.cn",
-          "domain:gstatic.com"
-        ]
-      },
-      {
-        "address": "223.5.5.5",
-        "domains": [
-          "domain:alidns.com",
-          "domain:doh.pub",
-          "domain:dot.pub",
-          "domain:360.cn",
-          "domain:onedns.net",
-          "geosite:cn"
-        ],
-        "expectIPs": [
-          "geoip:cn"
-        ],
-        "skipFallback": true,
-        "tag": "domestic-dns"
-      }
-    ],
-    "tag": "dns-module"
-  },
-  "log": {
-    "loglevel": "warning"
-  },
-  "inbounds": [
-    {
-      "port": $socks_port,
-      "protocol": "dokodemo-door",
-      "settings": {
-        "network": "tcp,udp",
-        "followRedirect": true
-      },
-      "sniffing": {
-        "enabled": true,
-        "destOverride": ["http", "tls", "fakedns"]
-      }
-    }
-  ],
   "outbounds": [
 $(generate_outbound),
     {
@@ -1038,114 +874,8 @@ $(generate_outbound),
         }
       },
       "tag": "block"
-    },
-    {
-      "protocol": "dns",
-      "tag": "dns-out"
     }
-  ],
-  "policy": {
-    "levels": {
-      "8": {
-        "connIdle": 300,
-        "downlinkOnly": 1,
-        "handshake": 4,
-        "uplinkOnly": 1
-      }
-    },
-    "system": {
-      "statsOutboundUplink": true,
-      "statsOutboundDownlink": true
-    }
-  },
-  "remarks": "$REMARK",
-  "routing": {
-    "domainStrategy": "AsIs",
-    "rules": [
-      {
-        "inboundTag": ["socks"],
-        "outboundTag": "dns-out",
-        "port": "53",
-        "type": "field"
-      },
-      {
-        "domain": ["domain:googleapis.cn", "domain:gstatic.com"],
-        "outboundTag": "proxy",
-        "type": "field"
-      },
-      {
-        "network": "udp",
-        "outboundTag": "block",
-        "port": "443",
-        "type": "field"
-      },
-      {
-        "domain": ["geosite:category-ads-all"],
-        "outboundTag": "block",
-        "type": "field"
-      },
-      {
-        "ip": ["geoip:private"],
-        "outboundTag": "direct",
-        "type": "field"
-      },
-      {
-        "domain": ["geosite:private"],
-        "outboundTag": "direct",
-        "type": "field"
-      },
-      {
-        "ip": [
-          "223.5.5.5", "223.6.6.6", "2400:3200::1", "2400:3200:baba::1",
-          "119.29.29.29", "1.12.12.12", "120.53.53.53", "2402:4e00::",
-          "2402:4e00:1::", "180.76.76.76", "2400:da00::6666", "114.114.114.114",
-          "114.114.115.115", "114.114.114.119", "114.114.115.119", "114.114.114.110",
-          "114.114.115.110", "180.184.1.1", "180.184.2.2", "101.226.4.6",
-          "218.30.118.6", "123.125.81.6", "140.207.198.6", "1.2.4.8",
-          "210.2.4.8", "52.80.66.66", "117.50.22.22", "2400:7fc0:849e:200::4",
-          "2404:c2c0:85d8:901::4", "117.50.10.10", "52.80.52.52",
-          "2400:7fc0:849e:200::8", "2404:c2c0:85d8:901::8",
-          "117.50.60.30", "52.80.60.30"
-        ],
-        "outboundTag": "direct",
-        "type": "field"
-      },
-      {
-        "domain": [
-          "domain:alidns.com", "domain:doh.pub", "domain:dot.pub",
-          "domain:360.cn", "domain:onedns.net"
-        ],
-        "outboundTag": "direct",
-        "type": "field"
-      },
-      {
-        "ip": ["geoip:cn"],
-        "outboundTag": "direct",
-        "type": "field"
-      },
-      {
-        "domain": ["geosite:cn"],
-        "outboundTag": "direct",
-        "type": "field"
-      },
-      {
-        "outboundTag": "proxy",
-        "port": "0-65535",
-        "type": "field"
-      },
-      {
-        "inboundTag": ["domestic-dns"],
-        "outboundTag": "direct",
-        "type": "field"
-      },
-      {
-        "inboundTag": ["dns-module"],
-        "outboundTag": "proxy",
-        "type": "field"
-      }
-    ]
-  },
-  "stats": {}
+  ]
 }
 EOF
 }
@@ -1156,8 +886,6 @@ EOF
 
 # 默认参数
 OUTPUT_FILE="config.json"
-SOCKS_PORT=1080
-SIMPLE_MODE=false
 PROXY_URL=""
 
 # 解析命令行参数
@@ -1166,14 +894,6 @@ while [ $# -gt 0 ]; do
         -o|--output)
             OUTPUT_FILE="$2"
             shift 2
-            ;;
-        -p|--port)
-            SOCKS_PORT="$2"
-            shift 2
-            ;;
-        -s|--simple)
-            SIMPLE_MODE=true
-            shift
             ;;
         -h|--help)
             show_help
@@ -1228,9 +948,9 @@ esac
 
 # 如果没有通过 -o 参数指定输出文件，则使用 REMARK 作为文件名
 if [ "$OUTPUT_FILE" = "config.json" ]; then
-    # 清理文件名中的文件系统不安全字符，但保留 UTF-8 字符(emoji、中文等)
-    # 只移除: / \ : * ? " < > |
-    SAFE_REMARK=$(echo "$REMARK" | sed 's/[\/\\:*?"<>|]/_/g')
+    # 清理文件名中的文件系统不安全字符和空格
+    # 移除: / \ : * ? " < > | 并将空格转为下划线
+    SAFE_REMARK=$(echo "$REMARK" | sed 's/[\/\\:*?"<>| ]/_/g')
     OUTPUT_FILE="${ADDCONFIG_FILE}${SAFE_REMARK}.json"
     
     # 确保目录存在
@@ -1267,15 +987,6 @@ case "$PROTOCOL" in
 esac
 
 # 生成配置文件
-printf '%b' "${YELLOW}正在生成配置文件...${NC}\n"
-if [ "$SIMPLE_MODE" = "true" ]; then
-    generate_simple_config "$OUTPUT_FILE" "$SOCKS_PORT"
-    printf '%b' "${GREEN}简化配置已生成: $OUTPUT_FILE${NC}\n"
-else
-    generate_full_config "$OUTPUT_FILE" "$SOCKS_PORT"
-    printf '%b' "${GREEN}完整配置已生成: $OUTPUT_FILE${NC}\n"
-fi
-
-printf '%b' "${GREEN}本地 SOCKS 端口: $SOCKS_PORT${NC}\n"
-echo ""
-printf '%b' "${YELLOW}提示: 使用 v2ray run -c $OUTPUT_FILE 启动代理${NC}\n"
+printf '%b' "${YELLOW}正在生成出站配置...${NC}\n"
+generate_outbounds_config "$OUTPUT_FILE"
+printf '%b' "${GREEN}出站配置已生成: $OUTPUT_FILE${NC}\n"
