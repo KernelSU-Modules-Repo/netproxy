@@ -135,14 +135,29 @@
       
       <div id=uid-page class=page>
         <div class=container>
+          
+          <mdui-card variant=elevated style=margin-bottom:16px>
+            <div style=padding:20px>
+              <div style=justify-content:space-between;align-items:center;display:flex>
+                <div>
+                  <h2 style="margin:0 0 4px;font-size:18px">代理模式</h2>
+                  <div id=proxy-mode-desc style=color:var(--mdui-color-on-surface-variant);font-size:13px>黑名单模式：代理所有应用，排除列表中的应用</div>
+                </div>
+                <mdui-segmented-button-group id=proxy-mode-switch value=blacklist selects=single>
+                  <mdui-segmented-button value=blacklist>黑名单</mdui-segmented-button>
+                  <mdui-segmented-button value=whitelist>白名单</mdui-segmented-button>
+                </mdui-segmented-button-group>
+              </div>
+            </div>
+          </mdui-card>
+
+          
           <mdui-card variant=elevated>
             <div style=padding:20px>
               <div style=align-items:center;margin-bottom:16px;display:flex>
-                <h2 style=flex-grow:1;margin:0;font-size:20px>UID 白名单</h2>
+                <h2 style=flex-grow:1;margin:0;font-size:20px id=proxy-list-title>排除应用</h2>
                 <mdui-button icon=add id=add-uid-btn>添加</mdui-button>
               </div>
-              <mdui-text-field label=搜索应用 icon=search id=app-search style=width:100%;margin-bottom:16px>
-              </mdui-text-field>
               <mdui-list id=uid-list>
                 <mdui-list-item>
                   <mdui-circular-progress></mdui-circular-progress>
@@ -194,7 +209,7 @@
     <mdui-navigation-bar value=status id=nav-bar>
       <mdui-navigation-bar-item icon=home value=status>状态</mdui-navigation-bar-item>
       <mdui-navigation-bar-item icon=settings value=config>配置</mdui-navigation-bar-item>
-      <mdui-navigation-bar-item icon=people value=uid>白名单</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon=tune value=uid>代理</mdui-navigation-bar-item>
       <mdui-navigation-bar-item icon=description value=logs>日志</mdui-navigation-bar-item>
     </mdui-navigation-bar>
   </mdui-layout>
@@ -261,7 +276,7 @@
     <mdui-button slot=action variant=text id=app-selector-cancel>取消</mdui-button>
   </mdui-dialog>
 
-  <script type=module src=/webui.089ee000.js></script>
+  <script type=module src=/webui.25a17126.js></script>
 
 
 

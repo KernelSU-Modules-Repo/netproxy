@@ -193,33 +193,56 @@ export class KSUService {
         await this.exec(`echo '${newStatus}' > ${this.MODULE_PATH}/config/status.yaml`);
     }
 
-    // 获取 UID 列表
-    static async getUIDList() {
+    // 获取代理模式
+    static async getProxyMode() {
         try {
-            const output = await this.exec(`cat ${this.MODULE_PATH}/config/uid_list.conf`);
+            const content = await this.exec(`cat ${this.MODULE_PATH}/config/proxy.conf`);
+            const match = content.match(/proxy_mode=(\w+)/);
+            return match ? match[1] : 'blacklist';
+        } catch (error) {
+            return 'blacklist';
+        }
+    }
+
+    // 设置代理模式
+    static async setProxyMode(mode) {
+        await this.exec(`sed -i 's/proxy_mode=.*/proxy_mode=${mode}/' ${this.MODULE_PATH}/config/proxy.conf`);
+    }
+
+    // 获取代理应用列表（包名）
+    static async getProxyApps() {
+        try {
+            const output = await this.exec(`cat ${this.MODULE_PATH}/config/proxy_apps.list`);
             return output.split('\n')
                 .map(line => line.trim())
-                .filter(line => line && !line.startsWith('#') && !line.startsWith('//'))
-                .filter(line => /^\d+$/.test(line));
+                .filter(line => line && !line.startsWith('#'));
         } catch (error) {
             return [];
         }
     }
 
-    // 添加 UID
-    static async addUID(uid) {
-        const list = await this.getUIDList();
-        if (list.includes(uid)) {
-            throw new Error('UID 已存在');
+    // 添加代理应用
+    static async addProxyApp(packageName) {
+        const list = await this.getProxyApps();
+        if (list.includes(packageName)) {
+            throw new Error('应用已存在');
         }
-        await this.exec(`echo '${uid}' >> ${this.MODULE_PATH}/config/uid_list.conf`);
+        await this.exec(`echo '${packageName}' >> ${this.MODULE_PATH}/config/proxy_apps.list`);
     }
 
-    // 删除 UID
-    static async removeUID(uid) {
-        const list = await this.getUIDList();
-        const newList = list.filter(u => u !== uid).join('\n');
-        await this.exec(`echo '${newList}' > ${this.MODULE_PATH}/config/uid_list.conf`);
+    // 删除代理应用
+    static async removeProxyApp(packageName) {
+        await this.exec(`sed -i '/^${packageName}$/d' ${this.MODULE_PATH}/config/proxy_apps.list`);
+    }
+
+    // 刷新 TProxy 规则（用于配置变更后即时生效）
+    static async renewTProxy() {
+        try {
+            const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/tproxy.sh renew"`);
+            return { success: result.errno === 0, output: result.stdout };
+        } catch (error) {
+            return { success: false, error: error.message };
+        }
     }
 
     // 获取日志

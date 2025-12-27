@@ -14,16 +14,16 @@ export class UI {
         this.currentPage = 'status';
         // 从localStorage读取主题，如果不存在则使用auto
         this.currentTheme = localStorage.getItem('theme') || 'auto';
-        
+
         // 初始化页面管理器
         this.statusPage = new StatusPageManager(this);
         this.configPage = new ConfigPageManager(this);
         this.uidPage = new UIDPageManager(this);
         this.logsPage = new LogsPageManager(this);
-        
+
         // 立即应用主题，避免闪烁
         this.applyTheme(this.currentTheme);
-        
+
         this.init();
     }
 
@@ -36,7 +36,7 @@ export class UI {
         } else {
             this.initializeMDUI();
         }
-        
+
         console.log('Step: setupNavigation');
         this.setupNavigation();
         console.log('Step: setupFAB');
@@ -47,6 +47,8 @@ export class UI {
         this.setupDialogs();
         console.log('Step: setupAppSelector');
         this.setupAppSelector();
+        console.log('Step: uidPage.init');
+        this.uidPage.init();
 
         console.log('Step: calling updateAllPages()');
         try {
@@ -84,7 +86,7 @@ export class UI {
 
         console.log('=== init() completed ===');
     }
-    
+
     initializeMDUI() {
         console.log('Initializing MDUI components...');
         const requiredComponents = ['mdui-layout', 'mdui-top-app-bar', 'mdui-card', 'mdui-button'];
@@ -209,16 +211,16 @@ export class UI {
 
     applyTheme(theme) {
         const html = document.documentElement;
-        
+
         // 首先移除所有主题类
         html.classList.remove('mdui-theme-light', 'mdui-theme-dark', 'mdui-theme-auto');
-        
+
         // 添加对应的主题类
         html.classList.add(`mdui-theme-${theme}`);
-        
+
         // 同时调用MDUI的setTheme确保组件内部状态正确
         setTheme(theme);
-        
+
         console.log(`Theme applied: ${theme}, classes: ${html.className}`);
     }
 
@@ -311,15 +313,6 @@ export class UI {
     setupAppSelector() {
         console.log('>> setupAppSelector: START');
         try {
-            const searchInput = document.getElementById('app-search');
-            console.log('   searchInput:', searchInput ? 'FOUND' : 'NOT FOUND');
-
-            if (searchInput) {
-                searchInput.addEventListener('input', (e) => {
-                    this.uidPage.filterApps(e.target.value);
-                });
-            }
-
             const addAppBtn = document.getElementById('add-uid-btn');
             console.log('   addAppBtn:', addAppBtn ? 'FOUND' : 'NOT FOUND');
 
