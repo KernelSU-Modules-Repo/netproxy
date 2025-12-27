@@ -91,6 +91,39 @@ mdui-chip {
   color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
 }
 
+/* ==================== 分段按钮组 Segmented Button ==================== */
+
+mdui-segmented-button-group {
+  --mdui-comp-segmented-button-container-color: var(--monet-surface-container-high);
+  --mdui-comp-segmented-button-outline-color: var(--monet-outline);
+  background-color: transparent !important;
+  border-color: var(--monet-outline, var(--mdui-color-outline)) !important;
+}
+
+mdui-segmented-button {
+  --mdui-comp-segmented-button-label-text-color: var(--monet-on-surface);
+  --mdui-comp-segmented-button-selected-container-color: var(--monet-secondary-container);
+  --mdui-comp-segmented-button-selected-label-text-color: var(--monet-on-secondary-container);
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+  border-color: var(--monet-outline, var(--mdui-color-outline)) !important;
+}
+
+/* 分段按钮 - 选中状态 */
+mdui-segmented-button[selected] {
+  background-color: var(--monet-secondary-container, var(--mdui-color-secondary-container)) !important;
+  color: var(--monet-on-secondary-container, var(--mdui-color-on-secondary-container)) !important;
+}
+
+/* 分段按钮 - 未选中状态悬停 */
+mdui-segmented-button:not([selected]):hover {
+  background-color: var(--monet-surface-container-highest, var(--mdui-color-surface-container-highest)) !important;
+}
+
+/* 分段按钮 - 选中状态的图标颜色 */
+mdui-segmented-button[selected]::part(icon) {
+  color: var(--monet-on-secondary-container, var(--mdui-color-on-secondary-container)) !important;
+}
+
 /* ==================== 对话框 ==================== */
 
 /* 对话框 - 面板背景 */
@@ -205,6 +238,16 @@ mdui-menu {
 
 mdui-menu-item {
   color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+/* 修复全局 CSS 重置导致的菜单项文字截断问题 */
+mdui-menu-item::part(container) {
+  padding: 8px 12px !important;
+}
+
+mdui-menu-item::part(label) {
+  overflow: visible !important;
+  line-height: normal !important;
 }
 
 mdui-menu-item:hover {
