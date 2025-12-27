@@ -113,13 +113,13 @@ export class KSUService {
 
     // 读取配置文件（从 outbounds 目录）
     static async readConfig(filename) {
-        return await this.exec(`cat ${this.MODULE_PATH}/config/xray/outbounds/${filename}`);
+        return await this.exec(`cat '${this.MODULE_PATH}/config/xray/outbounds/${filename}'`);
     }
 
     // 保存配置文件（到 outbounds 目录）
     static async saveConfig(filename, content) {
         const escaped = content.replace(/'/g, "'\\''");
-        await this.exec(`echo '${escaped}' > ${this.MODULE_PATH}/config/xray/outbounds/${filename}`);
+        await this.exec(`echo '${escaped}' > '${this.MODULE_PATH}/config/xray/outbounds/${filename}'`);
     }
 
     // 从节点链接导入配置
