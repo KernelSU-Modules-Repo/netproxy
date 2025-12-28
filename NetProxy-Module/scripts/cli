@@ -1,0 +1,794 @@
+#!/system/bin/sh
+
+#############################################################################
+# NetProxy CLI - 命令行控制工具
+# 支持通过 adb shell 调用管理 NetProxy
+#
+# 用法: adb shell su -c "/data/adb/modules/netproxy/scripts/cli <命令> [参数]"
+#
+# 命令:
+#   status              查看服务状态
+#   start               启动服务
+#   stop                停止服务
+#   restart             重启服务
+#
+#   config list         列出所有配置
+#   config switch <名称> 切换配置（支持热切换）
+#   config current      查看当前配置
+#   config add <链接>   添加节点
+#   config remove <名称> 删除配置
+#   config show <名称>  查看配置内容
+#
+#   sub list            列出所有订阅
+#   sub add <名称> <URL> 添加订阅
+#   sub update <名称>   更新指定订阅
+#   sub update-all      更新所有订阅
+#   sub remove <名称>   删除订阅
+#
+#   proxy mode          查看代理模式
+#   proxy mode <模式>   设置代理模式 (blacklist/whitelist)
+#   proxy apps          列出代理应用列表
+#   proxy add <包名>    添加应用到列表
+#   proxy remove <包名> 从列表移除应用
+#   proxy reload        重载代理规则（立即生效）
+#
+#############################################################################
+
+set -e
+set -u
+
+# 路径配置
+MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
+SCRIPTS_DIR="$MODDIR/scripts"
+CONFIG_DIR="$MODDIR/config"
+OUTBOUNDS_DIR="$CONFIG_DIR/xray/outbounds"
+STATUS_FILE="$CONFIG_DIR/status.yaml"
+PROXY_CONF="$CONFIG_DIR/proxy.conf"
+APPS_LIST="$CONFIG_DIR/proxy_apps.list"
+XRAY_BIN="$MODDIR/bin/xray"
+
+# 颜色输出
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+#######################################
+# 输出函数
+#######################################
+info() {
+    printf "${GREEN}[INFO]${NC} %s\n" "$1"
+}
+
+warn() {
+    printf "${YELLOW}[WARN]${NC} %s\n" "$1"
+}
+
+error() {
+    printf "${RED}[ERROR]${NC} %s\n" "$1"
+    exit 1
+}
+
+#######################################
+# 检查 Xray 是否运行
+#######################################
+is_running() {
+    pgrep -f "^$XRAY_BIN" >/dev/null 2>&1
+}
+
+#######################################
+# 服务状态
+#######################################
+cmd_status() {
+    echo "=============================="
+    echo "       NetProxy 状态"
+    echo "=============================="
+    
+    # 服务状态
+    if is_running; then
+        printf "服务状态: ${GREEN}运行中${NC}\n"
+        
+        # 获取 PID 和运行时间
+        local pid=$(pgrep -f "^$XRAY_BIN" | head -1)
+        echo "进程 PID: $pid"
+        
+        # 尝试获取运行时间
+        local uptime=$(ps -o etime= -p "$pid" 2>/dev/null | tr -d ' ' || echo "--")
+        echo "运行时间: $uptime"
+        
+        # 内存占用
+        local mem=$(ps -o rss= -p "$pid" 2>/dev/null | tr -d ' ' || echo "0")
+        if [ "$mem" -gt 1024 ] 2>/dev/null; then
+            echo "内存占用: $((mem / 1024)) MB"
+        else
+            echo "内存占用: ${mem} KB"
+        fi
+    else
+        printf "服务状态: ${RED}已停止${NC}\n"
+    fi
+    
+    # 当前配置
+    if [ -f "$STATUS_FILE" ]; then
+        local config=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+        if [ -n "$config" ]; then
+            echo "当前配置: $(basename "$config")"
+        fi
+    fi
+    
+    # 代理模式
+    local mode="blacklist"
+    if [ -f "$PROXY_CONF" ]; then
+        mode=$(grep -E "^proxy_mode=" "$PROXY_CONF" | cut -d'=' -f2 | tr -d ' \r')
+    fi
+    echo "代理模式: $mode"
+    
+    # Xray 版本
+    if [ -x "$XRAY_BIN" ]; then
+        local version=$("$XRAY_BIN" version 2>/dev/null | grep -o 'Xray [0-9.]*' | head -1 || echo "unknown")
+        echo "Xray 版本: $version"
+    fi
+    
+    echo "=============================="
+}
+
+#######################################
+# 启动服务
+#######################################
+cmd_start() {
+    if is_running; then
+        warn "服务已在运行中"
+        return 0
+    fi
+    
+    # 确保日志目录存在
+    mkdir -p "$MODDIR/logs"
+    
+    info "正在启动服务..."
+    sh "$SCRIPTS_DIR/start.sh"
+    
+    if is_running; then
+        info "服务启动成功"
+    else
+        error "服务启动失败，请检查日志"
+    fi
+}
+
+#######################################
+# 停止服务
+#######################################
+cmd_stop() {
+    if ! is_running; then
+        warn "服务未在运行"
+        return 0
+    fi
+    
+    info "正在停止服务..."
+    sh "$SCRIPTS_DIR/stop.sh"
+    
+    if ! is_running; then
+        info "服务已停止"
+    else
+        error "服务停止失败"
+    fi
+}
+
+#######################################
+# 重启服务
+#######################################
+cmd_restart() {
+    info "正在重启服务..."
+    
+    if is_running; then
+        sh "$SCRIPTS_DIR/stop.sh"
+        sleep 1
+    fi
+    
+    sh "$SCRIPTS_DIR/start.sh"
+    
+    if is_running; then
+        info "服务重启成功"
+    else
+        error "服务重启失败"
+    fi
+}
+
+#######################################
+# 配置管理
+#######################################
+cmd_config() {
+    local subcmd="${1:-}"
+    shift 2>/dev/null || true
+    
+    case "$subcmd" in
+        list)
+            echo "=============================="
+            echo "       配置文件列表"
+            echo "=============================="
+            
+            # 获取当前配置
+            local current=""
+            if [ -f "$STATUS_FILE" ]; then
+                current=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+                current=$(basename "$current" 2>/dev/null || echo "")
+            fi
+            
+            # 列出默认分组
+            echo ""
+            echo "[默认分组]"
+            for f in "$OUTBOUNDS_DIR"/*.json; do
+                [ -f "$f" ] || continue
+                local name=$(basename "$f")
+                if [ "$name" = "$current" ]; then
+                    printf "  ${GREEN}* %s${NC} (当前)\n" "$name"
+                else
+                    echo "    $name"
+                fi
+            done
+            
+            # 列出订阅分组
+            for sub_dir in "$OUTBOUNDS_DIR"/sub_*; do
+                [ -d "$sub_dir" ] || continue
+                local meta_file="$sub_dir/_meta.json"
+                [ -f "$meta_file" ] || continue
+                
+                local sub_name=$(grep -o '"name": *"[^"]*"' "$meta_file" | sed 's/"name": *"\([^"]*\)"/\1/')
+                echo ""
+                echo "[订阅: $sub_name]"
+                
+                for f in "$sub_dir"/*.json; do
+                    [ -f "$f" ] || continue
+                    local name=$(basename "$f")
+                    [ "$name" = "_meta.json" ] && continue
+                    
+                    local full_path="$f"
+                    if [ "$full_path" = "$current" ] || [ "$name" = "$current" ]; then
+                        printf "  ${GREEN}* %s${NC} (当前)\n" "$name"
+                    else
+                        echo "    $name"
+                    fi
+                done
+            done
+            echo ""
+            ;;
+        
+        switch)
+            local config_name="${1:-}"
+            if [ -z "$config_name" ]; then
+                error "请指定配置名称"
+            fi
+            
+            # 查找配置文件
+            local config_path=""
+            
+            # 先在默认目录查找
+            if [ -f "$OUTBOUNDS_DIR/$config_name" ]; then
+                config_path="$OUTBOUNDS_DIR/$config_name"
+            elif [ -f "$OUTBOUNDS_DIR/${config_name}.json" ]; then
+                config_path="$OUTBOUNDS_DIR/${config_name}.json"
+            else
+                # 在订阅目录查找
+                for sub_dir in "$OUTBOUNDS_DIR"/sub_*; do
+                    [ -d "$sub_dir" ] || continue
+                    if [ -f "$sub_dir/$config_name" ]; then
+                        config_path="$sub_dir/$config_name"
+                        break
+                    elif [ -f "$sub_dir/${config_name}.json" ]; then
+                        config_path="$sub_dir/${config_name}.json"
+                        break
+                    fi
+                done
+            fi
+            
+            if [ -z "$config_path" ]; then
+                error "未找到配置: $config_name"
+            fi
+            
+            info "切换配置: $(basename "$config_path")"
+            
+            if is_running; then
+                # 热切换
+                info "服务运行中，执行热切换..."
+                sh "$SCRIPTS_DIR/switch-config.sh" "$config_path"
+                info "热切换完成"
+            else
+                # 更新 status.yaml
+                echo "status: \"stopped\"" > "$STATUS_FILE"
+                echo "config: \"$config_path\"" >> "$STATUS_FILE"
+                info "配置已更新，下次启动时生效"
+            fi
+            ;;
+        
+        current)
+            if [ -f "$STATUS_FILE" ]; then
+                local config=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+                if [ -n "$config" ]; then
+                    echo "当前配置: $(basename "$config")"
+                    echo "完整路径: $config"
+                else
+                    echo "未设置配置"
+                fi
+            else
+                echo "状态文件不存在"
+            fi
+            ;;
+        
+        add)
+            local node_link="${1:-}"
+            if [ -z "$node_link" ]; then
+                error "请提供节点链接"
+            fi
+            
+            info "正在解析节点链接..."
+            if sh "$SCRIPTS_DIR/url2json.sh" "$node_link"; then
+                info "节点添加成功"
+            else
+                error "节点添加失败"
+            fi
+            ;;
+        
+        remove)
+            local config_name="${1:-}"
+            if [ -z "$config_name" ]; then
+                error "请指定配置名称"
+            fi
+            
+            # 查找配置文件
+            local config_path=""
+            
+            # 先在默认目录查找
+            if [ -f "$OUTBOUNDS_DIR/$config_name" ]; then
+                config_path="$OUTBOUNDS_DIR/$config_name"
+            elif [ -f "$OUTBOUNDS_DIR/${config_name}.json" ]; then
+                config_path="$OUTBOUNDS_DIR/${config_name}.json"
+            else
+                # 在订阅目录查找
+                for sub_dir in "$OUTBOUNDS_DIR"/sub_*; do
+                    [ -d "$sub_dir" ] || continue
+                    if [ -f "$sub_dir/$config_name" ]; then
+                        config_path="$sub_dir/$config_name"
+                        break
+                    elif [ -f "$sub_dir/${config_name}.json" ]; then
+                        config_path="$sub_dir/${config_name}.json"
+                        break
+                    fi
+                done
+            fi
+            
+            if [ -z "$config_path" ]; then
+                error "未找到配置: $config_name"
+            fi
+            
+            # 检查是否是当前使用的配置
+            if [ -f "$STATUS_FILE" ]; then
+                local current=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+                if [ "$config_path" = "$current" ]; then
+                    error "无法删除当前正在使用的配置"
+                fi
+            fi
+            
+            rm -f "$config_path"
+            info "已删除配置: $(basename "$config_path")"
+            ;;
+        
+        show)
+            local config_name="${1:-}"
+            if [ -z "$config_name" ]; then
+                error "请指定配置名称"
+            fi
+            
+            # 查找配置文件
+            local config_path=""
+            
+            # 先在默认目录查找
+            if [ -f "$OUTBOUNDS_DIR/$config_name" ]; then
+                config_path="$OUTBOUNDS_DIR/$config_name"
+            elif [ -f "$OUTBOUNDS_DIR/${config_name}.json" ]; then
+                config_path="$OUTBOUNDS_DIR/${config_name}.json"
+            else
+                # 在订阅目录查找
+                for sub_dir in "$OUTBOUNDS_DIR"/sub_*; do
+                    [ -d "$sub_dir" ] || continue
+                    if [ -f "$sub_dir/$config_name" ]; then
+                        config_path="$sub_dir/$config_name"
+                        break
+                    elif [ -f "$sub_dir/${config_name}.json" ]; then
+                        config_path="$sub_dir/${config_name}.json"
+                        break
+                    fi
+                done
+            fi
+            
+            if [ -z "$config_path" ]; then
+                error "未找到配置: $config_name"
+            fi
+            
+            echo "=============================="
+            echo "配置: $(basename "$config_path")"
+            echo "路径: $config_path"
+            echo "=============================="
+            cat "$config_path"
+            ;;
+        
+        *)
+            echo "用法: cli config <命令>"
+            echo ""
+            echo "命令:"
+            echo "  list              列出所有配置"
+            echo "  switch <名称>     切换配置"
+            echo "  current           查看当前配置"
+            echo "  add <节点链接>    添加节点"
+            echo "  remove <名称>     删除配置"
+            echo "  show <名称>       查看配置内容"
+            ;;
+    esac
+}
+
+#######################################
+# 订阅管理
+#######################################
+cmd_sub() {
+    local subcmd="${1:-}"
+    shift 2>/dev/null || true
+    
+    case "$subcmd" in
+        list)
+            echo "=============================="
+            echo "       订阅列表"
+            echo "=============================="
+            
+            local count=0
+            for sub_dir in "$OUTBOUNDS_DIR"/sub_*; do
+                [ -d "$sub_dir" ] || continue
+                local meta_file="$sub_dir/_meta.json"
+                [ -f "$meta_file" ] || continue
+                
+                local name=$(grep -o '"name": *"[^"]*"' "$meta_file" | sed 's/"name": *"\([^"]*\)"/\1/')
+                local updated=$(grep -o '"updated": *"[^"]*"' "$meta_file" | sed 's/"updated": *"\([^"]*\)"/\1/')
+                local node_count=$(find "$sub_dir" -name "*.json" ! -name "_meta.json" 2>/dev/null | wc -l)
+                
+                echo ""
+                echo "名称: $name"
+                echo "  节点数: $node_count"
+                echo "  更新时间: $updated"
+                
+                count=$((count + 1))
+            done
+            
+            if [ "$count" -eq 0 ]; then
+                echo ""
+                echo "暂无订阅"
+            fi
+            echo ""
+            ;;
+        
+        add)
+            local name="${1:-}"
+            local url="${2:-}"
+            
+            if [ -z "$name" ] || [ -z "$url" ]; then
+                error "用法: cli sub add <名称> <URL>"
+            fi
+            
+            info "添加订阅: $name"
+            sh "$SCRIPTS_DIR/subscription.sh" add "$name" "$url"
+            ;;
+        
+        update)
+            local name="${1:-}"
+            
+            if [ -z "$name" ]; then
+                error "用法: cli sub update <名称>"
+            fi
+            
+            info "更新订阅: $name"
+            sh "$SCRIPTS_DIR/subscription.sh" update "$name"
+            ;;
+        
+        update-all)
+            info "更新所有订阅..."
+            sh "$SCRIPTS_DIR/subscription.sh" update-all
+            ;;
+        
+        remove)
+            local name="${1:-}"
+            
+            if [ -z "$name" ]; then
+                error "用法: cli sub remove <名称>"
+            fi
+            
+            info "删除订阅: $name"
+            sh "$SCRIPTS_DIR/subscription.sh" remove "$name"
+            ;;
+        
+        *)
+            echo "用法: cli sub <命令>"
+            echo ""
+            echo "命令:"
+            echo "  list              列出所有订阅"
+            echo "  add <名称> <URL>  添加订阅"
+            echo "  update <名称>     更新指定订阅"
+            echo "  update-all        更新所有订阅"
+            echo "  remove <名称>     删除订阅"
+            ;;
+    esac
+}
+
+#######################################
+# 代理设置
+#######################################
+cmd_proxy() {
+    local subcmd="${1:-}"
+    shift 2>/dev/null || true
+    
+    case "$subcmd" in
+        mode)
+            local new_mode="${1:-}"
+            
+            if [ -z "$new_mode" ]; then
+                # 查看当前模式
+                local mode="blacklist"
+                if [ -f "$PROXY_CONF" ]; then
+                    mode=$(grep -E "^proxy_mode=" "$PROXY_CONF" | cut -d'=' -f2 | tr -d ' \r')
+                fi
+                echo "当前代理模式: $mode"
+                echo ""
+                echo "模式说明:"
+                echo "  blacklist - 代理所有应用，排除列表中的应用"
+                echo "  whitelist - 仅代理列表中的应用"
+            else
+                # 设置模式
+                case "$new_mode" in
+                    blacklist|whitelist)
+                        sed -i "s/proxy_mode=.*/proxy_mode=$new_mode/" "$PROXY_CONF"
+                        info "代理模式已设置为: $new_mode"
+                        
+                        if is_running; then
+                            info "正在重载代理规则..."
+                            sh "$SCRIPTS_DIR/tproxy.sh" renew
+                            info "规则已生效"
+                        else
+                            info "服务未运行，下次启动时生效"
+                        fi
+                        ;;
+                    *)
+                        error "无效的模式: $new_mode (可选: blacklist, whitelist)"
+                        ;;
+                esac
+            fi
+            ;;
+        
+        apps)
+            echo "=============================="
+            echo "       代理应用列表"
+            echo "=============================="
+            
+            local mode="blacklist"
+            if [ -f "$PROXY_CONF" ]; then
+                mode=$(grep -E "^proxy_mode=" "$PROXY_CONF" | cut -d'=' -f2 | tr -d ' \r')
+            fi
+            
+            echo "当前模式: $mode"
+            if [ "$mode" = "blacklist" ]; then
+                echo "说明: 以下应用不走代理"
+            else
+                echo "说明: 仅以下应用走代理"
+            fi
+            echo ""
+            
+            if [ -f "$APPS_LIST" ]; then
+                local count=0
+                while IFS= read -r line || [ -n "$line" ]; do
+                    line=$(echo "$line" | tr -d '\r' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+                    [ -z "$line" ] && continue
+                    case "$line" in \#*) continue ;; esac
+                    
+                    # 尝试获取 UID
+                    local uid=$(awk -v pkg="$line" '$1==pkg {print $2}' /data/system/packages.list 2>/dev/null)
+                    if [ -n "$uid" ]; then
+                        echo "  $line (UID: $uid)"
+                    else
+                        echo "  $line"
+                    fi
+                    count=$((count + 1))
+                done < "$APPS_LIST"
+                
+                if [ "$count" -eq 0 ]; then
+                    echo "  (列表为空)"
+                fi
+            else
+                echo "  (列表文件不存在)"
+            fi
+            echo ""
+            ;;
+        
+        add)
+            local package="${1:-}"
+            
+            if [ -z "$package" ]; then
+                error "用法: cli proxy add <包名>"
+            fi
+            
+            # 检查是否已存在
+            if [ -f "$APPS_LIST" ] && grep -q "^${package}$" "$APPS_LIST"; then
+                warn "应用已在列表中: $package"
+                return 0
+            fi
+            
+            # 验证包名是否存在
+            local uid=$(awk -v pkg="$package" '$1==pkg {print $2}' /data/system/packages.list 2>/dev/null)
+            if [ -z "$uid" ]; then
+                warn "未找到应用: $package (仍将添加到列表)"
+            fi
+            
+            echo "$package" >> "$APPS_LIST"
+            info "已添加应用: $package"
+            
+            if is_running; then
+                info "正在重载代理规则..."
+                sh "$SCRIPTS_DIR/tproxy.sh" renew
+                info "规则已生效"
+            fi
+            ;;
+        
+        remove)
+            local package="${1:-}"
+            
+            if [ -z "$package" ]; then
+                error "用法: cli proxy remove <包名>"
+            fi
+            
+            if [ ! -f "$APPS_LIST" ]; then
+                error "应用列表文件不存在"
+            fi
+            
+            if ! grep -q "^${package}$" "$APPS_LIST"; then
+                warn "应用不在列表中: $package"
+                return 0
+            fi
+            
+            sed -i "/^${package}$/d" "$APPS_LIST"
+            info "已移除应用: $package"
+            
+            if is_running; then
+                info "正在重载代理规则..."
+                sh "$SCRIPTS_DIR/tproxy.sh" renew
+                info "规则已生效"
+            fi
+            ;;
+        
+        reload)
+            if ! is_running; then
+                error "服务未运行"
+            fi
+            
+            info "正在重载代理规则..."
+            sh "$SCRIPTS_DIR/tproxy.sh" renew
+            info "规则已生效"
+            ;;
+        
+        *)
+            echo "用法: cli proxy <命令>"
+            echo ""
+            echo "命令:"
+            echo "  mode              查看代理模式"
+            echo "  mode <模式>       设置代理模式 (blacklist/whitelist)"
+            echo "  apps              列出代理应用列表"
+            echo "  add <包名>        添加应用到列表"
+            echo "  remove <包名>     从列表移除应用"
+            echo "  reload            重载代理规则"
+            ;;
+    esac
+}
+
+#######################################
+# 显示帮助
+#######################################
+show_help() {
+    cat << 'EOF'
+NetProxy CLI - 命令行控制工具
+
+用法: adb shell su -c "/data/adb/modules/netproxy/scripts/cli <命令> [参数]"
+
+服务控制:
+  status              查看服务状态
+  start               启动服务
+  stop                停止服务
+  restart             重启服务
+
+配置管理:
+  config list         列出所有配置
+  config switch <名称> 切换配置（支持热切换）
+  config current      查看当前配置
+  config add <链接>   添加节点
+  config remove <名称> 删除配置
+  config show <名称>  查看配置内容
+
+订阅管理:
+  sub list            列出所有订阅
+  sub add <名称> <URL> 添加订阅
+  sub update <名称>   更新指定订阅
+  sub update-all      更新所有订阅
+  sub remove <名称>   删除订阅
+
+代理设置:
+  proxy mode          查看代理模式
+  proxy mode <模式>   设置代理模式 (blacklist/whitelist)
+  proxy apps          列出代理应用列表
+  proxy add <包名>    添加应用到列表
+  proxy remove <包名> 从列表移除应用
+  proxy reload        重载代理规则
+
+示例:
+  # 服务控制
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli status"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli start"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli stop"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli restart"
+
+  # 节点管理
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli config list"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli config add 'socks://user:pass@host:port#节点名'"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli config add 'vless://uuid@host:port?...#节点名'"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli config switch 节点名.json"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli config show 节点名"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli config remove 节点名"
+
+  # 订阅管理
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli sub list"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli sub add '机场A' 'https://example.com/sub'"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli sub update '机场A'"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli sub update-all"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli sub remove '机场A'"
+
+  # 代理设置
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli proxy mode"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli proxy mode whitelist"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli proxy mode blacklist"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli proxy apps"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli proxy add com.google.android.youtube"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli proxy remove com.google.android.youtube"
+  adb shell su -c "/data/adb/modules/netproxy/scripts/cli proxy reload"
+
+EOF
+}
+
+#######################################
+# 主程序
+#######################################
+main() {
+    local cmd="${1:-}"
+    shift 2>/dev/null || true
+    
+    case "$cmd" in
+        status)
+            cmd_status
+            ;;
+        start)
+            cmd_start
+            ;;
+        stop)
+            cmd_stop
+            ;;
+        restart)
+            cmd_restart
+            ;;
+        config)
+            cmd_config "$@"
+            ;;
+        sub|subscription)
+            cmd_sub "$@"
+            ;;
+        proxy)
+            cmd_proxy "$@"
+            ;;
+        -h|--help|help|"")
+            show_help
+            ;;
+        *)
+            error "未知命令: $cmd\n使用 '--help' 查看帮助"
+            ;;
+    esac
+}
+
+main "$@"
