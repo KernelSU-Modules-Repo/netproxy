@@ -72,20 +72,17 @@
     })();
   </script>
 
-  <!-- 
+  <!--
     CSS 加载顺序很重要！
-    1. mdui.css - MDUI 组件库基础样式
-    2. material-icons.css - Material Icons 图标字体
+    1. mdui.css - MDUI 组件库基础样式（通过 app.js 从 npm 包导入）
+    2. material-icons.css - Material Icons 图标字体（本地字体，支持离线）
     3. KernelSU insets.css - 边到边适配（WebView 运行时注入）
     4. KernelSU colors.css - Monet 颜色变量（WebView 运行时注入）
     5. monet.css - 将 Monet 颜色映射到 MDUI 变量（必须在 colors.css 之后）
     6. style.css - 自定义样式（使用已覆盖的颜色变量）
   -->
 
-  <!-- 1. MDUI 组件库 -->
-  <link rel="stylesheet" href="./assets/mdui.css">
-
-  <!-- 2. Material Icons -->
+  <!-- 1. Material Icons（本地字体文件，支持离线使用） -->
   <link rel="stylesheet" href="./assets/material-icons.css">
 
   <!-- 3. KernelSU WebUI 边到边适配 -->

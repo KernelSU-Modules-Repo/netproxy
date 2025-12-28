@@ -3,6 +3,7 @@
  * 模块化架构 - 主入口文件
  */
 
+import 'mdui/mdui.css';
 import 'mdui';
 import { UI } from './ui/ui-core.js';
 
