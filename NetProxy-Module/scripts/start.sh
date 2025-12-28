@@ -9,8 +9,6 @@ readonly STATUS_FILE="$MODDIR/config/status.yaml"
 readonly XRAY_LOG_FILE="$MODDIR/logs/xray.log"
 readonly CONFDIR="$MODDIR/config/xray/confdir"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
-readonly INBOUNDS_FILE="$CONFDIR/01_inbounds.json"
-readonly DEFAULT_TPROXY_PORT=12345
 
 #######################################
 # 记录日志
@@ -55,32 +53,7 @@ get_config_path() {
     echo "$config_path"
 }
 
-#######################################
-# 从 inbounds 配置文件提取 TProxy 端口
-# Returns:
-#   TProxy 端口号
-#######################################
-get_tproxy_port() {
-    if [ ! -f "$INBOUNDS_FILE" ]; then
-        log "WARN" "inbounds 配置不存在: $INBOUNDS_FILE，使用默认端口"
-        echo "$DEFAULT_TPROXY_PORT"
-        return
-    fi
-    
-    # 解析 tproxy-in 或第一个 dokodemo-door 的端口
-    local port
-    port=$(grep -o '"port"[[:space:]]*:[[:space:]]*[0-9]*' "$INBOUNDS_FILE" | \
-           head -n 2 | tail -n 1 | \
-           grep -o '[0-9]*')
-    
-    if [ -z "$port" ]; then
-        log "WARN" "无法解析 TProxy 端口，使用默认 $DEFAULT_TPROXY_PORT"
-        echo "$DEFAULT_TPROXY_PORT"
-    else
-        log "INFO" "解析到 TProxy 端口: $port"
-        echo "$port"
-    fi
-}
+
 
 
 #######################################
@@ -113,7 +86,6 @@ is_xray_running() {
 #######################################
 start_xray() {
     local outbound_config
-    local tproxy_port
     
     log "INFO" "========== 开始启动 Xray 服务 =========="
     
@@ -146,9 +118,8 @@ start_xray() {
         die "Xray 进程启动后立即退出，请检查配置" 1
     fi
     
-    # 获取 TProxy 端口并配置规则
-    tproxy_port=$(get_tproxy_port)
-    "$MODDIR/scripts/tproxy.sh" enable "$tproxy_port"
+    # 启用 TProxy 规则
+    "$MODDIR/scripts/tproxy.sh" enable
     
     # 更新状态
     update_status "$outbound_config"

@@ -8,7 +8,7 @@ readonly PROXY_CONF="$MODDIR/config/proxy.conf"
 readonly APPS_LIST="$MODDIR/config/proxy_apps.list"
 
 # TProxy 配置
-TPROXY_PORT="${TPROXY_PORT:-12345}"
+readonly TPROXY_PORT=12345
 readonly BIN_NAME="xray"
 readonly MARK_ID="33554432/33554432"
 readonly TABLE_ID="100"
@@ -320,11 +320,6 @@ stop_tproxy() {
 #######################################
 case "${1:-}" in
     enable)
-        # 接收端口参数（可选）
-        if [ -n "${2:-}" ]; then
-            TPROXY_PORT="$2"
-        fi
-        
         log "INFO" "========== 启用 TProxy 透明代理 (端口: $TPROXY_PORT) =========="
         
         # 加载配置
@@ -389,10 +384,10 @@ case "${1:-}" in
         log "INFO" "========== TProxy 规则已刷新 =========="
         ;;
     *)
-        echo "用法: $0 {enable|disable|renew} [port]"
-        echo "  enable [port]  启用 TProxy，可选指定端口（默认 12345）"
-        echo "  disable        禁用 TProxy"
-        echo "  renew [port]   刷新 TProxy 规则（用于配置变更后）"
+        echo "用法: $0 {enable|disable|renew}"
+        echo "  enable   启用 TProxy"
+        echo "  disable  禁用 TProxy"
+        echo "  renew    刷新 TProxy 规则"
         exit 1
         ;;
 esac
