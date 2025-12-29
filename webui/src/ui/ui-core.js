@@ -297,6 +297,22 @@ export class UI {
             });
         }
 
+        const tproxyLogBtn = document.getElementById('refresh-tproxy-log');
+        if (tproxyLogBtn) {
+            tproxyLogBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.logsPage.loadTproxyLog();
+            });
+        }
+
+        const updateLogBtn = document.getElementById('refresh-update-log');
+        if (updateLogBtn) {
+            updateLogBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.logsPage.loadUpdateLog();
+            });
+        }
+
         const checkUpdateBtn = document.getElementById('check-update-btn');
         if (checkUpdateBtn) {
             checkUpdateBtn.addEventListener('click', () => {

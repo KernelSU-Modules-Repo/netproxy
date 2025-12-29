@@ -2,9 +2,9 @@
 set -e
 set -u
 
-readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
+readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly LOG_FILE="$MODDIR/logs/service.log"
-readonly STATUS_FILE="$MODDIR/config/status.yaml"
+readonly STATUS_FILE="$MODDIR/config/status.conf"
 readonly XRAY_BIN="$MODDIR/bin/xray"
 readonly API_SERVER="127.0.0.1:8080"
 
@@ -49,12 +49,12 @@ hot_switch() {
         exit 1
     fi
     
-    # 3. 更新 status.yaml
+    # 3. 更新 status.conf
     local current_status
-    current_status=$(grep -E "^status:" "$STATUS_FILE" | head -1 || echo 'status: "running"')
+    current_status=$(grep '^status=' "$STATUS_FILE" | head -1 || echo 'status="running"')
     {
         echo "$current_status"
-        echo "config: \"$config_file\""
+        echo "config=\"$config_file\""
     } > "$STATUS_FILE"
     
     log "INFO" "状态文件已更新"

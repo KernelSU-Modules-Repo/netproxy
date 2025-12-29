@@ -11,6 +11,8 @@ export class LogsPageManager {
     async update() {
         await this.loadServiceLog();
         await this.loadXrayLog();
+        await this.loadTproxyLog();
+        await this.loadUpdateLog();
     }
 
     async loadServiceLog() {
@@ -28,6 +30,24 @@ export class LogsPageManager {
             document.getElementById('xray-log').textContent = log;
         } catch (error) {
             document.getElementById('xray-log').textContent = '加载失败';
+        }
+    }
+
+    async loadTproxyLog() {
+        try {
+            const log = await KSUService.getTproxyLog();
+            document.getElementById('tproxy-log').textContent = log;
+        } catch (error) {
+            document.getElementById('tproxy-log').textContent = '加载失败';
+        }
+    }
+
+    async loadUpdateLog() {
+        try {
+            const log = await KSUService.getUpdateLog();
+            document.getElementById('update-log').textContent = log;
+        } catch (error) {
+            document.getElementById('update-log').textContent = '加载失败';
         }
     }
 }

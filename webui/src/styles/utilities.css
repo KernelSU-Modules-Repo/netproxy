@@ -71,6 +71,7 @@
 /* ==================== 错误抖动动画 ==================== */
 
 @keyframes shake {
+
   0%,
   100% {
     transform: translateX(0);
@@ -119,4 +120,32 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ==================== 主题颜色选择器 ==================== */
+
+.color-item {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  position: relative;
+}
+
+.color-item:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.color-item.selected::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 20px;
+  font-weight: bold;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }

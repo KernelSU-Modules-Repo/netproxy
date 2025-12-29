@@ -9,7 +9,7 @@
 set -e
 
 # 路径配置
-readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
+readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly ADDCONFIG_FILE="$MODDIR/config/xray/outbounds/"
 
 # 显示帮助信息

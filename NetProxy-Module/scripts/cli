@@ -42,7 +42,7 @@ MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
 SCRIPTS_DIR="$MODDIR/scripts"
 CONFIG_DIR="$MODDIR/config"
 OUTBOUNDS_DIR="$CONFIG_DIR/xray/outbounds"
-STATUS_FILE="$CONFIG_DIR/status.yaml"
+STATUS_FILE="$CONFIG_DIR/status.conf"
 PROXY_CONF="$CONFIG_DIR/proxy.conf"
 APPS_LIST="$CONFIG_DIR/proxy_apps.list"
 XRAY_BIN="$MODDIR/bin/xray"
@@ -110,7 +110,7 @@ cmd_status() {
     
     # 当前配置
     if [ -f "$STATUS_FILE" ]; then
-        local config=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+        local config=$(grep '^config=' "$STATUS_FILE" | cut -d'"' -f2)
         if [ -n "$config" ]; then
             echo "当前配置: $(basename "$config")"
         fi
@@ -145,7 +145,7 @@ cmd_start() {
     mkdir -p "$MODDIR/logs"
     
     info "正在启动服务..."
-    sh "$SCRIPTS_DIR/start.sh"
+    sh "$SCRIPTS_DIR/core/start.sh"
     
     if is_running; then
         info "服务启动成功"
@@ -164,7 +164,7 @@ cmd_stop() {
     fi
     
     info "正在停止服务..."
-    sh "$SCRIPTS_DIR/stop.sh"
+    sh "$SCRIPTS_DIR/core/stop.sh"
     
     if ! is_running; then
         info "服务已停止"
@@ -180,11 +180,11 @@ cmd_restart() {
     info "正在重启服务..."
     
     if is_running; then
-        sh "$SCRIPTS_DIR/stop.sh"
+        sh "$SCRIPTS_DIR/core/stop.sh"
         sleep 1
     fi
     
-    sh "$SCRIPTS_DIR/start.sh"
+    sh "$SCRIPTS_DIR/core/start.sh"
     
     if is_running; then
         info "服务重启成功"
@@ -209,7 +209,7 @@ cmd_config() {
             # 获取当前配置
             local current=""
             if [ -f "$STATUS_FILE" ]; then
-                current=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+                current=$(grep '^config=' "$STATUS_FILE" | cut -d'"' -f2)
                 current=$(basename "$current" 2>/dev/null || echo "")
             fi
             
@@ -289,19 +289,19 @@ cmd_config() {
             if is_running; then
                 # 热切换
                 info "服务运行中，执行热切换..."
-                sh "$SCRIPTS_DIR/switch-config.sh" "$config_path"
+                sh "$SCRIPTS_DIR/core/switch-config.sh" "$config_path"
                 info "热切换完成"
             else
-                # 更新 status.yaml
-                echo "status: \"stopped\"" > "$STATUS_FILE"
-                echo "config: \"$config_path\"" >> "$STATUS_FILE"
+                # 更新 status.conf
+                echo "status=\"stopped\"" > "$STATUS_FILE"
+                echo "config=\"$config_path\"" >> "$STATUS_FILE"
                 info "配置已更新，下次启动时生效"
             fi
             ;;
         
         current)
             if [ -f "$STATUS_FILE" ]; then
-                local config=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+                local config=$(grep '^config=' "$STATUS_FILE" | cut -d'"' -f2)
                 if [ -n "$config" ]; then
                     echo "当前配置: $(basename "$config")"
                     echo "完整路径: $config"
@@ -320,7 +320,7 @@ cmd_config() {
             fi
             
             info "正在解析节点链接..."
-            if sh "$SCRIPTS_DIR/url2json.sh" "$node_link"; then
+            if sh "$SCRIPTS_DIR/config/url2json.sh" "$node_link"; then
                 info "节点添加成功"
             else
                 error "节点添加失败"
@@ -361,7 +361,7 @@ cmd_config() {
             
             # 检查是否是当前使用的配置
             if [ -f "$STATUS_FILE" ]; then
-                local current=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+                local current=$(grep '^config=' "$STATUS_FILE" | cut -d'"' -f2)
                 if [ "$config_path" = "$current" ]; then
                     error "无法删除当前正在使用的配置"
                 fi
@@ -471,7 +471,7 @@ cmd_sub() {
             fi
             
             info "添加订阅: $name"
-            sh "$SCRIPTS_DIR/subscription.sh" add "$name" "$url"
+            sh "$SCRIPTS_DIR/config/subscription.sh" add "$name" "$url"
             ;;
         
         update)
@@ -482,12 +482,12 @@ cmd_sub() {
             fi
             
             info "更新订阅: $name"
-            sh "$SCRIPTS_DIR/subscription.sh" update "$name"
+            sh "$SCRIPTS_DIR/config/subscription.sh" update "$name"
             ;;
         
         update-all)
             info "更新所有订阅..."
-            sh "$SCRIPTS_DIR/subscription.sh" update-all
+            sh "$SCRIPTS_DIR/config/subscription.sh" update-all
             ;;
         
         remove)
@@ -498,7 +498,7 @@ cmd_sub() {
             fi
             
             info "删除订阅: $name"
-            sh "$SCRIPTS_DIR/subscription.sh" remove "$name"
+            sh "$SCRIPTS_DIR/config/subscription.sh" remove "$name"
             ;;
         
         *)
@@ -545,7 +545,7 @@ cmd_proxy() {
                         
                         if is_running; then
                             info "正在重载代理规则..."
-                            sh "$SCRIPTS_DIR/tproxy.sh" renew
+                            sh "$SCRIPTS_DIR/network/tproxy.sh" renew
                             info "规则已生效"
                         else
                             info "服务未运行，下次启动时生效"
@@ -626,7 +626,7 @@ cmd_proxy() {
             
             if is_running; then
                 info "正在重载代理规则..."
-                sh "$SCRIPTS_DIR/tproxy.sh" renew
+                sh "$SCRIPTS_DIR/network/tproxy.sh" renew
                 info "规则已生效"
             fi
             ;;
@@ -652,7 +652,7 @@ cmd_proxy() {
             
             if is_running; then
                 info "正在重载代理规则..."
-                sh "$SCRIPTS_DIR/tproxy.sh" renew
+                sh "$SCRIPTS_DIR/network/tproxy.sh" renew
                 info "规则已生效"
             fi
             ;;
@@ -663,7 +663,7 @@ cmd_proxy() {
             fi
             
             info "正在重载代理规则..."
-            sh "$SCRIPTS_DIR/tproxy.sh" renew
+            sh "$SCRIPTS_DIR/network/tproxy.sh" renew
             info "规则已生效"
             ;;
         

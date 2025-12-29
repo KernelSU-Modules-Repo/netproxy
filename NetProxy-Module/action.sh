@@ -2,8 +2,8 @@
 set -e
 
 readonly MODDIR="${0%/*}"
-readonly START_SCRIPT="$MODDIR/scripts/start.sh"
-readonly STOP_SCRIPT="$MODDIR/scripts/stop.sh"
+readonly START_SCRIPT="$MODDIR/scripts/core/start.sh"
+readonly STOP_SCRIPT="$MODDIR/scripts/core/stop.sh"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly XRAY_BIN="$MODDIR/bin/xray"
 

@@ -7,9 +7,9 @@
 
 set -e
 
-readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
+readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
-readonly URL2JSON="$MODDIR/scripts/url2json.sh"
+readonly URL2JSON="$MODDIR/scripts/config/url2json.sh"
 
 #######################################
 # 显示帮助

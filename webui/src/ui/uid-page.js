@@ -10,6 +10,7 @@ export class UIDPageManager {
         this.allApps = [];
         this.proxyMode = 'blacklist';
         this.proxyApps = [];
+        this.selectedApps = new Map(); // 用于多选
     }
 
     async init() {
@@ -204,17 +205,13 @@ export class UIDPageManager {
                 listTitle.textContent = mode === 'blacklist' ? '排除应用' : '代理应用';
             }
 
-            // 如果服务运行中，刷新规则
+            // 检查服务状态并给出相应提示
             const { status } = await KSUService.getStatus();
+            const modeName = mode === 'blacklist' ? '黑名单' : '白名单';
             if (status === 'running') {
-                const result = await KSUService.renewTProxy();
-                if (result.success) {
-                    toast(`已切换到${mode === 'blacklist' ? '黑名单' : '白名单'}模式并即时生效`);
-                } else {
-                    toast(`已切换模式，但规则刷新失败`);
-                }
+                toast(`已切换到${modeName}模式，重启服务后生效`);
             } else {
-                toast(`已切换到${mode === 'blacklist' ? '黑名单' : '白名单'}模式`);
+                toast(`已切换到${modeName}模式`);
             }
 
             this.update();
@@ -251,6 +248,16 @@ export class UIDPageManager {
     async showAppSelector() {
         const dialog = document.getElementById('app-selector-dialog');
         const listEl = document.getElementById('app-selector-list');
+        const addSelectedBtn = document.getElementById('app-selector-add-selected');
+
+        // 清空选中状态
+        this.selectedApps.clear();
+        this.updateAddSelectedButton();
+
+        // 绑定批量添加按钮事件（每次打开都重新绑定）
+        if (addSelectedBtn) {
+            addSelectedBtn.onclick = () => this.addSelectedApps();
+        }
 
         dialog.open = true;
 
@@ -264,6 +271,52 @@ export class UIDPageManager {
             listEl.innerHTML = '<mdui-list-item><div slot="headline">加载失败</div></mdui-list-item>';
             toast('加载应用列表失败: ' + error.message, true);
         }
+    }
+
+    updateAddSelectedButton() {
+        const btn = document.getElementById('app-selector-add-selected');
+        if (btn) {
+            const count = this.selectedApps.size;
+            btn.textContent = `添加选中 (${count})`;
+            btn.disabled = count === 0;
+        }
+    }
+
+    toggleAppSelection(app, checkbox) {
+        if (this.selectedApps.has(app.packageName)) {
+            this.selectedApps.delete(app.packageName);
+            checkbox.checked = false;
+        } else {
+            this.selectedApps.set(app.packageName, app);
+            checkbox.checked = true;
+        }
+        this.updateAddSelectedButton();
+    }
+
+    async addSelectedApps() {
+        if (this.selectedApps.size === 0) return;
+
+        const apps = Array.from(this.selectedApps.values());
+
+        for (const app of apps) {
+            try {
+                await KSUService.addProxyApp(app.packageName);
+            } catch (error) {
+                // 忽略错误（如应用已存在）
+            }
+        }
+
+        // 检查服务状态并给出相应提示
+        const { status } = await KSUService.getStatus();
+        if (status === 'running') {
+            toast(`成功添加 ${apps.length} 个应用，重启服务后生效`);
+        } else {
+            toast(`成功添加 ${apps.length} 个应用`);
+        }
+
+        document.getElementById('app-selector-dialog').open = false;
+        this.selectedApps.clear();
+        this.update();
     }
 
     renderAppList(apps) {
@@ -358,8 +411,16 @@ export class UIDPageManager {
             item.appendChild(iconEl);
             observer.observe(item);
 
-            item.addEventListener('click', async () => {
-                await this.addApp(app);
+            // 添加复选框
+            const checkbox = document.createElement('mdui-checkbox');
+            checkbox.slot = 'end-icon';
+            checkbox.checked = this.selectedApps.has(app.packageName);
+            item.appendChild(checkbox);
+
+            // 点击切换选中状态
+            item.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.toggleAppSelection(app, checkbox);
             });
 
             listEl.appendChild(item);

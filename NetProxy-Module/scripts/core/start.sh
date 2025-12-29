@@ -2,10 +2,10 @@
 set -e
 set -u
 
-readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
+readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly XRAY_BIN="$MODDIR/bin/xray"
-readonly STATUS_FILE="$MODDIR/config/status.yaml"
+readonly STATUS_FILE="$MODDIR/config/status.conf"
 readonly XRAY_LOG_FILE="$MODDIR/logs/xray.log"
 readonly CONFDIR="$MODDIR/config/xray/confdir"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
@@ -44,7 +44,7 @@ get_config_path() {
     fi
     
     local config_path
-    config_path=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE")
+    config_path=$(grep '^config=' "$STATUS_FILE" | cut -d'"' -f2)
     
     if [ -z "$config_path" ]; then
         die "无法从状态文件解析配置路径" 1
@@ -65,8 +65,8 @@ update_status() {
     local config_path="$1"
     
     {
-        echo "status: \"running\""
-        echo "config: \"$config_path\""
+        echo "status=\"running\""
+        echo "config=\"$config_path\""
     } > "$STATUS_FILE"
     
     log "INFO" "状态已更新: running, config: $config_path"
@@ -104,8 +104,8 @@ start_xray() {
     log "INFO" "使用模块化配置: confdir=$CONFDIR"
     log "INFO" "使用出站配置: $outbound_config"
     
-    # 启动 Xray 进程（使用 -confdir + -config）
-    nohup "$XRAY_BIN" run -confdir "$CONFDIR" -config "$outbound_config" > "$XRAY_LOG_FILE" 2>&1 &
+    # 启动 Xray 进程（使用 root:net_admin 运行）
+    nohup busybox setuidgid root:net_admin "$XRAY_BIN" run -confdir "$CONFDIR" -config "$outbound_config" > "$XRAY_LOG_FILE" 2>&1 &
     local xray_pid=$!
     
     log "INFO" "Xray 进程已启动, PID: $xray_pid"
@@ -119,7 +119,7 @@ start_xray() {
     fi
     
     # 启用 TProxy 规则
-    "$MODDIR/scripts/tproxy.sh" enable
+    "$MODDIR/scripts/network/tproxy.sh" start
     
     # 更新状态
     update_status "$outbound_config"

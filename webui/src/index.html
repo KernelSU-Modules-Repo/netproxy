@@ -354,6 +354,42 @@
               </div>
             </mdui-collapse-item>
           </mdui-collapse>
+
+          <!-- TProxy Log -->
+          <mdui-collapse accordion style="margin-top: 16px;">
+            <mdui-collapse-item>
+              <mdui-list-item slot="header" icon="router">
+                TProxy 日志
+                <mdui-button-icon slot="end-icon" icon="refresh" id="refresh-tproxy-log"></mdui-button-icon>
+              </mdui-list-item>
+              <div style="padding: 16px;">
+                <div class="log-container" id="tproxy-log">
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+
+          <!-- Update Log -->
+          <mdui-collapse accordion style="margin-top: 16px;">
+            <mdui-collapse-item>
+              <mdui-list-item slot="header" icon="system_update">
+                更新日志
+                <mdui-button-icon slot="end-icon" icon="refresh" id="refresh-update-log"></mdui-button-icon>
+              </mdui-list-item>
+              <div style="padding: 16px;">
+                <div class="log-container" id="update-log">
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+
+          <div style="padding: 16px; text-align: center;">
+            <mdui-button variant="outlined" id="logs-back-btn" icon="arrow_back">
+              返回设置
+            </mdui-button>
+          </div>
         </div>
       </div>
 
@@ -361,9 +397,17 @@
       <div id="settings-page" class="page">
         <div class="container">
           <mdui-list>
-            <!-- 日志入口 -->
-            <mdui-list-item icon="article" id="settings-logs-entry">
-              日志
+            <!-- 模块设置入口 -->
+            <mdui-list-item icon="settings_applications" id="settings-module-entry">
+              模块设置
+              <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <!-- 代理设置入口 -->
+            <mdui-list-item icon="swap_vert" id="settings-proxy-entry">
+              代理设置
               <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
             </mdui-list-item>
 
@@ -379,8 +423,16 @@
 
             <!-- 主题设置 -->
             <mdui-list-item icon="palette" id="settings-theme">
-              主题
-              <span slot="description" id="current-theme-text">自动</span>
+              主题与颜色
+              <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <!-- 日志入口 -->
+            <mdui-list-item icon="article" id="settings-logs-entry">
+              日志
+              <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
             </mdui-list-item>
 
             <mdui-divider></mdui-divider>
@@ -391,6 +443,42 @@
               <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
             </mdui-list-item>
           </mdui-list>
+        </div>
+      </div>
+
+      <!-- Module Settings Page -->
+      <div id="module-page" class="page">
+        <div class="container">
+          <mdui-card variant="elevated" class="compact-card">
+            <div style="padding: 16px;">
+              <h3 style="margin: 0 0 8px;">模块设置</h3>
+              <p style="margin: 0; color: var(--mdui-color-on-surface-variant); font-size: 14px;">
+                配置模块的基本行为
+              </p>
+            </div>
+          </mdui-card>
+
+          <mdui-list>
+            <mdui-list-item icon="power_settings_new">
+              开机自动启动
+              <span slot="description">开机后自动启动代理服务</span>
+              <mdui-switch slot="end-icon" id="module-auto-start"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <mdui-list-item icon="phone_android">
+              OnePlus A16 兼容性修复
+              <span slot="description">OnePlus Android 16 系统兼容性修复（清理系统添加的 REJECT 规则）</span>
+              <mdui-switch slot="end-icon" id="module-oneplus-fix"></mdui-switch>
+            </mdui-list-item>
+          </mdui-list>
+
+          <div style="padding: 16px; text-align: center;">
+            <mdui-button variant="outlined" id="module-back-btn" icon="arrow_back">
+              返回设置
+            </mdui-button>
+          </div>
         </div>
       </div>
 
@@ -470,6 +558,124 @@
 
           <div style="padding: 16px; text-align: center;">
             <mdui-button variant="outlined" id="routing-back-btn" icon="arrow_back">
+              返回设置
+            </mdui-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Proxy Settings Page -->
+      <div id="proxy-settings-page" class="page">
+        <div class="container">
+          <mdui-card variant="elevated" class="compact-card">
+            <div style="padding: 16px;">
+              <h3 style="margin: 0 0 8px;">代理设置</h3>
+              <p style="margin: 0; color: var(--mdui-color-on-surface-variant); font-size: 14px;">
+                配置哪些流量需要通过代理
+              </p>
+            </div>
+          </mdui-card>
+
+          <mdui-list id="proxy-settings-list" style="margin-top: 16px;">
+            <mdui-list-item>
+              移动数据
+              <span slot="description">代理移动数据流量</span>
+              <mdui-switch slot="end-icon" id="proxy-mobile"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              WiFi
+              <span slot="description">代理 WiFi 流量</span>
+              <mdui-switch slot="end-icon" id="proxy-wifi"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              热点
+              <span slot="description">代理热点连接设备的流量</span>
+              <mdui-switch slot="end-icon" id="proxy-hotspot"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              USB 共享
+              <span slot="description">代理 USB 共享设备的流量</span>
+              <mdui-switch slot="end-icon" id="proxy-usb"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <mdui-list-item>
+              TCP
+              <span slot="description">代理 TCP 流量</span>
+              <mdui-switch slot="end-icon" id="proxy-tcp"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              UDP
+              <span slot="description">代理 UDP 流量</span>
+              <mdui-switch slot="end-icon" id="proxy-udp"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <mdui-list-item>
+              IPv6
+              <span slot="description">启用 IPv6 代理</span>
+              <mdui-switch slot="end-icon" id="proxy-ipv6"></mdui-switch>
+            </mdui-list-item>
+          </mdui-list>
+
+          <div style="padding: 16px; text-align: center;">
+            <mdui-button variant="outlined" id="proxy-settings-back-btn" icon="arrow_back">
+              返回设置
+            </mdui-button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Theme Page -->
+      <div id="theme-page" class="page">
+        <div class="container">
+          <!-- 模式设置 -->
+          <mdui-card variant="elevated" class="compact-card">
+            <div style="padding: 16px;">
+              <h3 style="margin: 0 0 8px;">外观模式</h3>
+              <p style="margin: 0 0 16px; color: var(--mdui-color-on-surface-variant); font-size: 14px;">
+                选择浅色、深色或跟随系统
+              </p>
+              <mdui-segmented-button-group id="theme-mode-group" selects="single" value="auto" style="width: 100%;">
+                <mdui-segmented-button value="auto" icon="brightness_auto">自动</mdui-segmented-button>
+                <mdui-segmented-button value="light" icon="light_mode">浅色</mdui-segmented-button>
+                <mdui-segmented-button value="dark" icon="dark_mode">深色</mdui-segmented-button>
+              </mdui-segmented-button-group>
+            </div>
+          </mdui-card>
+
+          <!-- 主题色设置 -->
+          <mdui-card variant="elevated" class="compact-card" style="margin-top: 16px;">
+            <div style="padding: 16px;">
+              <h3 style="margin: 0 0 8px;">主题色</h3>
+              <p style="margin: 0 0 16px; color: var(--mdui-color-on-surface-variant); font-size: 14px;">
+                选择一个主题色
+              </p>
+              <div id="color-palette" style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px;">
+                <div class="color-item" data-color="#6750A4" style="background-color: #6750A4;" title="紫色 (默认)"></div>
+                <div class="color-item" data-color="#0061A4" style="background-color: #0061A4;" title="蓝色"></div>
+                <div class="color-item" data-color="#006B5F" style="background-color: #006B5F;" title="青色"></div>
+                <div class="color-item" data-color="#006E1C" style="background-color: #006E1C;" title="绿色"></div>
+                <div class="color-item" data-color="#8B5000" style="background-color: #8B5000;" title="橙色"></div>
+                <div class="color-item" data-color="#BA1A1A" style="background-color: #BA1A1A;" title="红色"></div>
+                <div class="color-item" data-color="#984061" style="background-color: #984061;" title="粉色"></div>
+                <div class="color-item" data-color="#5D5D5D" style="background-color: #5D5D5D;" title="灰色"></div>
+                <div class="color-item" data-color="#006874" style="background-color: #006874;" title="湖蓝"></div>
+                <div class="color-item" data-color="#6B5778" style="background-color: #6B5778;" title="薰衣草"></div>
+                <div class="color-item" data-color="#4758A9" style="background-color: #4758A9;" title="靛蓝"></div>
+                <div class="color-item" data-color="#7C5800" style="background-color: #7C5800;" title="琥珀"></div>
+              </div>
+            </div>
+          </mdui-card>
+
+          <div style="padding: 16px; text-align: center;">
+            <mdui-button variant="outlined" id="theme-back-btn" icon="arrow_back">
               返回设置
             </mdui-button>
           </div>
@@ -557,6 +763,7 @@
     </div>
 
     <mdui-button slot="action" variant="text" id="app-selector-cancel">取消</mdui-button>
+    <mdui-button slot="action" variant="filled" id="app-selector-add-selected" disabled>添加选中 (0)</mdui-button>
   </mdui-dialog>
 
   <script type="module" src="./app.js"></script>

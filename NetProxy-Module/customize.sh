@@ -55,16 +55,16 @@ set_permissions() {
     ui_print "设置文件权限..."
     
     set_perm_recursive "$MODPATH/bin/xray" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/start.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/stop.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/tproxy.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/switch-config.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/update-xray.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/url2json.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/subscription.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/clean_reject.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/core/start.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/core/stop.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/network/tproxy.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/core/switch-config.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/utils/update-xray.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/config/url2json.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/config/subscription.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/utils/oneplus_a16_fix.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/cli" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/routing.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/network/routing.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/action.sh" 0 0 0755 0755
 }
 

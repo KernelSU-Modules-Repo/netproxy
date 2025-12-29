@@ -1,6 +1,8 @@
 import { toast } from '../utils/toast.js';
 import { KSUService } from '../services/ksu-service.js';
-import logoUrl from '../assets/logo.png';
+import { setColorScheme } from 'mdui/functions/setColorScheme.js';
+import { setTheme } from 'mdui/functions/setTheme.js';
+const logoUrl = 'https://ghfast.top/https://raw.githubusercontent.com/Fanju6/NetProxy-Magisk/refs/heads/main/logo.png';
 
 export class SettingsPageManager {
     constructor(ui) {
@@ -11,9 +13,15 @@ export class SettingsPageManager {
             'bypass_cn_dns_ip', 'bypass_cn_dns_domain',
             'bypass_cn_ip', 'bypass_cn_domain', 'final_proxy'
         ];
+        this.proxyKeys = [
+            'proxy_mobile', 'proxy_wifi', 'proxy_hotspot', 'proxy_usb',
+            'proxy_tcp', 'proxy_udp', 'proxy_ipv6'
+        ];
         this.setupEventListeners();
         this.setupRoutingPage();
-        this.updateThemeText();
+        this.setupProxySettingsPage();
+        this.setupThemePage();
+        this.applyStoredTheme();
     }
 
     setupEventListeners() {
@@ -22,6 +30,14 @@ export class SettingsPageManager {
         if (logsEntry) {
             logsEntry.addEventListener('click', () => {
                 this.ui.switchPage('logs');
+            });
+        }
+
+        // 日志页返回按钮
+        const logsBackBtn = document.getElementById('logs-back-btn');
+        if (logsBackBtn) {
+            logsBackBtn.addEventListener('click', () => {
+                this.ui.switchPage('settings');
             });
         }
 
@@ -34,11 +50,65 @@ export class SettingsPageManager {
             });
         }
 
-        // 主题设置
+        // 代理设置入口
+        const proxyEntry = document.getElementById('settings-proxy-entry');
+        if (proxyEntry) {
+            proxyEntry.addEventListener('click', () => {
+                this.ui.switchPage('proxy-settings');
+                this.loadProxySettings();
+            });
+        }
+
+        // 模块设置入口
+        const moduleEntry = document.getElementById('settings-module-entry');
+        if (moduleEntry) {
+            moduleEntry.addEventListener('click', () => {
+                this.ui.switchPage('module');
+                this.loadModuleSettings();
+            });
+        }
+
+        // 模块设置页返回按钮
+        const moduleBackBtn = document.getElementById('module-back-btn');
+        if (moduleBackBtn) {
+            moduleBackBtn.addEventListener('click', () => {
+                this.ui.switchPage('settings');
+            });
+        }
+
+        // 模块设置开关
+        const autoStartSwitch = document.getElementById('module-auto-start');
+        if (autoStartSwitch) {
+            autoStartSwitch.addEventListener('change', async (e) => {
+                try {
+                    await KSUService.setModuleSetting('AUTO_START', e.target.checked);
+                    toast(`开机自启已${e.target.checked ? '启用' : '禁用'}`);
+                } catch (error) {
+                    toast('设置失败: ' + error.message, true);
+                    e.target.checked = !e.target.checked;
+                }
+            });
+        }
+
+        const oneplusFixSwitch = document.getElementById('module-oneplus-fix');
+        if (oneplusFixSwitch) {
+            oneplusFixSwitch.addEventListener('change', async (e) => {
+                try {
+                    await KSUService.setModuleSetting('ONEPLUS_A16_FIX', e.target.checked);
+                    toast(`OnePlus A16 兼容性修复已${e.target.checked ? '启用' : '禁用'}`);
+                } catch (error) {
+                    toast('设置失败: ' + error.message, true);
+                    e.target.checked = !e.target.checked;
+                }
+            });
+        }
+
+        // 主题设置入口
         const themeEntry = document.getElementById('settings-theme');
         if (themeEntry) {
             themeEntry.addEventListener('click', () => {
-                this.showThemeDialog();
+                this.ui.switchPage('theme');
+                this.loadThemeSettings();
             });
         }
 
@@ -100,74 +170,144 @@ export class SettingsPageManager {
         }
     }
 
-    updateThemeText() {
-        const themeText = document.getElementById('current-theme-text');
-        if (themeText) {
-            const savedTheme = localStorage.getItem('theme') || 'auto';
-            const themeNames = {
-                'auto': '自动',
-                'light': '浅色',
-                'dark': '深色'
-            };
-            themeText.textContent = themeNames[savedTheme] || '自动';
+    // ===================== 代理设置页面 =====================
+
+    setupProxySettingsPage() {
+        // 返回按钮
+        const backBtn = document.getElementById('proxy-settings-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                this.ui.switchPage('settings');
+            });
+        }
+
+        // 为每个开关绑定事件
+        for (const key of this.proxyKeys) {
+            // key 格式: proxy_mobile -> HTML id: proxy-mobile
+            const htmlId = key.replace('_', '-');
+            const switchEl = document.getElementById(htmlId);
+            if (switchEl) {
+                switchEl.addEventListener('change', async (e) => {
+                    const value = e.target.checked;
+                    await this.setProxySetting(key, value);
+                });
+            }
         }
     }
 
-    showThemeDialog() {
+    async loadProxySettings() {
+        try {
+            const settings = await KSUService.getProxySettings();
+            for (const key of this.proxyKeys) {
+                const htmlId = key.replace('_', '-');
+                const switchEl = document.getElementById(htmlId);
+                if (switchEl) {
+                    switchEl.checked = settings[key] === true;
+                }
+            }
+        } catch (error) {
+            console.error('加载代理设置失败:', error);
+        }
+    }
+
+    async setProxySetting(key, value) {
+        try {
+            await KSUService.setProxySetting(key, value);
+            toast(`已${value ? '启用' : '禁用'}`);
+        } catch (error) {
+            toast('设置失败: ' + error.message);
+            // 恢复开关状态
+            const htmlId = key.replace('_', '-');
+            const switchEl = document.getElementById(htmlId);
+            if (switchEl) {
+                switchEl.checked = !value;
+            }
+        }
+    }
+
+    // ===================== 主题页面 =====================
+
+    setupThemePage() {
+        // 返回按钮
+        const backBtn = document.getElementById('theme-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                this.ui.switchPage('settings');
+            });
+        }
+
+        // 模式选择
+        const modeGroup = document.getElementById('theme-mode-group');
+        if (modeGroup) {
+            modeGroup.addEventListener('change', (e) => {
+                const mode = e.target.value;
+                this.applyThemeMode(mode);
+            });
+        }
+
+        // 颜色选择
+        const colorPalette = document.getElementById('color-palette');
+        if (colorPalette) {
+            colorPalette.addEventListener('click', (e) => {
+                const colorItem = e.target.closest('.color-item');
+                if (colorItem) {
+                    const color = colorItem.dataset.color;
+                    this.applyThemeColor(color);
+                    this.updateColorSelection(color);
+                }
+            });
+        }
+    }
+
+    loadThemeSettings() {
         const savedTheme = localStorage.getItem('theme') || 'auto';
+        const savedColor = localStorage.getItem('themeColor') || '#6750A4';
 
-        // 创建主题选择对话框
-        const dialog = document.createElement('mdui-dialog');
-        dialog.headline = '选择主题';
-        dialog.innerHTML = `
-            <mdui-radio-group value="${savedTheme}" id="theme-radio-group">
-                <mdui-radio value="auto">自动（跟随系统）</mdui-radio>
-                <mdui-radio value="light">浅色</mdui-radio>
-                <mdui-radio value="dark">深色</mdui-radio>
-            </mdui-radio-group>
-            <mdui-button slot="action" variant="text" id="theme-cancel">取消</mdui-button>
-            <mdui-button slot="action" variant="filled" id="theme-confirm">确定</mdui-button>
-        `;
-
-        document.body.appendChild(dialog);
-        dialog.open = true;
-
-        const radioGroup = dialog.querySelector('#theme-radio-group');
-
-        dialog.querySelector('#theme-cancel').addEventListener('click', () => {
-            dialog.open = false;
-            setTimeout(() => dialog.remove(), 300);
-        });
-
-        dialog.querySelector('#theme-confirm').addEventListener('click', () => {
-            const newTheme = radioGroup.value;
-            this.applyTheme(newTheme);
-            dialog.open = false;
-            setTimeout(() => dialog.remove(), 300);
-        });
-
-        dialog.addEventListener('closed', () => {
-            setTimeout(() => dialog.remove(), 300);
-        });
-    }
-
-    applyTheme(theme) {
-        localStorage.setItem('theme', theme);
-
-        const html = document.documentElement;
-        html.classList.remove('mdui-theme-light', 'mdui-theme-dark', 'mdui-theme-auto');
-
-        if (theme === 'light') {
-            html.classList.add('mdui-theme-light');
-        } else if (theme === 'dark') {
-            html.classList.add('mdui-theme-dark');
-        } else {
-            html.classList.add('mdui-theme-auto');
+        // 设置模式选择
+        const modeGroup = document.getElementById('theme-mode-group');
+        if (modeGroup) {
+            modeGroup.value = savedTheme;
         }
 
-        this.updateThemeText();
-        toast('主题已更改');
+        // 设置颜色选择
+        this.updateColorSelection(savedColor);
     }
+
+    updateColorSelection(selectedColor) {
+        const colorItems = document.querySelectorAll('.color-item');
+        colorItems.forEach(item => {
+            if (item.dataset.color === selectedColor) {
+                item.classList.add('selected');
+            } else {
+                item.classList.remove('selected');
+            }
+        });
+    }
+
+    applyThemeMode(mode) {
+        localStorage.setItem('theme', mode);
+        setTheme(mode);
+        toast(`已切换到${mode === 'auto' ? '自动' : mode === 'light' ? '浅色' : '深色'}模式`);
+    }
+
+    applyThemeColor(color) {
+        localStorage.setItem('themeColor', color);
+        setColorScheme(color);
+        toast('主题色已更改');
+    }
+
+    applyStoredTheme() {
+        // 应用存储的主题模式
+        const savedTheme = localStorage.getItem('theme') || 'auto';
+        setTheme(savedTheme);
+
+        // 应用存储的主题色
+        const savedColor = localStorage.getItem('themeColor');
+        if (savedColor) {
+            setColorScheme(savedColor);
+        }
+    }
+
 
     showAboutDialog() {
         const dialog = document.createElement('mdui-dialog');
@@ -218,4 +358,24 @@ export class SettingsPageManager {
             setTimeout(() => dialog.remove(), 300);
         });
     }
+
+    // 加载模块设置
+    async loadModuleSettings() {
+        try {
+            const settings = await KSUService.getModuleSettings();
+
+            const autoStartSwitch = document.getElementById('module-auto-start');
+            if (autoStartSwitch) {
+                autoStartSwitch.checked = settings.auto_start;
+            }
+
+            const oneplusFixSwitch = document.getElementById('module-oneplus-fix');
+            if (oneplusFixSwitch) {
+                oneplusFixSwitch.checked = settings.oneplus_a16_fix;
+            }
+        } catch (error) {
+            console.error('Failed to load module settings:', error);
+        }
+    }
+
 }

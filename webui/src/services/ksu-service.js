@@ -25,9 +25,9 @@ export class KSUService {
     // 获取服务状态
     static async getStatus() {
         try {
-            const output = await this.exec(`cat ${this.MODULE_PATH}/config/status.yaml`);
-            const status = output.match(/status:\s*"([^"]+)"/)?.[1] || 'unknown';
-            const config = output.match(/config:\s*"([^"]+)"/)?.[1] || '';
+            const output = await this.exec(`cat ${this.MODULE_PATH}/config/status.conf`);
+            const status = output.match(/status="([^"]+)"/)?.[1] || 'unknown';
+            const config = output.match(/config="([^"]+)"/)?.[1] || '';
             return { status, config: config.split('/').pop() };
         } catch (error) {
             return { status: 'unknown', config: '' };
@@ -36,12 +36,12 @@ export class KSUService {
 
     // 启动服务
     static async startService() {
-        await exec(`su -c "sh ${this.MODULE_PATH}/scripts/start.sh"`);
+        await exec(`su -c "sh ${this.MODULE_PATH}/scripts/core/start.sh"`);
     }
 
     // 停止服务
     static async stopService() {
-        await exec(`su -c "sh ${this.MODULE_PATH}/scripts/stop.sh"`);
+        await exec(`su -c "sh ${this.MODULE_PATH}/scripts/core/stop.sh"`);
     }
 
     // 获取配置文件列表（从 outbounds 目录）
@@ -126,7 +126,7 @@ export class KSUService {
     static async importFromNodeLink(nodeLink) {
         try {
             console.log('Importing from node link...');
-            const cmd = `su -c "${this.MODULE_PATH}/scripts/url2json.sh '${nodeLink}'"`;
+            const cmd = `su -c "${this.MODULE_PATH}/scripts/config/url2json.sh '${nodeLink}'"`;
             const result = await exec(cmd);
             console.log('Import result:', result);
 
@@ -159,7 +159,7 @@ export class KSUService {
     // 检查并更新 Xray 内核
     static async updateXray() {
         try {
-            const cmd = `su -c "sh ${this.MODULE_PATH}/scripts/update-xray.sh"`;
+            const cmd = `su -c "sh ${this.MODULE_PATH}/scripts/utils/update-xray.sh"`;
             const result = await exec(cmd);
 
             if (result.errno === 0) {
@@ -189,22 +189,22 @@ export class KSUService {
 
         if (status === 'running') {
             // 热切换：使用 Xray API 动态更新出站配置
-            const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/switch-config.sh '${configPath}'"`);
+            const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/core/switch-config.sh '${configPath}'"`);
             if (result.errno !== 0) {
                 throw new Error(result.stderr || '热切换失败');
             }
         } else {
-            // 服务未运行：只更新 status.yaml
-            const newStatus = `status: "stopped"\nconfig: "${configPath}"`;
-            await this.exec(`echo '${newStatus}' > ${this.MODULE_PATH}/config/status.yaml`);
+            // 服务未运行：只更新 status.conf
+            const newStatus = `status="stopped"\nconfig="${configPath}"`;
+            await this.exec(`echo '${newStatus}' > ${this.MODULE_PATH}/config/status.conf`);
         }
     }
 
     // 获取代理模式
     static async getProxyMode() {
         try {
-            const content = await this.exec(`cat ${this.MODULE_PATH}/config/proxy.conf`);
-            const match = content.match(/proxy_mode=(\w+)/);
+            const content = await this.exec(`cat ${this.MODULE_PATH}/config/tproxy.conf`);
+            const match = content.match(/APP_PROXY_MODE="?(\w+)"?/);
             return match ? match[1] : 'blacklist';
         } catch (error) {
             return 'blacklist';
@@ -213,16 +213,23 @@ export class KSUService {
 
     // 设置代理模式
     static async setProxyMode(mode) {
-        await this.exec(`sed -i 's/proxy_mode=.*/proxy_mode=${mode}/' ${this.MODULE_PATH}/config/proxy.conf`);
+        await this.exec(`sed -i 's/APP_PROXY_MODE=.*/APP_PROXY_MODE="${mode}"/' ${this.MODULE_PATH}/config/tproxy.conf`);
     }
 
-    // 获取代理应用列表（包名）
+    // 获取代理应用列表（包名）- 根据模式返回 BYPASS 或 PROXY 列表
     static async getProxyApps() {
         try {
-            const output = await this.exec(`cat ${this.MODULE_PATH}/config/proxy_apps.list`);
-            return output.split('\n')
-                .map(line => line.trim())
-                .filter(line => line && !line.startsWith('#'));
+            const content = await this.exec(`cat ${this.MODULE_PATH}/config/tproxy.conf`);
+            const mode = (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || 'blacklist';
+
+            // 黑名单模式用 BYPASS_APPS_LIST，白名单模式用 PROXY_APPS_LIST
+            const listKey = mode === 'blacklist' ? 'BYPASS_APPS_LIST' : 'PROXY_APPS_LIST';
+            const match = content.match(new RegExp(`${listKey}="([^"]*)"`));
+
+            if (match && match[1]) {
+                return match[1].split(' ').filter(pkg => pkg.trim());
+            }
+            return [];
         } catch (error) {
             return [];
         }
@@ -230,22 +237,36 @@ export class KSUService {
 
     // 添加代理应用
     static async addProxyApp(packageName) {
-        const list = await this.getProxyApps();
-        if (list.includes(packageName)) {
+        const content = await this.exec(`cat ${this.MODULE_PATH}/config/tproxy.conf`);
+        const mode = (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || 'blacklist';
+        const listKey = mode === 'blacklist' ? 'BYPASS_APPS_LIST' : 'PROXY_APPS_LIST';
+        const match = content.match(new RegExp(`${listKey}="([^"]*)"`));
+        const currentList = match ? match[1] : '';
+
+        if (currentList.split(' ').includes(packageName)) {
             throw new Error('应用已存在');
         }
-        await this.exec(`echo '${packageName}' >> ${this.MODULE_PATH}/config/proxy_apps.list`);
+
+        const newList = currentList ? `${currentList} ${packageName}` : packageName;
+        await this.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${this.MODULE_PATH}/config/tproxy.conf`);
     }
 
     // 删除代理应用
     static async removeProxyApp(packageName) {
-        await this.exec(`sed -i '/^${packageName}$/d' ${this.MODULE_PATH}/config/proxy_apps.list`);
+        const content = await this.exec(`cat ${this.MODULE_PATH}/config/tproxy.conf`);
+        const mode = (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || 'blacklist';
+        const listKey = mode === 'blacklist' ? 'BYPASS_APPS_LIST' : 'PROXY_APPS_LIST';
+        const match = content.match(new RegExp(`${listKey}="([^"]*)"`));
+        const currentList = match ? match[1] : '';
+
+        const newList = currentList.split(' ').filter(pkg => pkg !== packageName).join(' ');
+        await this.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${this.MODULE_PATH}/config/tproxy.conf`);
     }
 
     // 刷新 TProxy 规则（用于配置变更后即时生效）
     static async renewTProxy() {
         try {
-            const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/tproxy.sh renew"`);
+            const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/network/tproxy.sh restart"`);
             return { success: result.errno === 0, output: result.stdout };
         } catch (error) {
             return { success: false, error: error.message };
@@ -291,7 +312,7 @@ export class KSUService {
         await this.exec(`rm -f ${statusFile}`);
 
         // 后台运行脚本，完成后写入状态
-        await exec(`su -c "nohup sh -c 'sh ${this.MODULE_PATH}/scripts/subscription.sh add \\"${name}\\" \\"${url}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
+        await exec(`su -c "nohup sh -c 'sh ${this.MODULE_PATH}/scripts/config/subscription.sh add \\"${name}\\" \\"${url}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
 
         // 轮询等待完成（最多 60 秒）
         return await this.waitForSubscriptionComplete(statusFile, 60000);
@@ -305,7 +326,7 @@ export class KSUService {
         await this.exec(`rm -f ${statusFile}`);
 
         // 后台运行脚本
-        await exec(`su -c "nohup sh -c 'sh ${this.MODULE_PATH}/scripts/subscription.sh update \\"${name}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
+        await exec(`su -c "nohup sh -c 'sh ${this.MODULE_PATH}/scripts/config/subscription.sh update \\"${name}\\" && echo success > ${statusFile} || echo fail > ${statusFile}' > /dev/null 2>&1 &"`);
 
         // 轮询等待完成
         return await this.waitForSubscriptionComplete(statusFile, 60000);
@@ -338,7 +359,7 @@ export class KSUService {
 
     // 删除订阅
     static async removeSubscription(name) {
-        const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/subscription.sh remove '${name}'"`);
+        const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/config/subscription.sh remove '${name}'"`);
         if (result.errno !== 0) {
             throw new Error(result.stderr || '删除订阅失败');
         }
@@ -395,6 +416,22 @@ export class KSUService {
     static async getXrayLog(lines = 100) {
         try {
             return await this.exec(`tail -n ${lines} ${this.MODULE_PATH}/logs/xray.log`);
+        } catch (error) {
+            return '暂无日志';
+        }
+    }
+
+    static async getTproxyLog(lines = 100) {
+        try {
+            return await this.exec(`tail -n ${lines} ${this.MODULE_PATH}/logs/tproxy.log`);
+        } catch (error) {
+            return '暂无日志';
+        }
+    }
+
+    static async getUpdateLog(lines = 100) {
+        try {
+            return await this.exec(`tail -n ${lines} ${this.MODULE_PATH}/logs/update.log`);
         } catch (error) {
             return '暂无日志';
         }
@@ -732,7 +769,7 @@ export class KSUService {
     // 获取路由设置
     static async getRoutingSettings() {
         try {
-            const output = await this.exec(`cat ${this.MODULE_PATH}/config/routing_settings.json`);
+            const output = await this.exec(`sh ${this.MODULE_PATH}/scripts/network/routing.sh get`);
             return JSON.parse(output);
         } catch (error) {
             // 返回默认设置
@@ -753,10 +790,76 @@ export class KSUService {
 
     // 设置路由选项
     static async setRoutingSetting(key, value) {
-        const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/routing.sh set '${key}' '${value}'"`);
+        const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/network/routing.sh set '${key}' '${value}'"`);
         if (result.errno !== 0) {
             throw new Error(result.stderr || '设置失败');
         }
+        return { success: true };
+    }
+
+    // ===================== 代理开关设置 =====================
+
+    // 获取代理开关设置
+    static async getProxySettings() {
+        try {
+            const content = await this.exec(`cat ${this.MODULE_PATH}/config/tproxy.conf`);
+            const settings = {};
+            const keys = ['PROXY_MOBILE', 'PROXY_WIFI', 'PROXY_HOTSPOT', 'PROXY_USB', 'PROXY_TCP', 'PROXY_UDP', 'PROXY_IPV6'];
+
+            for (const key of keys) {
+                const match = content.match(new RegExp(`${key}=(\\d+)`));
+                settings[key.toLowerCase()] = match ? match[1] === '1' : false;
+            }
+            return settings;
+        } catch (error) {
+            return {
+                proxy_mobile: true,
+                proxy_wifi: true,
+                proxy_hotspot: false,
+                proxy_usb: false,
+                proxy_tcp: true,
+                proxy_udp: true,
+                proxy_ipv6: false
+            };
+        }
+    }
+
+    // 设置代理开关
+    static async setProxySetting(key, value) {
+        const upperKey = key.toUpperCase();
+        const numValue = value ? '1' : '0';
+        await this.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${this.MODULE_PATH}/config/tproxy.conf`);
+        return { success: true };
+    }
+
+    // ===================== 模块设置 =====================
+
+    // 获取模块设置
+    static async getModuleSettings() {
+        try {
+            const content = await this.exec(`cat ${this.MODULE_PATH}/config/module.conf`);
+            const settings = {};
+
+            const autoStartMatch = content.match(/AUTO_START=(\d+)/);
+            settings.auto_start = autoStartMatch ? autoStartMatch[1] === '1' : true;
+
+            const oneplusFixMatch = content.match(/ONEPLUS_A16_FIX=(\d+)/);
+            settings.oneplus_a16_fix = oneplusFixMatch ? oneplusFixMatch[1] === '1' : true;
+
+            return settings;
+        } catch (error) {
+            return {
+                auto_start: true,
+                oneplus_a16_fix: true
+            };
+        }
+    }
+
+    // 设置模块选项
+    static async setModuleSetting(key, value) {
+        const upperKey = key.toUpperCase();
+        const numValue = value ? '1' : '0';
+        await this.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${this.MODULE_PATH}/config/module.conf`);
         return { success: true };
     }
 }

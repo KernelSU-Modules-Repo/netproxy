@@ -166,23 +166,43 @@ export class ConfigPageManager {
         const item = document.createElement('mdui-list-item');
         item.setAttribute('clickable', '');
         item.classList.add('config-item'); // 添加类以便 CSS 禁用 ripple
-        item.style.paddingLeft = '48px'; // 缩进表示层级
+        item.style.paddingLeft = '16px'; // 稍微缩进
 
         const displayName = filename.replace(/\.json$/i, '');
         item.setAttribute('headline', displayName);
 
-        const description = info.port
+        // 使用 slot="description" 自定义副文本布局
+        const descContainer = document.createElement('div');
+        descContainer.slot = 'description';
+        descContainer.style.cssText = 'display: flex; justify-content: space-between; align-items: center; width: 100%;';
+
+        // 左侧：协议和地址信息
+        const infoSpan = document.createElement('span');
+        infoSpan.textContent = info.port
             ? `${info.protocol} • ${info.address}:${info.port}`
             : `${info.protocol} • ${info.address}`;
-        item.setAttribute('description', description);
+        descContainer.appendChild(infoSpan);
 
+        // 右侧容器：当前标签 + 延迟
+        const statusContainer = document.createElement('span');
+        statusContainer.style.cssText = 'display: flex; align-items: center; gap: 6px;';
+
+        // 延迟显示标签
+        const latencyLabel = document.createElement('span');
+        latencyLabel.className = 'latency-label';
+        latencyLabel.style.cssText = 'font-size: 12px; color: var(--mdui-color-on-surface-variant);';
+        statusContainer.appendChild(latencyLabel);
+
+        // 当前配置标签
         if (isCurrent) {
-            const chip = document.createElement('mdui-chip');
-            chip.slot = 'end';
-            chip.textContent = '当前';
-            chip.style.marginRight = '8px';
-            item.appendChild(chip);
+            const currentTag = document.createElement('span');
+            currentTag.textContent = '当前';
+            currentTag.style.cssText = 'font-size: 11px; padding: 2px 6px; border-radius: 4px; background: var(--mdui-color-primary); color: var(--mdui-color-on-primary);';
+            statusContainer.appendChild(currentTag);
         }
+
+        descContainer.appendChild(statusContainer);
+        item.appendChild(descContainer);
 
         // 三点菜单
         const dropdown = document.createElement('mdui-dropdown');
@@ -232,7 +252,7 @@ export class ConfigPageManager {
         testItem.addEventListener('click', async (e) => {
             e.stopPropagation();
             dropdown.open = false;
-            await this.testConfig(displayName, info.address);
+            await this.testConfig(displayName, info.address, item);
         });
         menu.appendChild(testItem);
 
@@ -261,18 +281,39 @@ export class ConfigPageManager {
         container.appendChild(item);
     }
 
-    async testConfig(displayName, address) {
+    async testConfig(displayName, address, itemElement) {
+        const latencyLabel = itemElement?.querySelector('.latency-label');
+
         if (!address || address === '直连模式') {
-            toast('直连模式无需测试');
+            if (latencyLabel) latencyLabel.textContent = '直连';
             return;
         }
 
         try {
-            toast('正在测试连接...');
+            if (latencyLabel) {
+                latencyLabel.textContent = '测试中...';
+                latencyLabel.style.color = 'var(--mdui-color-on-surface-variant)';
+            }
             const latency = await KSUService.getPingLatency(address);
-            toast(`${displayName}: ${latency}`);
+            if (latencyLabel) {
+                latencyLabel.textContent = latency;
+                // 根据延迟值设置颜色
+                const ms = parseInt(latency);
+                if (!isNaN(ms)) {
+                    if (ms < 100) {
+                        latencyLabel.style.color = '#4caf50'; // 绿色
+                    } else if (ms < 300) {
+                        latencyLabel.style.color = '#ff9800'; // 橙色
+                    } else {
+                        latencyLabel.style.color = '#f44336'; // 红色
+                    }
+                }
+            }
         } catch (error) {
-            toast('测试失败: ' + error.message);
+            if (latencyLabel) {
+                latencyLabel.textContent = '失败';
+                latencyLabel.style.color = '#f44336';
+            }
         }
     }
 

@@ -8,38 +8,54 @@
 set -e
 set -u
 
-readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
-readonly SETTINGS_FILE="$MODDIR/config/routing_settings.json"
+readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
+readonly SETTINGS_FILE="$MODDIR/config/routing.conf"
 readonly ROUTING_FILE="$MODDIR/config/xray/confdir/03_routing.json"
 
 #######################################
-# 读取设置
+# 读取设置 (返回 JSON 格式给 WebUI)
 #######################################
 cmd_get() {
-    if [ -f "$SETTINGS_FILE" ]; then
-        cat "$SETTINGS_FILE"
-    else
+    if [ ! -f "$SETTINGS_FILE" ]; then
         echo '{}'
+        return
     fi
+    
+    echo '{'
+    local first=true
+    while IFS='=' read -r key value; do
+        # 跳过注释和空行
+        case "$key" in
+            \#*|"") continue ;;
+        esac
+        key=$(echo "$key" | tr '[:upper:]' '[:lower:]')
+        [ "$value" = "1" ] && value="true" || value="false"
+        [ "$first" = "true" ] && first=false || echo ','
+        printf '    "%s": %s' "$key" "$value"
+    done < "$SETTINGS_FILE"
+    echo
+    echo '}'
 }
 
 #######################################
 # 设置某项
 # Arguments:
-#   $1 - key
+#   $1 - key (小写)
 #   $2 - value (true/false)
 #######################################
 cmd_set() {
     local key="$1"
     local value="$2"
+    local upper_key
+    upper_key=$(echo "$key" | tr '[:lower:]' '[:upper:]')
     
-    if [ ! -f "$SETTINGS_FILE" ]; then
-        echo '{}' > "$SETTINGS_FILE"
-    fi
+    # 转换 true/false 为 1/0
+    [ "$value" = "true" ] && value="1" || value="0"
     
-    # 使用 sed 替换值
-    if grep -q "\"$key\"" "$SETTINGS_FILE"; then
-        sed -i "s/\"$key\": *[a-z]*/\"$key\": $value/" "$SETTINGS_FILE"
+    if grep -q "^${upper_key}=" "$SETTINGS_FILE" 2>/dev/null; then
+        sed -i "s/^${upper_key}=.*/${upper_key}=${value}/" "$SETTINGS_FILE"
+    else
+        echo "${upper_key}=${value}" >> "$SETTINGS_FILE"
     fi
     
     echo "已设置 $key = $value"
@@ -48,13 +64,17 @@ cmd_set() {
 #######################################
 # 读取设置值
 # Arguments:
-#   $1 - key
+#   $1 - key (小写)
 # Returns:
 #   true/false
 #######################################
 get_setting() {
     local key="$1"
-    grep -o "\"$key\": *[a-z]*" "$SETTINGS_FILE" 2>/dev/null | grep -o 'true\|false' || echo "true"
+    local upper_key
+    upper_key=$(echo "$key" | tr '[:lower:]' '[:upper:]')
+    local value
+    value=$(grep "^${upper_key}=" "$SETTINGS_FILE" 2>/dev/null | cut -d'=' -f2)
+    [ "$value" = "1" ] && echo "true" || echo "false"
 }
 
 #######################################

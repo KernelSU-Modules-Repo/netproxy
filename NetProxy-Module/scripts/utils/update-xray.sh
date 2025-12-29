@@ -1,7 +1,7 @@
 #!/system/bin/sh
 set -e
 
-readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
+readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly BIN_DIR="$MODDIR/bin"
 readonly TEMP_DIR="$BIN_DIR/.tmp"
 readonly LOG_FILE="$MODDIR/logs/update.log"

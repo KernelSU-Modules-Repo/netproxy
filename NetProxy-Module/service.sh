@@ -3,6 +3,20 @@ set -e
 
 readonly MAX_WAIT=60
 readonly MODDIR="${0%/*}"
+readonly MODULE_CONF="$MODDIR/config/module.conf"
+
+#######################################
+# 加载模块配置
+#######################################
+load_module_config() {
+    # 默认值
+    AUTO_START=1
+    ONEPLUS_A16_FIX=1
+    
+    if [ -f "$MODULE_CONF" ]; then
+        . "$MODULE_CONF"
+    fi
+}
 
 #######################################
 # 等待系统启动完成
@@ -34,22 +48,34 @@ wait_for_boot() {
 # 检测设备并执行特定脚本
 #######################################
 check_device_specific() {
+    # 检查是否启用 OnePlus A16 修复
+    if [ "$ONEPLUS_A16_FIX" != "1" ]; then
+        return 0
+    fi
+    
     local brand=$(getprop ro.product.brand)
     local android_version=$(getprop ro.build.version.release)
     
     # OnePlus + Android 16 需要清理 REJECT 规则
     if [ "$brand" = "OnePlus" ] && [ "$android_version" = "16" ]; then
-        echo "检测到 OnePlus Android 16，执行 clean_reject.sh" >> /dev/kmsg
-        if [ -f "$MODDIR/scripts/clean_reject.sh" ]; then
-            sh "$MODDIR/scripts/clean_reject.sh"
+        echo "检测到 OnePlus Android 16，执行 oneplus_a16_fix.sh" >> /dev/kmsg
+        if [ -f "$MODDIR/scripts/utils/oneplus_a16_fix.sh" ]; then
+            sh "$MODDIR/scripts/utils/oneplus_a16_fix.sh"
         fi
     fi
 }
 
 # 主流程
+load_module_config
+
 if wait_for_boot; then
-    # 启动服务
-    sh "$MODDIR/scripts/start.sh"
+    # 检查是否启用开机自启
+    if [ "$AUTO_START" = "1" ]; then
+        # 启动服务
+        sh "$MODDIR/scripts/core/start.sh"
+    else
+        echo "NetProxy 开机自启已禁用" >> /dev/kmsg
+    fi
     
     # 执行设备特定脚本
     check_device_specific

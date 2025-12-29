@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang=zh-CN><script type=importmap>{"imports":{"6gGgd":"/logo.3823637e.png"}}</script><link rel=stylesheet href=/webui.5bccf37b.css><meta charset=UTF-8><meta name=viewport content="width=device-width, initial-scale=1.0"><meta http-equiv=Cache-Control content="no-cache, no-store, must-revalidate"><meta http-equiv=Pragma content=no-cache><meta http-equiv=Expires content=0><meta name=app-version content=v1.0.2-20251224><title>NetProxy</title><style>#fouc-overlay{z-index:99999;transition:opacity .15s ease-out;position:fixed;inset:0}#fouc-overlay.fade-out{opacity:0;pointer-events:none}</style><script>!function(){try{var e=localStorage.getItem("theme")||"auto",t=document.documentElement;t.classList.remove("mdui-theme-light","mdui-theme-dark","mdui-theme-auto");var a="dark"===e||"auto"===e&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;"light"===e?t.classList.add("mdui-theme-light"):"dark"===e?t.classList.add("mdui-theme-dark"):t.classList.add("mdui-theme-auto");var d=document.createElement("style"),o=a?"#141218":"#fef7ff";"auto"===e?d.textContent="#fouc-overlay { background-color: var(--background, "+o+"); }":d.textContent="#fouc-overlay { background-color: "+o+"; }",document.head.appendChild(d)}catch(e){document.documentElement.classList.add("mdui-theme-auto")}}();</script><link rel=stylesheet href=/webui.425275c0.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/insets.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/colors.css><link rel=stylesheet href=/webui.67ba7ff5.css><link rel=stylesheet href=/webui.13a9bc0f.css><body>
+<!DOCTYPE html><html lang=zh-CN><link rel=stylesheet href=/webui.5bccf37b.css><meta charset=UTF-8><meta name=viewport content="width=device-width, initial-scale=1.0"><meta http-equiv=Cache-Control content="no-cache, no-store, must-revalidate"><meta http-equiv=Pragma content=no-cache><meta http-equiv=Expires content=0><meta name=app-version content=v1.0.2-20251224><title>NetProxy</title><style>#fouc-overlay{z-index:99999;transition:opacity .15s ease-out;position:fixed;inset:0}#fouc-overlay.fade-out{opacity:0;pointer-events:none}</style><script>!function(){try{var e=localStorage.getItem("theme")||"auto",t=document.documentElement;t.classList.remove("mdui-theme-light","mdui-theme-dark","mdui-theme-auto");var a="dark"===e||"auto"===e&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;"light"===e?t.classList.add("mdui-theme-light"):"dark"===e?t.classList.add("mdui-theme-dark"):t.classList.add("mdui-theme-auto");var d=document.createElement("style"),o=a?"#141218":"#fef7ff";"auto"===e?d.textContent="#fouc-overlay { background-color: var(--background, "+o+"); }":d.textContent="#fouc-overlay { background-color: "+o+"; }",document.head.appendChild(d)}catch(e){document.documentElement.classList.add("mdui-theme-auto")}}();</script><link rel=stylesheet href=/webui.425275c0.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/insets.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/colors.css><link rel=stylesheet href=/webui.67ba7ff5.css><link rel=stylesheet href=/webui.95d07d72.css><body>
   
   <div id=fouc-overlay></div>
 
@@ -206,6 +206,42 @@
               </div>
             </mdui-collapse-item>
           </mdui-collapse>
+
+          
+          <mdui-collapse accordion style=margin-top:16px>
+            <mdui-collapse-item>
+              <mdui-list-item slot=header icon=router>
+                TProxy 日志
+                <mdui-button-icon slot=end-icon icon=refresh id=refresh-tproxy-log></mdui-button-icon>
+              </mdui-list-item>
+              <div style=padding:16px>
+                <div class=log-container id=tproxy-log>
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+
+          
+          <mdui-collapse accordion style=margin-top:16px>
+            <mdui-collapse-item>
+              <mdui-list-item slot=header icon=system_update>
+                更新日志
+                <mdui-button-icon slot=end-icon icon=refresh id=refresh-update-log></mdui-button-icon>
+              </mdui-list-item>
+              <div style=padding:16px>
+                <div class=log-container id=update-log>
+                  <mdui-circular-progress></mdui-circular-progress>
+                </div>
+              </div>
+            </mdui-collapse-item>
+          </mdui-collapse>
+
+          <div style=text-align:center;padding:16px>
+            <mdui-button variant=outlined id=logs-back-btn icon=arrow_back>
+              返回设置
+            </mdui-button>
+          </div>
         </div>
       </div>
 
@@ -214,8 +250,16 @@
         <div class=container>
           <mdui-list>
             
-            <mdui-list-item icon=article id=settings-logs-entry>
-              日志
+            <mdui-list-item icon=settings_applications id=settings-module-entry>
+              模块设置
+              <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            
+            <mdui-list-item icon=swap_vert id=settings-proxy-entry>
+              代理设置
               <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
             </mdui-list-item>
 
@@ -231,8 +275,16 @@
 
             
             <mdui-list-item icon=palette id=settings-theme>
-              主题
-              <span slot=description id=current-theme-text>自动</span>
+              主题与颜色
+              <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            
+            <mdui-list-item icon=article id=settings-logs-entry>
+              日志
+              <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
             </mdui-list-item>
 
             <mdui-divider></mdui-divider>
@@ -243,6 +295,42 @@
               <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
             </mdui-list-item>
           </mdui-list>
+        </div>
+      </div>
+
+      
+      <div id=module-page class=page>
+        <div class=container>
+          <mdui-card variant=elevated class=compact-card>
+            <div style=padding:16px>
+              <h3 style="margin:0 0 8px">模块设置</h3>
+              <p style=color:var(--mdui-color-on-surface-variant);margin:0;font-size:14px>
+                配置模块的基本行为
+              </p>
+            </div>
+          </mdui-card>
+
+          <mdui-list>
+            <mdui-list-item icon=power_settings_new>
+              开机自动启动
+              <span slot=description>开机后自动启动代理服务</span>
+              <mdui-switch slot=end-icon id=module-auto-start></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <mdui-list-item icon=phone_android>
+              OnePlus A16 兼容性修复
+              <span slot=description>OnePlus Android 16 系统兼容性修复（清理系统添加的 REJECT 规则）</span>
+              <mdui-switch slot=end-icon id=module-oneplus-fix></mdui-switch>
+            </mdui-list-item>
+          </mdui-list>
+
+          <div style=text-align:center;padding:16px>
+            <mdui-button variant=outlined id=module-back-btn icon=arrow_back>
+              返回设置
+            </mdui-button>
+          </div>
         </div>
       </div>
 
@@ -327,6 +415,124 @@
           </div>
         </div>
       </div>
+
+      
+      <div id=proxy-settings-page class=page>
+        <div class=container>
+          <mdui-card variant=elevated class=compact-card>
+            <div style=padding:16px>
+              <h3 style="margin:0 0 8px">代理设置</h3>
+              <p style=color:var(--mdui-color-on-surface-variant);margin:0;font-size:14px>
+                配置哪些流量需要通过代理
+              </p>
+            </div>
+          </mdui-card>
+
+          <mdui-list id=proxy-settings-list style=margin-top:16px>
+            <mdui-list-item>
+              移动数据
+              <span slot=description>代理移动数据流量</span>
+              <mdui-switch slot=end-icon id=proxy-mobile></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              WiFi
+              <span slot=description>代理 WiFi 流量</span>
+              <mdui-switch slot=end-icon id=proxy-wifi></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              热点
+              <span slot=description>代理热点连接设备的流量</span>
+              <mdui-switch slot=end-icon id=proxy-hotspot></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              USB 共享
+              <span slot=description>代理 USB 共享设备的流量</span>
+              <mdui-switch slot=end-icon id=proxy-usb></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <mdui-list-item>
+              TCP
+              <span slot=description>代理 TCP 流量</span>
+              <mdui-switch slot=end-icon id=proxy-tcp></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              UDP
+              <span slot=description>代理 UDP 流量</span>
+              <mdui-switch slot=end-icon id=proxy-udp></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <mdui-list-item>
+              IPv6
+              <span slot=description>启用 IPv6 代理</span>
+              <mdui-switch slot=end-icon id=proxy-ipv6></mdui-switch>
+            </mdui-list-item>
+          </mdui-list>
+
+          <div style=text-align:center;padding:16px>
+            <mdui-button variant=outlined id=proxy-settings-back-btn icon=arrow_back>
+              返回设置
+            </mdui-button>
+          </div>
+        </div>
+      </div>
+
+      
+      <div id=theme-page class=page>
+        <div class=container>
+          
+          <mdui-card variant=elevated class=compact-card>
+            <div style=padding:16px>
+              <h3 style="margin:0 0 8px">外观模式</h3>
+              <p style="color:var(--mdui-color-on-surface-variant);margin:0 0 16px;font-size:14px">
+                选择浅色、深色或跟随系统
+              </p>
+              <mdui-segmented-button-group id=theme-mode-group selects=single value=auto style=width:100%>
+                <mdui-segmented-button value=auto icon=brightness_auto>自动</mdui-segmented-button>
+                <mdui-segmented-button value=light icon=light_mode>浅色</mdui-segmented-button>
+                <mdui-segmented-button value=dark icon=dark_mode>深色</mdui-segmented-button>
+              </mdui-segmented-button-group>
+            </div>
+          </mdui-card>
+
+          
+          <mdui-card variant=elevated class=compact-card style=margin-top:16px>
+            <div style=padding:16px>
+              <h3 style="margin:0 0 8px">主题色</h3>
+              <p style="color:var(--mdui-color-on-surface-variant);margin:0 0 16px;font-size:14px">
+                选择一个主题色
+              </p>
+              <div id=color-palette style=grid-template-columns:repeat(6,1fr);gap:12px;display:grid>
+                <div class=color-item data-color=#6750A4 style=background-color:#6750a4 title="紫色 (默认)"></div>
+                <div class=color-item data-color=#0061A4 style=background-color:#0061a4 title=蓝色></div>
+                <div class=color-item data-color=#006B5F style=background-color:#006b5f title=青色></div>
+                <div class=color-item data-color=#006E1C style=background-color:#006e1c title=绿色></div>
+                <div class=color-item data-color=#8B5000 style=background-color:#8b5000 title=橙色></div>
+                <div class=color-item data-color=#BA1A1A style=background-color:#ba1a1a title=红色></div>
+                <div class=color-item data-color=#984061 style=background-color:#984061 title=粉色></div>
+                <div class=color-item data-color=#5D5D5D style=background-color:#5d5d5d title=灰色></div>
+                <div class=color-item data-color=#006874 style=background-color:#006874 title=湖蓝></div>
+                <div class=color-item data-color=#6B5778 style=background-color:#6b5778 title=薰衣草></div>
+                <div class=color-item data-color=#4758A9 style=background-color:#4758a9 title=靛蓝></div>
+                <div class=color-item data-color=#7C5800 style=background-color:#7c5800 title=琥珀></div>
+              </div>
+            </div>
+          </mdui-card>
+
+          <div style=text-align:center;padding:16px>
+            <mdui-button variant=outlined id=theme-back-btn icon=arrow_back>
+              返回设置
+            </mdui-button>
+          </div>
+        </div>
+      </div>
     </mdui-layout-main>
 
     
@@ -404,8 +610,9 @@
     </div>
 
     <mdui-button slot=action variant=text id=app-selector-cancel>取消</mdui-button>
+    <mdui-button slot=action variant=filled id=app-selector-add-selected disabled>添加选中 (0)</mdui-button>
   </mdui-dialog>
 
-  <script type=module src=/webui.fdaa3efd.js></script>
+  <script type=module src=/webui.a2d78821.js></script>
 
 

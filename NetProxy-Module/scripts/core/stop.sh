@@ -2,10 +2,10 @@
 set -e
 set -u
 
-readonly MODDIR="$(cd "$(dirname "$0")/.." && pwd)"
+readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly XRAY_BIN="$MODDIR/bin/xray"
-readonly STATUS_FILE="$MODDIR/config/status.yaml"
+readonly STATUS_FILE="$MODDIR/config/status.conf"
 readonly KILL_TIMEOUT=5
 
 #######################################
@@ -61,7 +61,7 @@ kill_xray_process() {
 #######################################
 cleanup_tproxy() {
     log "INFO" "清理 TProxy 规则..."
-    "$MODDIR/scripts/tproxy.sh" disable || true
+    "$MODDIR/scripts/network/tproxy.sh" stop || true
     log "INFO" "TProxy 规则清理完成"
 }
 
@@ -75,12 +75,12 @@ update_status() {
     fi
     
     local config_path
-    config_path=$(awk -F'"' '/^config:/ {print $2}' "$STATUS_FILE" 2>/dev/null || echo "")
+    config_path=$(grep '^config=' "$STATUS_FILE" 2>/dev/null | cut -d'"' -f2 || echo "")
     
     {
-        echo "status: \"stopped\""
+        echo "status=\"stopped\""
         if [ -n "$config_path" ]; then
-            echo "config: \"$config_path\""
+            echo "config=\"$config_path\""
         fi
     } > "$STATUS_FILE"
     
