@@ -64,6 +64,7 @@ set_permissions() {
     set_perm_recursive "$MODPATH/scripts/subscription.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/clean_reject.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/cli" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/scripts/routing.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/action.sh" 0 0 0755 0755
 }
 

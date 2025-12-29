@@ -726,4 +726,37 @@ export class KSUService {
         }
         return btoa(binary);
     }
+
+    // ===================== 路由设置 =====================
+
+    // 获取路由设置
+    static async getRoutingSettings() {
+        try {
+            const output = await this.exec(`cat ${this.MODULE_PATH}/config/routing_settings.json`);
+            return JSON.parse(output);
+        } catch (error) {
+            // 返回默认设置
+            return {
+                google_cn: true,
+                block_udp443: true,
+                block_ads: true,
+                bypass_lan_ip: true,
+                bypass_lan_domain: true,
+                bypass_cn_dns_ip: true,
+                bypass_cn_dns_domain: true,
+                bypass_cn_ip: true,
+                bypass_cn_domain: true,
+                final_proxy: true
+            };
+        }
+    }
+
+    // 设置路由选项
+    static async setRoutingSetting(key, value) {
+        const result = await exec(`su -c "sh ${this.MODULE_PATH}/scripts/routing.sh set '${key}' '${value}'"`);
+        if (result.errno !== 0) {
+            throw new Error(result.stderr || '设置失败');
+        }
+        return { success: true };
+    }
 }

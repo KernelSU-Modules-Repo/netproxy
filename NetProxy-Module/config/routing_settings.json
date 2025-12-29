@@ -1,0 +1,12 @@
+{
+    "google_cn": true,
+    "block_udp443": true,
+    "block_ads": true,
+    "bypass_lan_ip": true,
+    "bypass_lan_domain": true,
+    "bypass_cn_dns_ip": true,
+    "bypass_cn_dns_domain": true,
+    "bypass_cn_ip": true,
+    "bypass_cn_domain": true,
+    "final_proxy": true
+}

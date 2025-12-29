@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang=zh-CN><link rel=stylesheet href=/webui.5bccf37b.css><meta charset=UTF-8><meta name=viewport content="width=device-width, initial-scale=1.0"><meta http-equiv=Cache-Control content="no-cache, no-store, must-revalidate"><meta http-equiv=Pragma content=no-cache><meta http-equiv=Expires content=0><meta name=app-version content=v1.0.2-20251224><title>NetProxy</title><style>#fouc-overlay{z-index:99999;transition:opacity .15s ease-out;position:fixed;inset:0}#fouc-overlay.fade-out{opacity:0;pointer-events:none}</style><script>!function(){try{var e=localStorage.getItem("theme")||"auto",t=document.documentElement;t.classList.remove("mdui-theme-light","mdui-theme-dark","mdui-theme-auto");var a="dark"===e||"auto"===e&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;"light"===e?t.classList.add("mdui-theme-light"):"dark"===e?t.classList.add("mdui-theme-dark"):t.classList.add("mdui-theme-auto");var d=document.createElement("style"),o=a?"#141218":"#fef7ff";"auto"===e?d.textContent="#fouc-overlay { background-color: var(--background, "+o+"); }":d.textContent="#fouc-overlay { background-color: "+o+"; }",document.head.appendChild(d)}catch(e){document.documentElement.classList.add("mdui-theme-auto")}}();</script><link rel=stylesheet href=/webui.483915c9.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/insets.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/colors.css><link rel=stylesheet href=/webui.67ba7ff5.css><link rel=stylesheet href=/webui.13a9bc0f.css><body>
+<!DOCTYPE html><html lang=zh-CN><script type=importmap>{"imports":{"6gGgd":"/logo.3823637e.png"}}</script><link rel=stylesheet href=/webui.5bccf37b.css><meta charset=UTF-8><meta name=viewport content="width=device-width, initial-scale=1.0"><meta http-equiv=Cache-Control content="no-cache, no-store, must-revalidate"><meta http-equiv=Pragma content=no-cache><meta http-equiv=Expires content=0><meta name=app-version content=v1.0.2-20251224><title>NetProxy</title><style>#fouc-overlay{z-index:99999;transition:opacity .15s ease-out;position:fixed;inset:0}#fouc-overlay.fade-out{opacity:0;pointer-events:none}</style><script>!function(){try{var e=localStorage.getItem("theme")||"auto",t=document.documentElement;t.classList.remove("mdui-theme-light","mdui-theme-dark","mdui-theme-auto");var a="dark"===e||"auto"===e&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;"light"===e?t.classList.add("mdui-theme-light"):"dark"===e?t.classList.add("mdui-theme-dark"):t.classList.add("mdui-theme-auto");var d=document.createElement("style"),o=a?"#141218":"#fef7ff";"auto"===e?d.textContent="#fouc-overlay { background-color: var(--background, "+o+"); }":d.textContent="#fouc-overlay { background-color: "+o+"; }",document.head.appendChild(d)}catch(e){document.documentElement.classList.add("mdui-theme-auto")}}();</script><link rel=stylesheet href=/webui.425275c0.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/insets.css><link rel=stylesheet href=https://mui.kernelsu.org/internal/colors.css><link rel=stylesheet href=/webui.67ba7ff5.css><link rel=stylesheet href=/webui.13a9bc0f.css><body>
   
   <div id=fouc-overlay></div>
 
@@ -208,14 +208,133 @@
           </mdui-collapse>
         </div>
       </div>
+
+      
+      <div id=settings-page class=page>
+        <div class=container>
+          <mdui-list>
+            
+            <mdui-list-item icon=article id=settings-logs-entry>
+              日志
+              <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            
+            <mdui-list-item icon=alt_route id=settings-routing-entry>
+              路由规则
+              <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            
+            <mdui-list-item icon=palette id=settings-theme>
+              主题
+              <span slot=description id=current-theme-text>自动</span>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            
+            <mdui-list-item icon=info id=settings-about>
+              关于
+              <mdui-icon slot=end-icon name=chevron_right></mdui-icon>
+            </mdui-list-item>
+          </mdui-list>
+        </div>
+      </div>
+
+      
+      <div id=routing-page class=page>
+        <div class=container>
+          <mdui-card variant=elevated class=compact-card>
+            <div style=padding:16px>
+              <h3 style="margin:0 0 8px">路由规则设置</h3>
+              <p style=color:var(--mdui-color-on-surface-variant);margin:0;font-size:14px>
+                开启的规则会被添加到 Xray 路由配置中
+              </p>
+            </div>
+          </mdui-card>
+
+          <mdui-list id=routing-list style=margin-top:16px>
+            <mdui-list-item>
+              Google CN 走代理
+              <span slot=description>googleapis.cn, gstatic.com</span>
+              <mdui-switch slot=end-icon id=route-google_cn></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              阻断 UDP 443
+              <span slot=description>阻止 QUIC 协议</span>
+              <mdui-switch slot=end-icon id=route-block_udp443></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              阻断广告
+              <span slot=description>geosite:category-ads-all</span>
+              <mdui-switch slot=end-icon id=route-block_ads></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过局域网 IP
+              <span slot=description>geoip:private</span>
+              <mdui-switch slot=end-icon id=route-bypass_lan_ip></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过局域网域名
+              <span slot=description>geosite:private</span>
+              <mdui-switch slot=end-icon id=route-bypass_lan_domain></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国公共 DNS IP
+              <span slot=description>阿里/腾讯/百度等 DNS 服务器 IP</span>
+              <mdui-switch slot=end-icon id=route-bypass_cn_dns_ip></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国公共 DNS 域名
+              <span slot=description>alidns.com, doh.pub 等</span>
+              <mdui-switch slot=end-icon id=route-bypass_cn_dns_domain></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国 IP
+              <span slot=description>geoip:cn</span>
+              <mdui-switch slot=end-icon id=route-bypass_cn_ip></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国域名
+              <span slot=description>geosite:cn</span>
+              <mdui-switch slot=end-icon id=route-bypass_cn_domain></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              最终代理
+              <span slot=description>兜底规则：其他流量走代理</span>
+              <mdui-switch slot=end-icon id=route-final_proxy></mdui-switch>
+            </mdui-list-item>
+          </mdui-list>
+
+          <div style=text-align:center;padding:16px>
+            <mdui-button variant=outlined id=routing-back-btn icon=arrow_back>
+              返回设置
+            </mdui-button>
+          </div>
+        </div>
+      </div>
     </mdui-layout-main>
 
     
     <mdui-navigation-bar value=status id=nav-bar>
       <mdui-navigation-bar-item icon=home value=status>状态</mdui-navigation-bar-item>
-      <mdui-navigation-bar-item icon=settings value=config>配置</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon=folder value=config>配置</mdui-navigation-bar-item>
       <mdui-navigation-bar-item icon=tune value=uid>代理</mdui-navigation-bar-item>
-      <mdui-navigation-bar-item icon=description value=logs>日志</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon=settings value=settings>设置</mdui-navigation-bar-item>
     </mdui-navigation-bar>
   </mdui-layout>
 
@@ -287,6 +406,6 @@
     <mdui-button slot=action variant=text id=app-selector-cancel>取消</mdui-button>
   </mdui-dialog>
 
-  <script type=module src=/webui.caefccd6.js></script>
+  <script type=module src=/webui.fdaa3efd.js></script>
 
 

@@ -5,6 +5,7 @@ import { StatusPageManager } from './status-page.js';
 import { ConfigPageManager } from './config-page.js';
 import { UIDPageManager } from './uid-page.js';
 import { LogsPageManager } from './logs-page.js';
+import { SettingsPageManager } from './settings-page.js';
 
 /**
  * UI 核心管理器
@@ -20,6 +21,7 @@ export class UI {
         this.configPage = new ConfigPageManager(this);
         this.uidPage = new UIDPageManager(this);
         this.logsPage = new LogsPageManager(this);
+        this.settingsPage = new SettingsPageManager(this);
 
         // 立即应用主题，避免闪烁
         this.applyTheme(this.currentTheme);

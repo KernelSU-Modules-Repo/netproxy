@@ -356,14 +356,133 @@
           </mdui-collapse>
         </div>
       </div>
+
+      <!-- Settings Page -->
+      <div id="settings-page" class="page">
+        <div class="container">
+          <mdui-list>
+            <!-- 日志入口 -->
+            <mdui-list-item icon="article" id="settings-logs-entry">
+              日志
+              <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <!-- 路由设置入口 -->
+            <mdui-list-item icon="alt_route" id="settings-routing-entry">
+              路由规则
+              <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <!-- 主题设置 -->
+            <mdui-list-item icon="palette" id="settings-theme">
+              主题
+              <span slot="description" id="current-theme-text">自动</span>
+            </mdui-list-item>
+
+            <mdui-divider></mdui-divider>
+
+            <!-- 关于 -->
+            <mdui-list-item icon="info" id="settings-about">
+              关于
+              <mdui-icon slot="end-icon" name="chevron_right"></mdui-icon>
+            </mdui-list-item>
+          </mdui-list>
+        </div>
+      </div>
+
+      <!-- Routing Page -->
+      <div id="routing-page" class="page">
+        <div class="container">
+          <mdui-card variant="elevated" class="compact-card">
+            <div style="padding: 16px;">
+              <h3 style="margin: 0 0 8px;">路由规则设置</h3>
+              <p style="margin: 0; color: var(--mdui-color-on-surface-variant); font-size: 14px;">
+                开启的规则会被添加到 Xray 路由配置中
+              </p>
+            </div>
+          </mdui-card>
+
+          <mdui-list id="routing-list" style="margin-top: 16px;">
+            <mdui-list-item>
+              Google CN 走代理
+              <span slot="description">googleapis.cn, gstatic.com</span>
+              <mdui-switch slot="end-icon" id="route-google_cn"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              阻断 UDP 443
+              <span slot="description">阻止 QUIC 协议</span>
+              <mdui-switch slot="end-icon" id="route-block_udp443"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              阻断广告
+              <span slot="description">geosite:category-ads-all</span>
+              <mdui-switch slot="end-icon" id="route-block_ads"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过局域网 IP
+              <span slot="description">geoip:private</span>
+              <mdui-switch slot="end-icon" id="route-bypass_lan_ip"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过局域网域名
+              <span slot="description">geosite:private</span>
+              <mdui-switch slot="end-icon" id="route-bypass_lan_domain"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国公共 DNS IP
+              <span slot="description">阿里/腾讯/百度等 DNS 服务器 IP</span>
+              <mdui-switch slot="end-icon" id="route-bypass_cn_dns_ip"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国公共 DNS 域名
+              <span slot="description">alidns.com, doh.pub 等</span>
+              <mdui-switch slot="end-icon" id="route-bypass_cn_dns_domain"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国 IP
+              <span slot="description">geoip:cn</span>
+              <mdui-switch slot="end-icon" id="route-bypass_cn_ip"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              绕过中国域名
+              <span slot="description">geosite:cn</span>
+              <mdui-switch slot="end-icon" id="route-bypass_cn_domain"></mdui-switch>
+            </mdui-list-item>
+
+            <mdui-list-item>
+              最终代理
+              <span slot="description">兜底规则：其他流量走代理</span>
+              <mdui-switch slot="end-icon" id="route-final_proxy"></mdui-switch>
+            </mdui-list-item>
+          </mdui-list>
+
+          <div style="padding: 16px; text-align: center;">
+            <mdui-button variant="outlined" id="routing-back-btn" icon="arrow_back">
+              返回设置
+            </mdui-button>
+          </div>
+        </div>
+      </div>
     </mdui-layout-main>
 
     <!-- Bottom Navigation -->
     <mdui-navigation-bar value="status" id="nav-bar">
       <mdui-navigation-bar-item icon="home" value="status">状态</mdui-navigation-bar-item>
-      <mdui-navigation-bar-item icon="settings" value="config">配置</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon="folder" value="config">配置</mdui-navigation-bar-item>
       <mdui-navigation-bar-item icon="tune" value="uid">代理</mdui-navigation-bar-item>
-      <mdui-navigation-bar-item icon="description" value="logs">日志</mdui-navigation-bar-item>
+      <mdui-navigation-bar-item icon="settings" value="settings">设置</mdui-navigation-bar-item>
     </mdui-navigation-bar>
   </mdui-layout>
 
