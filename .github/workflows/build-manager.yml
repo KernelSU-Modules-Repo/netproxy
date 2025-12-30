@@ -1,0 +1,70 @@
+name: 构建 Manager
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'Manager/**'
+  pull_request:
+    paths:
+      - 'Manager/**'
+
+jobs:
+  build:
+    name: 构建 APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 拉取代码
+        uses: actions/checkout@v4
+        with:
+          submodules: "recursive"
+          fetch-depth: 0
+
+      - name: 写入签名密钥
+        if: ${{ ( github.event_name != 'pull_request' && github.ref == 'refs/heads/main' ) || github.ref_type == 'tag' }}
+        working-directory: Manager
+        run: |
+          if [ ! -z "${{ secrets.KEY_STORE }}" ]; then
+            echo storePassword='${{ secrets.KEY_STORE_PASSWORD }}' >> keystore.properties
+            echo keyAlias='${{ secrets.ALIAS }}' >> keystore.properties
+            echo keyPassword='${{ secrets.KEY_PASSWORD }}' >> keystore.properties
+            echo storeFile=$PWD/'key.jks' >> keystore.properties
+            echo '${{ secrets.KEY_STORE }}' | base64 --decode > key.jks
+          fi
+
+      - name: 设置 Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: 设置 Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 构建 APK
+        working-directory: Manager
+        run: |
+          ./gradlew assemble
+
+      - name: 上传 Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: "NetProxy-release"
+          path: "Manager/app/build/outputs/apk/release/*.apk"
+          compression-level: 9
+
+      - name: 上传 Release Mapping
+        uses: actions/upload-artifact@v4
+        with:
+          name: "NetProxy-release-mappings"
+          path: "Manager/app/build/outputs/mapping/release"
+          compression-level: 9
+
+      - name: 上传 Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: "NetProxy-debug"
+          path: "Manager/app/build/outputs/apk/debug/*.apk"
+          compression-level: 9
