@@ -50,6 +50,7 @@ mdui-navigation-bar-item[active]::part(label) {
 
 mdui-button {
   --mdui-comp-filled-button-container-color: var(--monet-primary);
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
 }
 
 mdui-button[variant="filled"] {
@@ -89,8 +90,8 @@ mdui-list-item.config-item mdui-dropdown[slot="end-icon"] mdui-button-icon {
 /* ==================== 浮动操作按钮 FAB ==================== */
 
 mdui-fab {
-  background-color: var(--monet-primary-container, var(--mdui-color-primary-container)) !important;
-  color: var(--monet-on-primary-container, var(--mdui-color-on-primary-container)) !important;
+  background-color: var(--monet-primary, var(--mdui-color-primary)) !important;
+  color: var(--monet-on-primary, var(--mdui-color-on-primary)) !important;
 }
 
 /* ==================== 芯片 Chip ==================== */
@@ -98,6 +99,10 @@ mdui-fab {
 mdui-chip {
   background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
   color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+mdui-chip::part(icon) {
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
 }
 
 /* ==================== 分段按钮组 Segmented Button ==================== */
@@ -425,4 +430,41 @@ mdui-checkbox:hover::part(control) {
 /* 复选框聚焦状态 */
 mdui-checkbox:focus-visible::part(control) {
   outline-color: var(--monet-primary, var(--mdui-color-primary)) !important;
+}
+
+/* ==================== 开关 Switch ==================== */
+
+mdui-switch {
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
+}
+
+/* 开关 - 轨道背景色（未选中状态） */
+mdui-switch:not([checked])::part(track) {
+  background-color: var(--monet-surface-variant, var(--mdui-color-surface-variant)) !important;
+}
+
+/* 开关 - 轨道背景色（选中状态） */
+mdui-switch[checked]::part(track) {
+  background-color: var(--monet-primary-container, var(--mdui-color-primary-container)) !important;
+}
+
+/* 开关 - 圆形 thumb 背景色（未选中状态） */
+mdui-switch:not([checked])::part(thumb) {
+  background-color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
+}
+
+/* 开关 - 圆形 thumb 背景色（选中状态） */
+mdui-switch[checked]::part(thumb) {
+  background-color: var(--monet-primary, var(--mdui-color-primary)) !important;
+}
+
+/* 开关 - 选中状态的图标颜色 */
+mdui-switch[checked]::part(checked-icon) {
+  color: var(--monet-on-primary, var(--mdui-color-on-primary)) !important;
+}
+
+/* ==================== 分割线 Divider ==================== */
+
+mdui-divider {
+  background-color: var(--monet-outline-variant, var(--mdui-color-outline-variant)) !important;
 }

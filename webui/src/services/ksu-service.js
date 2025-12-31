@@ -861,6 +861,11 @@ export class KSUService {
         return { success: true };
     }
 
+    // 打开外部浏览器
+    static async openExternalUrl(url) {
+        await exec(`am start -a android.intent.action.VIEW -d "${url}"`);
+    }
+
     // ===================== 路由规则管理 =====================
 
     // 获取路由规则列表

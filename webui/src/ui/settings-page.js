@@ -476,6 +476,9 @@ export class SettingsPageManager {
                 }
             });
         }
+
+        // 莫奈取色开关
+        this.setupMonetToggle();
     }
 
     loadThemeSettings() {
@@ -490,6 +493,9 @@ export class SettingsPageManager {
 
         // 设置颜色选择
         this.updateColorSelection(savedColor);
+
+        // 设置莫奈取色开关状态
+        this.updateMonetToggleState();
     }
 
     updateColorSelection(selectedColor) {
@@ -506,12 +512,29 @@ export class SettingsPageManager {
     applyThemeMode(mode) {
         localStorage.setItem('theme', mode);
         setTheme(mode);
+        this.updateMonetToggleState();
         toast(`已切换到${mode === 'auto' ? '自动' : mode === 'light' ? '浅色' : '深色'}模式`);
     }
 
     applyThemeColor(color) {
         localStorage.setItem('themeColor', color);
+        
+        const monetEnabled = localStorage.getItem('monetEnabled') === 'true';
+        const savedTheme = localStorage.getItem('theme') || 'auto';
+        const isAutoMode = savedTheme === 'auto';
+        
+        if (isAutoMode && !monetEnabled) {
+            const root = document.documentElement;
+            root.style.setProperty('--monet-primary', color);
+            root.style.setProperty('--monet-primary-container', color + '30');
+            root.style.setProperty('--monet-on-primary', '#ffffff');
+            root.style.setProperty('--monet-on-primary-container', color);
+            root.style.setProperty('--monet-secondary-container', color + '30');
+            root.style.setProperty('--monet-on-secondary-container', color);
+        }
+        
         setColorScheme(color);
+        this.updateMonetToggleState();
         toast('主题色已更改');
     }
 
@@ -525,8 +548,91 @@ export class SettingsPageManager {
         if (savedColor) {
             setColorScheme(savedColor);
         }
+
+        // 应用莫奈取色设置
+        const savedMonet = localStorage.getItem('monetEnabled');
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const html = document.documentElement;
+
+        if (savedMonet === 'true' && savedTheme === 'auto') {
+            html.classList.add('mdui-theme-auto');
+            html.classList.remove('mdui-theme-light', 'mdui-theme-dark');
+        } else if (savedTheme === 'auto') {
+            html.classList.remove('mdui-theme-auto');
+            html.classList.add(isDark ? 'mdui-theme-dark' : 'mdui-theme-light');
+
+            // 自动模式 + 莫奈取色关闭：手动设置 Monet 变量以应用用户选择的主题色
+            if (savedColor) {
+                html.style.setProperty('--monet-primary', savedColor);
+                html.style.setProperty('--monet-primary-container', savedColor + '30');
+                html.style.setProperty('--monet-on-primary', '#ffffff');
+                html.style.setProperty('--monet-on-primary-container', savedColor);
+                html.style.setProperty('--monet-secondary-container', savedColor + '30');
+                html.style.setProperty('--monet-on-secondary-container', savedColor);
+            }
+        }
     }
 
+    setupMonetToggle() {
+        const monetToggle = document.getElementById('monet-toggle');
+        if (!monetToggle) return;
+
+        monetToggle.addEventListener('change', (e) => {
+            const enabled = e.target.checked;
+            localStorage.setItem('monetEnabled', enabled);
+            this.applyMonetSetting(enabled);
+            toast(`莫奈取色已${enabled ? '启用' : '禁用'}`);
+        });
+    }
+
+    updateMonetToggleState() {
+        const savedTheme = localStorage.getItem('theme') || 'auto';
+        const monetToggle = document.getElementById('monet-toggle');
+        const savedMonet = localStorage.getItem('monetEnabled');
+
+        if (monetToggle) {
+            if (savedTheme === 'auto') {
+                monetToggle.disabled = false;
+                if (savedMonet !== null) {
+                    monetToggle.checked = savedMonet === 'true';
+                } else {
+                    monetToggle.checked = true;
+                }
+                this.applyMonetSetting(monetToggle.checked);
+            } else {
+                monetToggle.disabled = true;
+                monetToggle.checked = false;
+            }
+        }
+    }
+
+    applyMonetSetting(enabled) {
+        const html = document.documentElement;
+        const savedColor = localStorage.getItem('themeColor') || '#6750A4';
+        const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+        if (enabled) {
+            html.classList.add('mdui-theme-auto');
+            html.classList.remove('mdui-theme-light', 'mdui-theme-dark');
+            html.style.removeProperty('--monet-primary');
+            html.style.removeProperty('--monet-primary-container');
+            html.style.removeProperty('--monet-on-primary');
+            html.style.removeProperty('--monet-on-primary-container');
+            html.style.removeProperty('--monet-secondary-container');
+            html.style.removeProperty('--monet-on-secondary-container');
+            setColorScheme(savedColor);
+        } else {
+            html.classList.remove('mdui-theme-auto');
+            html.classList.add(isDark ? 'mdui-theme-dark' : 'mdui-theme-light');
+            html.style.setProperty('--monet-primary', savedColor);
+            html.style.setProperty('--monet-primary-container', savedColor + '30');
+            html.style.setProperty('--monet-on-primary', '#ffffff');
+            html.style.setProperty('--monet-on-primary-container', savedColor);
+            html.style.setProperty('--monet-secondary-container', savedColor + '30');
+            html.style.setProperty('--monet-on-secondary-container', savedColor);
+            setColorScheme(savedColor);
+        }
+    }
 
     showAboutDialog() {
         const dialog = document.createElement('mdui-dialog');
@@ -544,28 +650,36 @@ export class SettingsPageManager {
             <mdui-divider></mdui-divider>
             <mdui-list>
                 <mdui-list-item id="about-github">
+                    <mdui-icon slot="icon" class="mdui-color-on-surface-variant" style="width: 24px; height: 24px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                        </svg>
+                    </mdui-icon>
                     GitHub
-                    <mdui-icon slot="end-icon" name="content_copy"></mdui-icon>
                 </mdui-list-item>
                 <mdui-list-item id="about-telegram">
+                    <mdui-icon slot="icon" class="mdui-color-on-surface-variant" style="width: 24px; height: 24px;">
+                        <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                            <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.696.064-1.225-.46-1.901-.903-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.477-1.635.099-.002.321.023.465.141.121.1.154.234.17.331.015.099.034.323.019.498z"/>
+                        </svg>
+                    </mdui-icon>
                     Telegram 群组
-                    <mdui-icon slot="end-icon" name="content_copy"></mdui-icon>
                 </mdui-list-item>
             </mdui-list>
             <mdui-button slot="action" variant="text">关闭</mdui-button>
         `;
 
         document.body.appendChild(dialog);
-        dialog.open = true;
+        requestAnimationFrame(() => {
+            dialog.open = true;
+        });
 
         dialog.querySelector('#about-github')?.addEventListener('click', () => {
-            navigator.clipboard.writeText('https://github.com/Fanju6/NetProxy-Magisk');
-            toast('GitHub 链接已复制');
+            KSUService.openExternalUrl('https://github.com/Fanju6/NetProxy-Magisk');
         });
 
         dialog.querySelector('#about-telegram')?.addEventListener('click', () => {
-            navigator.clipboard.writeText('https://t.me/NetProxy_Magisk');
-            toast('Telegram 链接已复制');
+            KSUService.openExternalUrl('https://t.me/NetProxy_Magisk');
         });
 
         dialog.querySelector('mdui-button').addEventListener('click', () => {
