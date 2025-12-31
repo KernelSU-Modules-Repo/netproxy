@@ -10,12 +10,16 @@ readonly XRAY_LOG_FILE="$MODDIR/logs/xray.log"
 readonly CONFDIR="$MODDIR/config/xray/confdir"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
 
+
 # 根据运行环境设置 busybox 路径
-# 判断 /data/adb/ksu/bin/busybox 是否存在
 if [ -f "/data/adb/ksu/bin/busybox" ]; then
     BUSYBOX="/data/adb/ksu/bin/busybox"
-else
+elif [ -f "/data/adb/ap/bin/busybox" ]; then
+    BUSYBOX="/data/adb/ap/bin/busybox"
+elif [ -f "/data/adb/magisk/busybox" ]; then
     BUSYBOX="/data/adb/magisk/busybox"
+else
+    BUSYBOX="busybox"
 fi
 
 #######################################
