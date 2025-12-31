@@ -8,7 +8,7 @@ import www.netproxy.web.ui.R
 class ProxyStatusTileService : TileService() {
     
     companion object {
-        private const val STATUS_FILE = "/data/adb/modules/netproxy/config/status.conf"
+        private const val XRAY_BIN = "/data/adb/modules/netproxy/bin/xray"
         private const val START_SCRIPT = "/data/adb/modules/netproxy/scripts/core/start.sh"
         private const val STOP_SCRIPT = "/data/adb/modules/netproxy/scripts/core/stop.sh"
     }
@@ -37,16 +37,9 @@ class ProxyStatusTileService : TileService() {
     }
     
     private fun getProxyStatus(): Boolean {
-        val result = Shell.cmd("cat $STATUS_FILE").exec()
-        if (result.isSuccess && result.out.isNotEmpty()) {
-            for (line in result.out) {
-                if (line.startsWith("status=")) {
-                    val status = line.substringAfter("status=").trim().replace("\"", "")
-                    return status == "running"
-                }
-            }
-        }
-        return false
+        // 使用 pidof 检查 xray 进程是否运行
+        val result = Shell.cmd("pidof -s $XRAY_BIN").exec()
+        return result.isSuccess && result.out.isNotEmpty() && result.out[0].isNotBlank()
     }
     
     private fun updateTileState() {
