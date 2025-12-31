@@ -40,20 +40,6 @@ jobs:
       - name: 构建 WebUI
         run: python webui/build_webui.py
 
-      - name: 推送 WebUI 产物到仓库
-        run: |
-          git config --global user.name "NetProxyBot"
-          git config --global user.email "bot@netproxy.io"
-          
-          git add NetProxy-Module/webroot
-          
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "chore: update webui build artifacts"
-            git push
-          fi
-
       - name: 上传构建产物
         uses: actions/upload-artifact@v4
         with:
