@@ -264,7 +264,8 @@ mdui-list-item.config-item::part(ripple) {
 mdui-collapse {
   background-color: var(--monet-surface-container-low, var(--mdui-color-surface-container-low)) !important;
   border-radius: 12px;
-  overflow: hidden; /* 确保子元素不超出圆角边界 */
+  overflow: hidden;
+  /* 确保子元素不超出圆角边界 */
 }
 
 mdui-collapse-item {
@@ -342,6 +343,45 @@ mdui-menu-item::part(label) {
 
 mdui-menu-item:hover {
   background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
+}
+
+/* ==================== 选择器 Select ==================== */
+
+mdui-select {
+  /* 覆盖 MDUI select 的主色为 Monet 主色 */
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
+  /* 覆盖表面容器色为 Monet 表面色 */
+  --mdui-color-surface-container-highest: var(--monet-surface-container-highest, var(--mdui-color-surface-container-highest));
+  /* 覆盖轮廓颜色为 Monet 轮廓色 */
+  --mdui-color-outline: var(--monet-outline, var(--mdui-color-outline));
+  --mdui-color-outline-variant: var(--monet-outline-variant, var(--mdui-color-outline-variant));
+  /* 覆盖表面容器色 */
+  --mdui-color-surface-container: var(--monet-surface-container, var(--mdui-color-surface-container));
+}
+
+/* 选择器触发器 - 保持边框可见，使用 Monet 颜色 */
+mdui-select::part(text-field) {
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
+  --mdui-color-outline: var(--monet-outline, var(--mdui-color-outline));
+}
+
+/* 选择器弹出菜单 - 背景色使用 Monet 表面色 */
+mdui-select::part(menu) {
+  background-color: var(--monet-surface-container, var(--mdui-color-surface-container)) !important;
+}
+
+/* 选择器内的菜单项 */
+mdui-select mdui-menu-item {
+  color: var(--monet-on-surface, var(--mdui-color-on-surface)) !important;
+}
+
+mdui-select mdui-menu-item:hover {
+  background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
+}
+
+/* 选择器聚焦状态 - 底部边框线使用 Monet 主色 */
+mdui-select[focused]::part(text-field) {
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
 }
 
 /* ==================== 进度指示器 ==================== */
