@@ -498,17 +498,13 @@ export class KSUService {
     // 获取ping延迟
     static async getPingLatency(host) {
         try {
-            const result = await exec(`ping -c 1 -W 1 ${host} 2>&1 | grep 'time=' | awk -F 'time=' '{print $2}' | awk '{print $1}'`);
-
-            if (result.errno === 0 && result.stdout.trim()) {
-                const latency = parseFloat(result.stdout.trim());
-                if (!isNaN(latency)) {
-                    return `${Math.round(latency)} ms`;
-                }
+            const { stdout } = await exec(`ping -c 1 -W 1 ${host}`);
+            const match = stdout.match(/time=([\d.]+)\s*ms/);
+            if (match) {
+                return `${Math.round(parseFloat(match[1]))} ms`;
             }
             return '超时';
-        } catch (error) {
-            console.error(`Failed to ping ${host}:`, error);
+        } catch {
             return '失败';
         }
     }
