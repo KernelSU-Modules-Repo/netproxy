@@ -476,21 +476,21 @@ export class KSUService {
     // 获取Xray内存占用
     static async getMemoryUsage() {
         try {
-            const result = await exec(`ps -o rss,comm | grep xray | grep -v grep | awk '{sum+=$1} END {print sum}'`);
-            if (result.errno !== 0 || !result.stdout || result.stdout.trim() === '') {
-                return '--';
-            }
-
-            const memoryKB = parseInt(result.stdout.trim()) || 0;
-            if (memoryKB === 0) return '--';
-
-            if (memoryKB > 1024) {
-                return `${(memoryKB / 1024).toFixed(1)} MB`;
-            } else {
-                return `${memoryKB} KB`;
-            }
+            const result = await exec(`
+                pid=$(pidof xray | awk '{print $1}')
+                if [ -n "$pid" ] && [ -r "/proc/$pid/status" ]; then
+                    memKB=$(awk '/VmRSS:/ {print $2}' /proc/$pid/status)
+                    if [ "$memKB" -gt 1024 ]; then
+                        echo "$((memKB/1024)) MB"
+                    else
+                        echo "$memKB KB"
+                    fi
+                else
+                    echo "--"
+                fi
+            `);
+            return (result.errno === 0 && result.stdout.trim()) ? result.stdout.trim() : '--';
         } catch (error) {
-            console.error('Get memory usage error:', error);
             return '--';
         }
     }
