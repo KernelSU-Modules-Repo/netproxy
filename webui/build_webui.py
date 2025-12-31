@@ -43,11 +43,22 @@ def clear_target_dir():
     """清空目标目录"""
     print(f"清空目标目录: {TARGET_DIR}")
     if os.path.exists(TARGET_DIR):
-        file_count = sum(len(files) for _, _, files in os.walk(TARGET_DIR))
-        print(f"  清空前目录包含 {file_count} 个文件")
-        shutil.rmtree(TARGET_DIR)
-    os.makedirs(TARGET_DIR, exist_ok=True)
-    print(f"  已重建目标目录: {TARGET_DIR}")
+        file_count = 0
+        for item in os.listdir(TARGET_DIR):
+            item_path = os.path.join(TARGET_DIR, item)
+            # 保留 .gitkeep 文件
+            if item == '.gitkeep':
+                continue
+            if os.path.isfile(item_path):
+                os.remove(item_path)
+                file_count += 1
+            elif os.path.isdir(item_path):
+                shutil.rmtree(item_path)
+                file_count += 1
+        print(f"  清空了 {file_count} 个文件")
+    else:
+        os.makedirs(TARGET_DIR, exist_ok=True)
+        print(f"  已创建目标目录: {TARGET_DIR}")
 
 def verify_build_files():
     """验证构建文件是否完整"""
