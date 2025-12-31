@@ -416,19 +416,19 @@ export class KSUService {
     // 获取服务运行时间
     static async getUptime() {
         try {
-            const result = await exec(`ps -o etime= -C xray 2>/dev/null | head -1 | tr -d ' '`);
-
-            if (result.errno === 0 && result.stdout.trim()) {
-                return result.stdout.trim();
-            }
-
-            const fallback = await exec(`ps -eo etime,comm | grep xray | grep -v grep | head -1 | awk '{print $1}'`);
-
-            if (fallback.errno === 0 && fallback.stdout.trim()) {
-                return fallback.stdout.trim();
-            }
-
-            return '--';
+            const result = await exec(`
+                pid=$(pidof xray) || exit 1
+                awk 'BEGIN {
+                    getline u < "/proc/uptime"; split(u, a, " ")
+                    getline s < "/proc/'"$pid"'/stat"; split(s, b, " ")
+                    "getconf CLK_TCK" | getline h
+                    t = int(a[1] - b[22] / h)
+                    d = int(t / 86400); h = int((t % 86400) / 3600); m = int((t % 3600) / 60); s = t % 60
+                    if (d > 0) printf "%d-%02d:%02d:%02d", d, h, m, s
+                    else printf "%02d:%02d:%02d", h, m, s
+                }'
+            `);
+            return (result.errno === 0 && result.stdout.trim()) ? result.stdout.trim() : '--';
         } catch (error) {
             return '--';
         }
