@@ -379,19 +379,38 @@ mdui-select mdui-menu-item:hover {
   background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
 }
 
-/* 选择器聚焦状态 - 底部边框线使用 Monet 主色 */
-mdui-select[focused]::part(text-field) {
-  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
+/* 修复 select 下拉菜单项文字对齐问题 - 彻底移除图标占位 */
+mdui-select mdui-menu-item::part(container) {
+  padding-left: 16px !important;
+  padding-right: 16px !important;
+  justify-content: flex-start !important;
 }
 
-/* ==================== 进度指示器 ==================== */
+mdui-select mdui-menu-item::part(selected-icon),
+mdui-select mdui-menu-item::part(icon) {
+  display: none !important;
+}
 
+mdui-select mdui-menu-item::part(label) {
+  text-align: left !important;
+  flex: 1 !important;
+}
+
+/* 确保选中项有明显的背景色区分（因为移除了勾选图标） */
+mdui-select mdui-menu-item[selected]::part(container) {
+  background-color: var(--monet-secondary-container, var(--mdui-color-secondary-container)) !important;
+}
+
+mdui-select mdui-menu-item[selected] {
+  color: var(--monet-on-secondary-container, var(--mdui-color-on-secondary-container)) !important;
+}
+
+/* 进度指示器颜色覆盖 */
 mdui-circular-progress {
   /* 覆盖 MDUI circular-progress 的指示器颜色为 Monet 主色 */
   --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
 }
 
-/* 使用 ::part 选择器确保颜色正确应用到 Shadow DOM 内部 */
 mdui-circular-progress::part(indicator) {
   stroke: var(--monet-primary, var(--mdui-color-primary)) !important;
 }
