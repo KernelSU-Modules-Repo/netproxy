@@ -269,33 +269,83 @@ export class ConfigPageManager {
         });
 
         // 2. 创建所有 tab-panel
+        // 2. 创建所有 tab-panel
         for (const group of this._cachedGroups) {
             const panel = document.createElement('mdui-tab-panel');
             panel.slot = 'panel';
             panel.value = group.name;
 
-            // 订阅分组添加操作按钮
+            // 操作栏 (Toolbar)
+            const actions = document.createElement('div');
+            actions.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px 16px;';
+
+            // 左侧标题
+            const title = document.createElement('span');
+            title.textContent = '节点列表';
+            title.style.cssText = 'font-size: 14px; font-weight: 500; color: var(--mdui-color-on-surface-variant);';
+            actions.appendChild(title);
+
+            // 右侧菜单按钮
+            const dropdown = document.createElement('mdui-dropdown');
+            dropdown.setAttribute('placement', 'bottom-end');
+
+            const triggerBtn = document.createElement('mdui-button-icon');
+            triggerBtn.slot = 'trigger';
+            triggerBtn.setAttribute('icon', 'more_vert');
+            dropdown.appendChild(triggerBtn);
+
+            const menu = document.createElement('mdui-menu');
+
+            // 全部测试
+            const testItem = document.createElement('mdui-menu-item');
+            testItem.innerHTML = '<mdui-icon slot="icon" name="playlist_play"></mdui-icon>全部测试';
+            testItem.addEventListener('click', () => {
+                dropdown.open = false;
+                this.testGroupLatency(group.name);
+            });
+            menu.appendChild(testItem);
+
+            // 按延迟排序
+            const sortItem = document.createElement('mdui-menu-item');
+            sortItem.innerHTML = '<mdui-icon slot="icon" name="sort"></mdui-icon>按延迟排序';
+            sortItem.addEventListener('click', () => {
+                dropdown.open = false;
+                this.sortGroupNodes(group.name);
+            });
+            menu.appendChild(sortItem);
+
+            // 清理无效节点
+            const cleanItem = document.createElement('mdui-menu-item');
+            cleanItem.innerHTML = '<mdui-icon slot="icon" name="delete_sweep"></mdui-icon>清理无效节点';
+            cleanItem.style.color = 'var(--mdui-color-error)';
+            cleanItem.addEventListener('click', () => {
+                dropdown.open = false;
+                this.deleteInvalidNodes(group.name);
+            });
+            menu.appendChild(cleanItem);
+
+            // 订阅专用操作
             if (group.type === 'subscription') {
-                const actions = document.createElement('div');
-                actions.style.cssText = 'display: flex; justify-content: flex-end; gap: 8px; padding: 8px 0;';
+                const updateItem = document.createElement('mdui-menu-item');
+                updateItem.innerHTML = '<mdui-icon slot="icon" name="refresh"></mdui-icon>更新订阅';
+                updateItem.addEventListener('click', () => {
+                    dropdown.open = false;
+                    this.updateSubscription(group.dirName, group.name);
+                });
+                menu.appendChild(updateItem);
 
-                const refreshBtn = document.createElement('mdui-button');
-                refreshBtn.setAttribute('icon', 'refresh');
-                refreshBtn.setAttribute('variant', 'text');
-                refreshBtn.textContent = '刷新';
-                refreshBtn.addEventListener('click', () => this.updateSubscription(group.dirName));
-                actions.appendChild(refreshBtn);
-
-                const deleteBtn = document.createElement('mdui-button');
-                deleteBtn.setAttribute('icon', 'delete');
-                deleteBtn.setAttribute('variant', 'text');
-                deleteBtn.style.color = 'var(--mdui-color-error)';
-                deleteBtn.textContent = '删除';
-                deleteBtn.addEventListener('click', () => this.deleteSubscription(group.dirName, group.name));
-                actions.appendChild(deleteBtn);
-
-                panel.appendChild(actions);
+                const deleteItem = document.createElement('mdui-menu-item');
+                deleteItem.innerHTML = '<mdui-icon slot="icon" name="delete"></mdui-icon>删除订阅';
+                deleteItem.addEventListener('click', () => {
+                    dropdown.open = false;
+                    this.deleteSubscription(group.dirName, group.name);
+                });
+                menu.appendChild(deleteItem);
             }
+
+            dropdown.appendChild(menu);
+            actions.appendChild(dropdown);
+            panel.appendChild(actions);
 
             // 创建列表容器
             const list = document.createElement('mdui-list');
@@ -522,12 +572,15 @@ export class ConfigPageManager {
                 latencyLabel.textContent = '测试中...';
                 latencyLabel.style.color = 'var(--mdui-color-on-surface-variant)';
             }
-            const latency = await KSUService.getPingLatency(address);
+            const latencyStr = await KSUService.getPingLatency(address);
+            let latencyVal = 9999;
+
             if (latencyLabel) {
-                latencyLabel.textContent = latency;
+                latencyLabel.textContent = latencyStr;
                 // 根据延迟值设置颜色
-                const ms = parseInt(latency);
+                const ms = parseInt(latencyStr);
                 if (!isNaN(ms)) {
+                    latencyVal = ms;
                     if (ms < 100) {
                         latencyLabel.style.color = '#4caf50'; // 绿色
                     } else if (ms < 300) {
@@ -535,14 +588,124 @@ export class ConfigPageManager {
                     } else {
                         latencyLabel.style.color = '#f44336'; // 红色
                     }
+                } else if (latencyStr === '失败' || latencyStr === '超时') {
+                    latencyLabel.style.color = '#f44336';
                 }
             }
+
+            // 缓存测试结果，用于排序和清理
+            // config-list-item 的 dataset.filename 是文件名
+            const filename = itemElement?.dataset.filename || displayName + '.json'; // 尽可能获取文件名
+            // 找到对应的 group 和 info
+            for (const [groupName, infos] of this._cachedConfigInfos.entries()) {
+                if (infos.has(filename)) {
+                    const info = infos.get(filename);
+                    info.latency = latencyVal;
+                    info.latencyStr = latencyStr;
+                    break;
+                }
+            }
+
         } catch (error) {
             if (latencyLabel) {
                 latencyLabel.textContent = '失败';
                 latencyLabel.style.color = '#f44336';
             }
         }
+    }
+
+    // 批量测试延迟
+    async testGroupLatency(groupName) {
+        const group = this._cachedGroups.find(g => g.name === groupName);
+        if (!group) return;
+
+        const listEl = document.getElementById(`config-list-${groupName}`);
+        if (!listEl) return;
+
+        const items = Array.from(listEl.querySelectorAll('.config-item'));
+        const total = items.length;
+        if (total === 0) {
+            toast('没有可测试的节点');
+            return;
+        }
+
+        const toastId = toast(`开始测试 ${total} 个节点...`, 0); // 持续显示
+
+        // 并发控制，每次 5 个
+        const concurrency = 5;
+        for (let i = 0; i < total; i += concurrency) {
+            const chunk = items.slice(i, i + concurrency);
+            await Promise.all(chunk.map(async (item) => {
+                const filename = item.dataset.filename;
+                const info = this._cachedConfigInfos.get(groupName)?.get(filename);
+                if (info && info.address) {
+                    await this.testConfig(filename.replace(/\.json$/i, ''), info.address, item);
+                }
+            }));
+        }
+
+        // 关闭 toast (重新显示一个自动消失的)
+        // mdui 没提供直接关闭 toast 的 api，只能发个新的覆盖
+        toast('测试完成');
+    }
+
+    // 按延迟排序
+    async sortGroupNodes(groupName) {
+        const group = this._cachedGroups.find(g => g.name === groupName);
+        if (!group) return;
+
+        const infos = this._cachedConfigInfos.get(groupName);
+        if (!infos) return; // 还没加载过
+
+        // 排序：有延迟的在前（按数值升序），没延迟的在后（保持原序或排最后）
+        group.configs.sort((a, b) => {
+            const latA = infos.get(a)?.latency ?? 99999;
+            const latB = infos.get(b)?.latency ?? 99999;
+            return latA - latB;
+        });
+
+        toast('已重新排序');
+        await this.renderActiveTab(groupName);
+    }
+
+    // 清理无效节点 (失败/超时)
+    async deleteInvalidNodes(groupName) {
+        const infos = this._cachedConfigInfos.get(groupName);
+        if (!infos) {
+            toast('请先进行测试');
+            return;
+        }
+
+        const invalidFiles = [];
+        for (const [filename, info] of infos.entries()) {
+            if (info.latencyStr === '失败' || info.latencyStr === '超时') {
+                invalidFiles.push(filename);
+            }
+        }
+
+        if (invalidFiles.length === 0) {
+            toast('没有发现无效节点 (需先测试)');
+            return;
+        }
+
+        const confirmed = await this.ui.confirm(`发现 ${invalidFiles.length} 个无效节点，确定要删除吗？\n\n这属于破坏性操作，无法恢复。`);
+        if (!confirmed) return;
+
+        const group = this._cachedGroups.find(g => g.name === groupName);
+        let successCount = 0;
+
+        for (const filename of invalidFiles) {
+            const fullPath = group.dirName ? `${group.dirName}/${filename}` : filename;
+            const result = await KSUService.deleteConfig(fullPath);
+            if (result && result.success) {
+                successCount++;
+            }
+        }
+
+        toast(`已清理 ${successCount} 个节点`);
+        // 强制刷新
+        this._cachedConfigInfos.delete(groupName);
+        this.update();
     }
 
     async deleteConfig(fullPath, displayName) {
@@ -575,16 +738,16 @@ export class ConfigPageManager {
 
     // ===================== 订阅管理 =====================
 
-    async updateSubscription(name) {
+    async updateSubscription(dirName, displayName) {
         toast(`正在更新订阅...`);
 
         // 使用 setTimeout 让浏览器先渲染 UI
         setTimeout(async () => {
             try {
-                await KSUService.updateSubscription(name);
+                // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
+                await KSUService.updateSubscription(displayName);
                 toast('订阅更新成功');
                 // 清除该分组的缓存，强制重新加载
-                const displayName = name.startsWith('sub_') ? name.slice(4) : name;
                 this._cachedConfigInfos.delete(displayName);
                 this.update();
             } catch (error) {
@@ -596,11 +759,13 @@ export class ConfigPageManager {
 
     async deleteSubscription(dirName, displayName) {
         try {
-            const confirmed = await this.ui.confirm(`确定要删除订阅 "${displayName || dirName}" 吗？\n\n该订阅下的所有节点都将被删除。`);
+            const confirmed = await this.ui.confirm(`确定要删除订阅 "${displayName}" 吗？\n\n该订阅下的所有节点都将被删除。`);
             if (!confirmed) return;
 
-            await KSUService.removeSubscription(dirName);
+            // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
+            await KSUService.removeSubscription(displayName);
             toast('订阅已删除');
+            // 重新加载分组
             this.update();
         } catch (error) {
             toast('删除失败: ' + error.message);
