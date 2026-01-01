@@ -383,7 +383,7 @@ export class ConfigPageManager {
         item.classList.add('config-item');
         item.dataset.groupName = group.name;
         item.dataset.filename = filename;
-        item.style.paddingLeft = '16px';
+        item.dataset.filename = filename;
 
         const displayName = filename.replace(/\.json$/i, '');
         item.setAttribute('headline', displayName);
