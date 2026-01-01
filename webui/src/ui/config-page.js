@@ -729,7 +729,12 @@ export class ConfigPageManager {
         try {
             await KSUService.switchConfig(fullPath);
             toast('已切换到: ' + displayName);
-            await this.update();
+            // 更新当前配置缓存
+            this._cachedCurrentConfig = fullPath;
+            // 强制重新渲染当前 tab 以更新"当前"标记
+            if (this._selectedTab) {
+                await this.renderActiveTab(this._selectedTab);
+            }
             await this.ui.statusPage.update();
         } catch (error) {
             toast('切换配置失败: ' + error.message);
@@ -765,8 +770,10 @@ export class ConfigPageManager {
             // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
             await KSUService.removeSubscription(displayName);
             toast('订阅已删除');
-            // 重新加载分组
-            this.update();
+            // 清除缓存，强制刷新分组列表
+            this._cachedGroups = null;
+            this._cachedConfigInfos.clear();
+            await this.update(true);
         } catch (error) {
             toast('删除失败: ' + error.message);
         }
@@ -816,10 +823,12 @@ export class ConfigPageManager {
             try {
                 await KSUService.addSubscription(name, url);
                 toast('订阅添加成功');
-                this.update();
+                // 清除缓存，强制刷新分组列表
+                this._cachedGroups = null;
+                this._cachedConfigInfos.clear();
+                await this.update(true);
             } catch (error) {
                 toast('添加失败: ' + error.message);
-                this.update();
             }
         }, 50);
     }
