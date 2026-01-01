@@ -13,6 +13,23 @@ export class ConfigPageManager {
         this._cachedGroups = null;
         this._cachedCurrentConfig = null;
         this._cachedConfigInfos = new Map(); // groupName -> Map<filename, info>
+        this._loadingChunks = new Set(); // 防止并发加载同一 chunk
+
+        // 懒加载观察器
+        this.observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const item = entry.target;
+                    const groupName = item.dataset.groupName;
+                    const filename = item.dataset.filename;
+
+                    if (groupName && filename) {
+                        this.loadConfigForItem(item, groupName, filename);
+                    }
+                    this.observer.unobserve(item);
+                }
+            });
+        }, { rootMargin: '200px' });
     }
 
     /**
@@ -54,23 +71,130 @@ export class ConfigPageManager {
     // 刷新数据并渲染（首次加载或手动刷新时调用）
     async update() {
         try {
-            // 加载数据并缓存
-            this._cachedGroups = await KSUService.getConfigGroups();
+            // 1. 获取目录结构（快速，无详情）
+            const groups = await KSUService.getConfigStructure();
+
+            // 2. 更新缓存（保留旧的详情缓存以防闪烁？或者直接清空以保证一致性？）
+            // 用户要求刷新，应该清空详情
+            this._cachedGroups = groups;
             const { config } = await KSUService.getStatus();
             this._cachedCurrentConfig = config;
-            this._cachedConfigInfos.clear();
+            // 注意：不再清空 _cachedConfigInfos，只在必要时更新
+            // 但如果用户强制刷新，可能需要处理。这里暂且不清空，依靠后续逻辑更新
 
-            // 预加载所有展开分组的配置信息
-            const loadPromises = this._cachedGroups
-                .filter(g => this.expandedGroups.has(g.name))
-                .map(async g => {
-                    const infos = await this.loadConfigInfos(g);
-                    this._cachedConfigInfos.set(g.name, infos);
-                });
-            await Promise.all(loadPromises);
+            // 3. 立即渲染结构
+            await this.render();
 
-            this.render();
+            // 4. 不再主动加载所有详情，依靠 IntersectionObserver 懒加载
         } catch (error) {
+        }
+    }
+
+    // 加载单个节点详情（实际会加载周围的一批）
+    async loadConfigForItem(item, groupName, filename) {
+        const group = this._cachedGroups.find(g => g.name === groupName);
+        if (!group) return;
+
+        // 如果该分组尚未初始化 Map
+        if (!this._cachedConfigInfos.has(groupName)) {
+            this._cachedConfigInfos.set(groupName, new Map());
+        }
+        const groupInfos = this._cachedConfigInfos.get(groupName);
+
+        // 如果已经有数据，直接渲染（可能刚加载完）
+        if (groupInfos.has(filename) && groupInfos.get(filename).protocol !== 'loading...') {
+            this.updateItemUI(item, groupInfos.get(filename));
+            return;
+        }
+
+        // 找到该文件在列表中的索引
+        const index = group.configs.indexOf(filename);
+        if (index === -1) return;
+
+        // 加载该索引附近的一批文件
+        const CHUNK_SIZE = 20;
+        const chunkIndex = Math.floor(index / CHUNK_SIZE);
+        const chunkKey = `${groupName}:${chunkIndex}`;
+
+        // 检查是否正在加载该 chunk
+        if (this._loadingChunks.has(chunkKey)) return;
+        this._loadingChunks.add(chunkKey);
+
+        const start = chunkIndex * CHUNK_SIZE;
+        const end = Math.min((chunkIndex + 1) * CHUNK_SIZE, group.configs.length);
+
+        const filesToLoad = group.configs.slice(start, end);
+        // 过滤掉已经加载过的
+        const pendingFiles = filesToLoad.filter(f => {
+            const info = groupInfos.get(f);
+            return !info || info.protocol === 'loading...'; // 重新加载 loading 状态的
+        });
+
+        if (pendingFiles.length === 0) return;
+
+        // 标记为正在加载，避免重复请求
+        pendingFiles.forEach(f => groupInfos.set(f, { protocol: 'loading...', address: '', port: '' }));
+
+        // 构建完整路径
+        const filePaths = pendingFiles.map(f => group.dirName ? `${group.dirName}/${f}` : f);
+
+        // 批量读取
+        const newInfos = await KSUService.batchReadConfigInfos(filePaths);
+
+        // 更新缓存并刷新 UI
+        for (const [fname, info] of newInfos) {
+            groupInfos.set(fname, info);
+            const targetItem = document.querySelector(`.config-item[data-group-name="${groupName}"][data-filename="${fname}"]`);
+            if (targetItem) {
+                this.updateItemUI(targetItem, info);
+            }
+        }
+
+        // 移除加载锁
+        this._loadingChunks.delete(chunkKey);
+    }
+
+    updateItemUI(item, info) {
+        // 更新协议
+        const protocolLine = item.querySelector('.protocol-line');
+        if (protocolLine) protocolLine.textContent = info.protocol || '未知协议';
+
+        // 更新地址
+        const addressSpan = item.querySelector('.address-span');
+        if (addressSpan) addressSpan.textContent = info.port ? `${info.address}:${info.port}` : info.address;
+    }
+
+    // 加载分组详情并刷新
+    async loadConfigChunk(groupName, startIndex = 0, chunkSize = 20) {
+        const group = this._cachedGroups.find(g => g.name === groupName);
+        if (!group || group.configs.length === 0) return;
+
+        if (!this._cachedConfigInfos.has(groupName)) {
+            this._cachedConfigInfos.set(groupName, new Map());
+        }
+        const groupInfos = this._cachedConfigInfos.get(groupName);
+
+        const end = Math.min(startIndex + chunkSize, group.configs.length);
+        const filesToLoad = group.configs.slice(startIndex, end);
+
+        const pendingFiles = filesToLoad.filter(f => {
+            const info = groupInfos.get(f);
+            return !info || info.protocol === 'loading...';
+        });
+
+        if (pendingFiles.length === 0) return;
+
+        pendingFiles.forEach(f => groupInfos.set(f, { protocol: 'loading...', address: '', port: '' }));
+
+        const filePaths = pendingFiles.map(f => group.dirName ? `${group.dirName}/${f}` : f);
+        const newInfos = await KSUService.batchReadConfigInfos(filePaths);
+
+        for (const [fname, info] of newInfos) {
+            groupInfos.set(fname, info);
+            const targetItem = document.querySelector(`.config-item[data-group-name="${groupName}"][data-filename="${fname}"]`);
+            if (targetItem) {
+                this.updateItemUI(targetItem, info);
+            }
         }
     }
 
@@ -84,27 +208,26 @@ export class ConfigPageManager {
 
         const fragment = document.createDocumentFragment();
         for (const group of this._cachedGroups) {
-            await this.renderGroup(fragment, group, this._cachedCurrentConfig);
+            // 传递 group 对象和当前配置
+            this.renderGroup(fragment, group, this._cachedCurrentConfig);
         }
         listEl.innerHTML = '';
         listEl.appendChild(fragment);
     }
 
-    async renderGroup(container, group, currentConfig) {
+    // 渲染分组
+    renderGroup(container, group, currentConfig) {
         const isExpanded = this.expandedGroups.has(group.name);
 
-        // 分组头部
         const header = document.createElement('mdui-list-item');
         header.setAttribute('clickable', '');
         header.style.backgroundColor = 'var(--mdui-color-surface-container)';
 
-        // 展开/收起图标
         const expandIcon = document.createElement('mdui-icon');
         expandIcon.slot = 'icon';
         expandIcon.name = isExpanded ? 'expand_more' : 'chevron_right';
         header.appendChild(expandIcon);
 
-        // 分组标题
         header.setAttribute('headline', `${group.name} (${group.configs.length})`);
 
         // 订阅分组显示更新时间
@@ -113,7 +236,7 @@ export class ConfigPageManager {
             header.setAttribute('description', `更新于 ${date.toLocaleDateString()}`);
         }
 
-        // 订阅分组添加刷新和删除按钮
+        // 订阅分组按钮... (简化逻辑：仅在订阅类型显示)
         if (group.type === 'subscription') {
             const refreshBtn = document.createElement('mdui-button-icon');
             refreshBtn.slot = 'end-icon';
@@ -135,19 +258,18 @@ export class ConfigPageManager {
             header.appendChild(deleteBtn);
         }
 
-        // 点击展开/收起
-        header.addEventListener('click', async () => {
-            await this.toggleGroup(group.name, group);
+        header.addEventListener('click', () => {
+            this.toggleGroup(group.name, group);
         });
 
         container.appendChild(header);
 
-        // 展开时显示节点列表（使用缓存）
         if (isExpanded) {
             const configInfos = this._cachedConfigInfos.get(group.name) || new Map();
+            // const isLoading = !this._cachedConfigInfos.has(group.name); // 不再需要整体 loading 状态
 
             for (const filename of group.configs) {
-                const info = configInfos.get(filename) || { protocol: 'unknown', address: '', port: '' };
+                const info = configInfos.get(filename); // 如果没有 info，传 undefined，renderConfigItem哪怕是 undefined 也会渲染骨架并 observe
                 const fullPath = group.dirName ? `${group.dirName}/${filename}` : filename;
                 const isCurrent = currentConfig && currentConfig.endsWith(filename);
 
@@ -156,20 +278,21 @@ export class ConfigPageManager {
         }
     }
 
-    // 切换分组展开/收起（懒加载 + 渲染）
+    // 切换分组
     async toggleGroup(groupName, group) {
         if (this.expandedGroups.has(groupName)) {
-            // 收起：只需重新渲染
             this.expandedGroups.delete(groupName);
+            this.render();
         } else {
-            // 展开：如果没有缓存，先加载
             this.expandedGroups.add(groupName);
+            // 初始化缓存
             if (!this._cachedConfigInfos.has(groupName)) {
-                const infos = await this.loadConfigInfos(group);
-                this._cachedConfigInfos.set(groupName, infos);
+                this._cachedConfigInfos.set(groupName, new Map());
             }
+            // 只加载前 10 个，剩余由 Observer 懒加载
+            await this.loadConfigChunk(groupName, 0, 10);
+            this.render();
         }
-        this.render();
     }
 
     async loadConfigInfos(group) {
@@ -186,43 +309,46 @@ export class ConfigPageManager {
         const item = document.createElement('mdui-list-item');
         item.setAttribute('clickable', '');
         item.classList.add('config-item');
+        item.dataset.groupName = group.name;
+        item.dataset.filename = filename;
         item.style.paddingLeft = '16px';
 
         const displayName = filename.replace(/\.json$/i, '');
         item.setAttribute('headline', displayName);
 
-        // 使用 slot="description" 自定义多行布局
         const descContainer = document.createElement('div');
         descContainer.slot = 'description';
         descContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; width: 100%;';
 
-        // 第一行：协议
         const protocolLine = document.createElement('div');
+        protocolLine.className = 'protocol-line'; // 添加类名方便更新
         protocolLine.style.cssText = 'color: var(--mdui-color-primary); font-size: 12px;';
-        protocolLine.textContent = info.protocol || '未知协议';
+        protocolLine.textContent = info ? (info.protocol || '未知协议') : 'loading...';
         descContainer.appendChild(protocolLine);
 
-        // 第二行：地址+端口 ｜ 延迟 + 当前标识
         const addressLine = document.createElement('div');
         addressLine.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
 
-        // 左侧：地址和端口
         const addressSpan = document.createElement('span');
+        addressSpan.className = 'address-span'; // 添加类名方便更新
         addressSpan.style.cssText = 'color: var(--mdui-color-on-surface-variant); font-size: 12px;';
-        addressSpan.textContent = info.port ? `${info.address}:${info.port}` : info.address;
+        addressSpan.textContent = info ? (info.port ? `${info.address}:${info.port}` : info.address) : '';
         addressLine.appendChild(addressSpan);
 
-        // 右侧：状态容器（延迟 + 当前标识）
+        // 如果没有 info，加入 Observer
+        if (!info) {
+            this.observer.observe(item);
+        }
+
         const statusContainer = document.createElement('span');
         statusContainer.style.cssText = 'display: flex; align-items: center; gap: 6px;';
 
-        // 延迟标签
         const latencyLabel = document.createElement('span');
         latencyLabel.className = 'latency-label';
+        // ... (rest same) ...
         latencyLabel.style.cssText = 'font-size: 12px; color: var(--mdui-color-on-surface-variant);';
         statusContainer.appendChild(latencyLabel);
 
-        // 当前配置标签
         if (isCurrent) {
             const currentTag = document.createElement('span');
             currentTag.textContent = '当前';

@@ -50,11 +50,56 @@ export class KSUService {
         await exec(`su -c "sh ${this.MODULE_PATH}/scripts/core/stop.sh"`);
     }
 
-    // 获取配置文件列表（从 outbounds 目录）
-    static async getConfigList() {
+    // 获取配置文件结构（分组和文件名）- 对应 Shell 逻辑
+    static async getConfigStructure() {
         try {
-            const output = await this.exec(`ls ${this.MODULE_PATH}/config/xray/outbounds/*.json 2>/dev/null || echo`);
-            return output.split('\n').filter(f => f).map(f => f.split('/').pop());
+            const cmd = `
+                cd ${this.MODULE_PATH}/config/xray/outbounds 2>/dev/null || exit
+                
+                # 1. 默认分组 (根目录文件)
+                echo "===== GROUP:默认分组 ====="
+                find . -maxdepth 1 -type f -name "*.json" | sed 's|^\\./||'
+                
+                # 2. 订阅/子文件夹分组
+                for dir in */; do
+                    [ -d "$dir" ] || continue
+                    dirname="\${dir%/}"
+                    echo "===== GROUP:$dirname ====="
+                    find "$dir" -maxdepth 1 -type f -name "*.json" | sed "s|^$dir||"
+                done
+            `;
+            const output = await this.exec(cmd);
+
+            const groups = [];
+            let currentGroup = null;
+
+            const lines = output.split('\n');
+            for (const line of lines) {
+                if (!line.trim()) continue;
+
+                if (line.startsWith('===== GROUP:')) {
+                    const rawName = line.replace('===== GROUP:', '').replace(' =====', '').trim();
+                    // 移除 sub_ 前缀用于显示
+                    const displayName = rawName.startsWith('sub_') ? rawName.slice(4) : rawName;
+                    const isSubscription = rawName.startsWith('sub_');
+
+                    currentGroup = {
+                        name: displayName,
+                        type: rawName === '默认分组' ? 'local' : (isSubscription ? 'subscription' : 'local'),
+                        configs: [],
+                        dirName: rawName === '默认分组' ? '' : rawName  // 保留原始目录名用于路径
+                    };
+                    groups.push(currentGroup);
+                } else if (currentGroup) {
+                    const filename = line.trim();
+                    // 过滤掉 _meta 元数据文件
+                    if (!filename.startsWith('_meta')) {
+                        currentGroup.configs.push(filename);
+                    }
+                }
+            }
+
+            return groups;
         } catch (error) {
             return [];
         }
