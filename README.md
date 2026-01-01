@@ -93,12 +93,10 @@ vless://... 或 vmess://... 或 trojan://... 等
 {
   "outbounds": [
     {
-      "protocol": "vless",
       "tag": "proxy",
+      "protocol": "vless",
       "settings": { ... }
-    },
-    { "protocol": "freedom", "tag": "direct" },
-    { "protocol": "blackhole", "tag": "block" }
+    }
   ]
 }
 ```
