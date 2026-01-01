@@ -105,6 +105,24 @@ mdui-chip::part(icon) {
   color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
 }
 
+/* ==================== 选项卡 Tabs ==================== */
+
+mdui-tabs {
+  /* 使用与卡片相同的背景色 */
+  --mdui-color-surface: var(--monet-surface-container-low, var(--mdui-color-surface-container-low));
+  --mdui-color-primary: var(--monet-primary, var(--mdui-color-primary));
+  --mdui-color-on-surface: var(--monet-on-surface, var(--mdui-color-on-surface));
+  --mdui-color-on-surface-variant: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant));
+}
+
+mdui-tab {
+  color: var(--monet-on-surface-variant, var(--mdui-color-on-surface-variant)) !important;
+}
+
+mdui-tab[active] {
+  color: var(--monet-primary, var(--mdui-color-primary)) !important;
+}
+
 /* ==================== 分段按钮组 Segmented Button ==================== */
 
 mdui-segmented-button-group {

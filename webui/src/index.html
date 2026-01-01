@@ -273,12 +273,22 @@
                   </mdui-menu>
                 </mdui-dropdown>
               </div>
-              <mdui-list id="config-list">
-                <mdui-list-item>
-                  <mdui-circular-progress></mdui-circular-progress>
-                  <div slot="headline">加载中...</div>
-                </mdui-list-item>
-              </mdui-list>
+
+              <!-- 分组横向标签页 (动态生成) -->
+              <mdui-tabs id="config-tabs" value="default" style="max-width: 100%; overflow-x: auto;">
+                <mdui-tab value="default">默认分组</mdui-tab>
+                <!-- 更多 tab 由 JS 动态添加 -->
+
+                <mdui-tab-panel slot="panel" value="default">
+                  <mdui-list id="config-list">
+                    <mdui-list-item>
+                      <mdui-circular-progress></mdui-circular-progress>
+                      <div slot="headline">加载中...</div>
+                    </mdui-list-item>
+                  </mdui-list>
+                </mdui-tab-panel>
+                <!-- 更多 panel 由 JS 动态添加 -->
+              </mdui-tabs>
             </div>
           </mdui-card>
         </div>

@@ -7,8 +7,8 @@ import { toast } from '../utils/toast.js';
 export class ConfigPageManager {
     constructor(ui) {
         this.ui = ui;
-        this.expandedGroups = new Set(['默认分组']);
         this.currentOpenDropdown = null;
+        this._tabEventBound = false; // 防止重复绑定 tab 事件
         // 缓存数据，避免重复加载
         this._cachedGroups = null;
         this._cachedCurrentConfig = null;
@@ -198,101 +198,141 @@ export class ConfigPageManager {
         }
     }
 
-    // 仅渲染 UI（展开/收起时调用，使用缓存数据）
+    // 仅渲染 UI（使用 mdui-tabs 横向分组）
     async render() {
-        const listEl = document.getElementById('config-list');
+        const tabsEl = document.getElementById('config-tabs');
+        if (!tabsEl) return;
+
         if (!this._cachedGroups || this._cachedGroups.length === 0) {
-            listEl.innerHTML = '<mdui-list-item><div slot="headline">暂无配置文件</div></mdui-list-item>';
+            tabsEl.innerHTML = '<mdui-tab value="empty">暂无配置</mdui-tab><mdui-tab-panel slot="panel" value="empty"><p style="padding: 16px; text-align: center;">暂无配置文件</p></mdui-tab-panel>';
             return;
         }
 
-        const fragment = document.createDocumentFragment();
+        // 保存当前选中的 tab
+        const currentTab = tabsEl.value || this._cachedGroups[0]?.name || 'default';
+
+        // 清空并重建 tabs
+        tabsEl.innerHTML = '';
+
+        // 1. 创建所有 tab 标签
         for (const group of this._cachedGroups) {
-            // 传递 group 对象和当前配置
-            this.renderGroup(fragment, group, this._cachedCurrentConfig);
-        }
-        listEl.innerHTML = '';
-        listEl.appendChild(fragment);
-    }
-
-    // 渲染分组
-    renderGroup(container, group, currentConfig) {
-        const isExpanded = this.expandedGroups.has(group.name);
-
-        const header = document.createElement('mdui-list-item');
-        header.setAttribute('clickable', '');
-        header.style.backgroundColor = 'var(--mdui-color-surface-container)';
-
-        const expandIcon = document.createElement('mdui-icon');
-        expandIcon.slot = 'icon';
-        expandIcon.name = isExpanded ? 'expand_more' : 'chevron_right';
-        header.appendChild(expandIcon);
-
-        header.setAttribute('headline', `${group.name} (${group.configs.length})`);
-
-        // 订阅分组显示更新时间
-        if (group.type === 'subscription' && group.updated) {
-            const date = new Date(group.updated);
-            header.setAttribute('description', `更新于 ${date.toLocaleDateString()}`);
+            const tab = document.createElement('mdui-tab');
+            tab.value = group.name;
+            tab.textContent = `${group.name} (${group.configs.length})`;
+            tabsEl.appendChild(tab);
         }
 
-        // 订阅分组按钮... (简化逻辑：仅在订阅类型显示)
-        if (group.type === 'subscription') {
-            const refreshBtn = document.createElement('mdui-button-icon');
-            refreshBtn.slot = 'end-icon';
-            refreshBtn.setAttribute('icon', 'refresh');
-            refreshBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                await this.updateSubscription(group.name);
+        // 1.5 注入滚动样式到 Shadow DOM（等待渲染后）
+        requestAnimationFrame(() => {
+            const shadowRoot = tabsEl.shadowRoot;
+            if (shadowRoot) {
+                const container = shadowRoot.querySelector('[part="container"]');
+                if (container) {
+                    container.style.cssText = 'display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;';
+                }
+
+                // 让每个 tab 保持自然宽度不收缩
+                const tabs = shadowRoot.querySelectorAll('slot');
+                tabs.forEach(slot => {
+                    const assignedElements = slot.assignedElements();
+                    assignedElements.forEach(el => {
+                        if (el.tagName === 'MDUI-TAB') {
+                            el.style.cssText = 'flex-shrink: 0; white-space: nowrap;';
+                        }
+                    });
+                });
+            }
+
+            // 同时给 Light DOM 中的 tab 设置样式
+            const lightTabs = tabsEl.querySelectorAll('mdui-tab');
+            lightTabs.forEach(tab => {
+                tab.style.cssText = 'flex-shrink: 0; white-space: nowrap;';
             });
-            header.appendChild(refreshBtn);
-
-            const deleteBtn = document.createElement('mdui-button-icon');
-            deleteBtn.slot = 'end-icon';
-            deleteBtn.setAttribute('icon', 'delete');
-            deleteBtn.style.color = 'var(--mdui-color-error)';
-            deleteBtn.addEventListener('click', async (e) => {
-                e.stopPropagation();
-                await this.deleteSubscription(group.name);
-            });
-            header.appendChild(deleteBtn);
-        }
-
-        header.addEventListener('click', () => {
-            this.toggleGroup(group.name, group);
         });
 
-        container.appendChild(header);
+        // 2. 创建所有 tab-panel
+        for (const group of this._cachedGroups) {
+            const panel = document.createElement('mdui-tab-panel');
+            panel.slot = 'panel';
+            panel.value = group.name;
 
-        if (isExpanded) {
-            const configInfos = this._cachedConfigInfos.get(group.name) || new Map();
-            // const isLoading = !this._cachedConfigInfos.has(group.name); // 不再需要整体 loading 状态
+            // 订阅分组添加操作按钮
+            if (group.type === 'subscription') {
+                const actions = document.createElement('div');
+                actions.style.cssText = 'display: flex; justify-content: flex-end; gap: 8px; padding: 8px 0;';
 
-            for (const filename of group.configs) {
-                const info = configInfos.get(filename); // 如果没有 info，传 undefined，renderConfigItem哪怕是 undefined 也会渲染骨架并 observe
-                const fullPath = group.dirName ? `${group.dirName}/${filename}` : filename;
-                const isCurrent = currentConfig && currentConfig.endsWith(filename);
+                const refreshBtn = document.createElement('mdui-button');
+                refreshBtn.setAttribute('icon', 'refresh');
+                refreshBtn.setAttribute('variant', 'text');
+                refreshBtn.textContent = '刷新';
+                refreshBtn.addEventListener('click', () => this.updateSubscription(group.dirName));
+                actions.appendChild(refreshBtn);
 
-                this.renderConfigItem(container, filename, fullPath, info, isCurrent, group);
+                const deleteBtn = document.createElement('mdui-button');
+                deleteBtn.setAttribute('icon', 'delete');
+                deleteBtn.setAttribute('variant', 'text');
+                deleteBtn.style.color = 'var(--mdui-color-error)';
+                deleteBtn.textContent = '删除';
+                deleteBtn.addEventListener('click', () => this.deleteSubscription(group.dirName, group.name));
+                actions.appendChild(deleteBtn);
+
+                panel.appendChild(actions);
             }
+
+            // 创建列表容器
+            const list = document.createElement('mdui-list');
+            list.id = `config-list-${group.name}`;
+            list.className = 'config-group-list';
+            panel.appendChild(list);
+
+            tabsEl.appendChild(panel);
+        }
+
+        // 3. 恢复选中状态
+        const validTab = this._cachedGroups.find(g => g.name === currentTab) ? currentTab : this._cachedGroups[0]?.name;
+        tabsEl.value = validTab;
+
+        // 4. 为当前 tab 加载并渲染内容
+        await this.renderActiveTab(validTab);
+
+        // 5. 绑定 tab 切换事件（只绑定一次）
+        if (!this._tabEventBound) {
+            tabsEl.addEventListener('change', async (e) => {
+                const newTab = e.target.value;
+                await this.renderActiveTab(newTab);
+            });
+            this._tabEventBound = true;
         }
     }
 
-    // 切换分组
-    async toggleGroup(groupName, group) {
-        if (this.expandedGroups.has(groupName)) {
-            this.expandedGroups.delete(groupName);
-            this.render();
-        } else {
-            this.expandedGroups.add(groupName);
-            // 初始化缓存
-            if (!this._cachedConfigInfos.has(groupName)) {
-                this._cachedConfigInfos.set(groupName, new Map());
-            }
-            // 只加载前 10 个，剩余由 Observer 懒加载
+    // 渲染当前激活的 tab 内容
+    async renderActiveTab(groupName) {
+        const group = this._cachedGroups.find(g => g.name === groupName);
+        if (!group) return;
+
+        const listEl = document.getElementById(`config-list-${groupName}`);
+        if (!listEl) return;
+
+        // 如果没有缓存数据，先加载前 10 个
+        if (!this._cachedConfigInfos.has(groupName)) {
+            this._cachedConfigInfos.set(groupName, new Map());
             await this.loadConfigChunk(groupName, 0, 10);
-            this.render();
         }
+
+        const configInfos = this._cachedConfigInfos.get(groupName) || new Map();
+
+        // 渲染列表
+        const fragment = document.createDocumentFragment();
+        for (const filename of group.configs) {
+            const info = configInfos.get(filename);
+            const fullPath = group.dirName ? `${group.dirName}/${filename}` : filename;
+            const isCurrent = this._cachedCurrentConfig && this._cachedCurrentConfig.endsWith(filename);
+
+            this.renderConfigItem(fragment, filename, fullPath, info, isCurrent, group);
+        }
+
+        listEl.innerHTML = '';
+        listEl.appendChild(fragment);
     }
 
     async loadConfigInfos(group) {
@@ -504,17 +544,16 @@ export class ConfigPageManager {
     // ===================== 订阅管理 =====================
 
     async updateSubscription(name) {
-        toast(`正在更新订阅 "${name}"...`);
-
-        // 先显示骨架屏
-        const listEl = document.getElementById('config-list');
-        this.ui.showSkeleton(listEl, 5, { showIcon: false });
+        toast(`正在更新订阅...`);
 
         // 使用 setTimeout 让浏览器先渲染 UI
         setTimeout(async () => {
             try {
                 await KSUService.updateSubscription(name);
                 toast('订阅更新成功');
+                // 清除该分组的缓存，强制重新加载
+                const displayName = name.startsWith('sub_') ? name.slice(4) : name;
+                this._cachedConfigInfos.delete(displayName);
                 this.update();
             } catch (error) {
                 toast('更新失败: ' + error.message);
@@ -523,14 +562,13 @@ export class ConfigPageManager {
         }, 50);
     }
 
-    async deleteSubscription(name) {
+    async deleteSubscription(dirName, displayName) {
         try {
-            const confirmed = await this.ui.confirm(`确定要删除订阅 "${name}" 吗？\n\n该订阅下的所有节点都将被删除。`);
+            const confirmed = await this.ui.confirm(`确定要删除订阅 "${displayName || dirName}" 吗？\n\n该订阅下的所有节点都将被删除。`);
             if (!confirmed) return;
 
-            await KSUService.removeSubscription(name);
+            await KSUService.removeSubscription(dirName);
             toast('订阅已删除');
-            this.expandedGroups.delete(name);
             this.update();
         } catch (error) {
             toast('删除失败: ' + error.message);
@@ -574,10 +612,6 @@ export class ConfigPageManager {
         nameInput.value = '';
         urlInput.value = '';
 
-        // 显示骨架屏
-        const listEl = document.getElementById('config-list');
-        this.ui.showSkeleton(listEl, 5, { showIcon: false });
-
         toast('正在下载订阅，请稍候...');
 
         // 使用 setTimeout 让浏览器先渲染 UI，再执行阻塞操作
@@ -585,7 +619,6 @@ export class ConfigPageManager {
             try {
                 await KSUService.addSubscription(name, url);
                 toast('订阅添加成功');
-                this.expandedGroups.add(name);
                 this.update();
             } catch (error) {
                 toast('添加失败: ' + error.message);

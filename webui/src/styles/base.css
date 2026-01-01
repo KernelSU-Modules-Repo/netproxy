@@ -31,11 +31,18 @@ body {
 }
 
 /* 确保所有标题和段落继承正确的颜色 */
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   color: var(--monet-on-surface, var(--mdui-color-on-surface));
 }
 
-p, span, div {
+p,
+span,
+div {
   color: inherit;
 }
 
@@ -107,4 +114,12 @@ mdui-card {
   margin-bottom: 16px;
   width: 100%;
   box-sizing: border-box;
+}
+
+/* Config tabs horizontal scrolling */
+#config-tabs::part(container) {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
