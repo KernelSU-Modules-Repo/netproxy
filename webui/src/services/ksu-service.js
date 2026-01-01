@@ -645,34 +645,8 @@ export class KSUService {
             }
 
 
-            // 3. 增强应用信息 (Label, Icon)
-            // 场景 A: WebUI X 环境
-            if (typeof $packageManager !== 'undefined' && apps.length > 0) {
-                // 批量获取应用信息
-
-                const enrichedApps = await Promise.all(apps.map(async app => {
-                    try {
-                        const info = $packageManager.getApplicationInfo(app.packageName, 0, parseInt(app.userId));
-                        let label = app.packageName;
-                        if (info.getLabel && typeof info.getLabel === 'function') label = info.getLabel();
-                        else if (info.loadLabel && typeof info.loadLabel === 'function') label = info.loadLabel($packageManager);
-                        else if (info.label) label = info.label;
-                        else if (info.toString() !== '[object Object]') label = info.toString();
-
-                        app.appLabel = label || app.packageName;
-                        // Icon 依然懒加载
-                    } catch (e) {
-                        // 忽略错误，保持原样
-                    }
-                    return app;
-                }));
-                return enrichedApps;
-            }
-
-            // 场景 B: KSU API 环境 (getPackagesInfo)
-            // 尝试用 KSU API 获取 Label/Icon
+            // 3. 增强应用信息 (Label, Icon) - 使用 KSU API
             try {
-                // 仅对 main user 或者 unique package names 请求
                 const uniquePkgs = [...new Set(apps.map(a => a.packageName))];
                 if (uniquePkgs.length > 0) {
                     const infos = await getPackagesInfo(uniquePkgs);
@@ -683,7 +657,6 @@ export class KSUService {
                         const info = infoMap.get(app.packageName);
                         if (info) {
                             app.appLabel = info.appLabel || app.appLabel;
-                            // KSU API 返回的 icon 是 ksu://icon/...
                             app.icon = `ksu://icon/${app.packageName}`;
                         }
                     });
@@ -699,25 +672,8 @@ export class KSUService {
         }
     }
 
-    // 补充 fetchAppDetails 用于懒加载或者增强信息
+    // 获取应用详情（Label, Icon）
     static async fetchAppDetails(apps) {
-        // 1. 尝试 WebUI X 环境 
-        if (typeof $packageManager !== 'undefined') {
-            await Promise.all(apps.map(async app => {
-                try {
-                    const info = $packageManager.getApplicationInfo(app.packageName, 0, parseInt(app.userId));
-                    let label = app.packageName;
-                    if (info.getLabel && typeof info.getLabel === 'function') label = info.getLabel();
-                    else if (info.loadLabel && typeof info.loadLabel === 'function') label = info.loadLabel($packageManager);
-                    else if (info.label) label = info.label;
-
-                    app.appLabel = label || app.packageName;
-                } catch (e) { }
-            }));
-            return apps;
-        }
-
-        // 2. 尝试 KSU API 环境
         try {
             const uniquePkgs = [...new Set(apps.map(a => a.packageName))];
             if (uniquePkgs.length > 0) {
@@ -740,76 +696,6 @@ export class KSUService {
         return apps;
     }
 
-
-
-    static iconCache = new Map();
-    static iconLoadQueue = [];
-    static activeIconLoads = 0;
-    static MAX_CONCURRENT_ICON_LOADS = 4; // 限制并发数，避免旧版 WebUI X 阻塞
-
-    static clearIconLoadQueue() {
-        this.iconLoadQueue = [];
-    }
-
-    static async loadAppIcon(packageName) {
-        if (this.iconCache.has(packageName)) {
-            return this.iconCache.get(packageName);
-        }
-
-        if (typeof $packageManager === 'undefined') return null;
-
-        return new Promise((resolve) => {
-            this.iconLoadQueue.push({ packageName, resolve });
-            this.processIconLoadQueue();
-        });
-    }
-
-    static async processIconLoadQueue() {
-        if (this.activeIconLoads >= this.MAX_CONCURRENT_ICON_LOADS || this.iconLoadQueue.length === 0) {
-            return;
-        }
-
-        this.activeIconLoads++;
-        const { packageName, resolve } = this.iconLoadQueue.shift();
-
-        try {
-            const base64 = await this._doLoadAppIcon(packageName);
-            resolve(base64);
-        } catch (e) {
-            resolve(null);
-        } finally {
-            this.activeIconLoads--;
-            // 使用 setTimeout 让出主线程，避免连续处理阻塞 UI
-            setTimeout(() => this.processIconLoadQueue(), 0);
-        }
-    }
-
-    static async _doLoadAppIcon(packageName) {
-        try {
-            const stream = $packageManager.getApplicationIcon(packageName, 0, 0);
-            if (!stream) return null;
-
-            const wrapped = await wrapInputStream(stream);
-            const buffer = await wrapped.arrayBuffer();
-
-            const base64 = 'data:image/png;base64,' + this.arrayBufferToBase64(buffer);
-
-            this.iconCache.set(packageName, base64);
-            return base64;
-        } catch (e) {
-            return null;
-        }
-    }
-
-    static arrayBufferToBase64(buffer) {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        const len = bytes.byteLength;
-        for (let i = 0; i < len; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
-    }
 
     // ===================== 分应用代理总开关 =====================
 

@@ -166,15 +166,13 @@ export class UIDPageManager {
                                     if (placeholder) placeholder.style.display = 'none';
                                 };
                             } else if (packageName) {
-                                // 尝试通过 WebUI X 加载
-                                KSUService.loadAppIcon(packageName).then(base64 => {
-                                    if (base64) {
-                                        img.src = base64;
-                                        img.style.display = 'block';
-                                        const placeholder = item.querySelector('mdui-icon[slot="icon"]');
-                                        if (placeholder) placeholder.style.display = 'none';
-                                    }
-                                });
+                                // 使用 KSU API 图标 URL
+                                img.src = `ksu://icon/${packageName}`;
+                                img.onload = function () {
+                                    this.style.display = 'block';
+                                    const placeholder = item.querySelector('mdui-icon[slot="icon"]');
+                                    if (placeholder) placeholder.style.display = 'none';
+                                };
                             }
                         }
                         observer.unobserve(item);
@@ -231,8 +229,6 @@ export class UIDPageManager {
                 if (proxyApp.icon) {
                     iconEl.dataset.iconUrl = proxyApp.icon;
                 }
-
-                // 暂时不硬编码 ksu url，由 loadAppIcon 内部决定或 observer 处理
 
                 iconEl.onerror = function () {
                     this.style.display = 'none';
@@ -422,7 +418,7 @@ export class UIDPageManager {
                         const packageName = img.dataset.packageName;
 
                         if (iconUrl) {
-                            // KSU API 方式：直接使用 ksu://icon/ URL
+                            // 使用 ksu://icon/ URL
                             img.src = iconUrl;
                             img.onload = function () {
                                 this.style.display = 'block';
@@ -432,17 +428,15 @@ export class UIDPageManager {
                                 }
                             };
                         } else if (packageName) {
-                            // WebUI X 方式：通过 $packageManager 加载
-                            KSUService.loadAppIcon(packageName).then(base64 => {
-                                if (base64) {
-                                    img.src = base64;
-                                    img.style.display = 'block';
-                                    const placeholder = item.querySelector('mdui-icon[slot="icon"]');
-                                    if (placeholder) {
-                                        placeholder.style.display = 'none';
-                                    }
+                            // 使用 KSU API 图标 URL
+                            img.src = `ksu://icon/${packageName}`;
+                            img.onload = function () {
+                                this.style.display = 'block';
+                                const placeholder = item.querySelector('mdui-icon[slot="icon"]');
+                                if (placeholder) {
+                                    placeholder.style.display = 'none';
                                 }
-                            });
+                            };
                         }
                     }
                     observer.unobserve(item);
