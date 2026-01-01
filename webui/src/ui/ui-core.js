@@ -106,21 +106,17 @@ export class UI {
         document.getElementById(`${pageName}-page`).classList.add('active');
         this.currentPage = pageName;
 
-        // 只对状态页特殊处理：延迟执行更新，让导航栏动画完全完成
+        // 延迟执行更新，让导航栏动画完全完成
         // MDUI 导航栏动画大约需要 200ms 完成
-        if (pageName === 'status') {
-            setTimeout(() => {
-                this.statusPage.update();
-            }, 200);
-        } else {
-            // 其他页面立即更新
+        setTimeout(() => {
+            if (pageName === 'status') this.statusPage.update();
             if (pageName === 'config') this.configPage.update();
             if (pageName === 'uid') this.uidPage.update();
             if (pageName === 'logs') this.logsPage.update();
             if (pageName === 'debug' && typeof debugLogger !== 'undefined') {
                 debugLogger.updateUI();
             }
-        }
+        }, 200);
     }
 
     setupFAB() {
