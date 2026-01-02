@@ -2,7 +2,7 @@ import { toast } from '../utils/toast.js';
 import { KSUService } from '../services/ksu-service.js';
 import { setColorScheme } from 'mdui/functions/setColorScheme.js';
 import { setTheme } from 'mdui/functions/setTheme.js';
-const logoUrl = 'https://ghfast.top/https://raw.githubusercontent.com/Fanju6/NetProxy-Magisk/refs/heads/main/logo.png';
+const logoUrl = 'https://ghfast.top/https://raw.githubusercontent.com/Fanju6/NetProxy-Magisk/refs/heads/main/image/logo.png';
 
 export class SettingsPageManager {
     constructor(ui) {
@@ -929,10 +929,10 @@ export class SettingsPageManager {
      */
     applyAllMonetVariables(primaryColor, isDark) {
         const html = document.documentElement;
-        
+
         // 调用 setColorScheme 让 MDUI 组件内部使用正确的颜色
         setColorScheme(primaryColor);
-        
+
         // 解析主题色为 RGB
         const hexToRgb = (hex) => {
             const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
@@ -942,7 +942,7 @@ export class SettingsPageManager {
                 b: parseInt(result[3], 16)
             } : { r: 103, g: 80, b: 164 }; // 默认紫色
         };
-        
+
         // 混合两个颜色
         const mixColors = (color1, color2, weight) => {
             return {
@@ -951,14 +951,14 @@ export class SettingsPageManager {
                 b: Math.round(color1.b * weight + color2.b * (1 - weight))
             };
         };
-        
+
         // RGB 转 Hex
         const rgbToHex = (rgb) => {
             return '#' + [rgb.r, rgb.g, rgb.b].map(x => x.toString(16).padStart(2, '0')).join('');
         };
-        
+
         const primary = hexToRgb(primaryColor);
-        
+
         // 设置 primary 相关变量（用户选择的主题色）
         html.style.setProperty('--monet-primary', primaryColor);
         html.style.setProperty('--monet-primary-container', primaryColor + '30');
@@ -966,7 +966,7 @@ export class SettingsPageManager {
         html.style.setProperty('--monet-on-primary-container', primaryColor);
         html.style.setProperty('--monet-secondary-container', primaryColor + '30');
         html.style.setProperty('--monet-on-secondary-container', primaryColor);
-        
+
         // 根据主题色生成 surface 颜色（Material 3 风格）
         if (isDark) {
             // 深色模式：使用深灰色基底，轻微混入主题色
@@ -974,14 +974,14 @@ export class SettingsPageManager {
             const darkMid = { r: 33, g: 31, b: 38 };       // #211f26
             const darkHigh = { r: 43, g: 41, b: 48 };      // #2b2930
             const darkHighest = { r: 54, g: 52, b: 59 };   // #36343b
-            
+
             // 混入约 5% 的主题色，使 surface 带有主题色调
             const surface = mixColors(primary, darkBase, 0.05);
             const surfaceContainer = mixColors(primary, darkMid, 0.05);
             const surfaceContainerLow = mixColors(primary, { r: 29, g: 27, b: 32 }, 0.05);
             const surfaceContainerHigh = mixColors(primary, darkHigh, 0.05);
             const surfaceContainerHighest = mixColors(primary, darkHighest, 0.05);
-            
+
             html.style.setProperty('--monet-surface', rgbToHex(surface));
             html.style.setProperty('--monet-on-surface', '#e6e0e9');
             html.style.setProperty('--monet-surface-variant', '#49454f');
@@ -1000,7 +1000,7 @@ export class SettingsPageManager {
             // 浅色模式：使用白色基底，轻微混入主题色
             const white = { r: 255, g: 255, b: 255 };
             const lightBase = { r: 254, g: 247, b: 255 };  // 非常浅的基底
-            
+
             // 混入约 3-8% 的主题色，使 surface 带有主题色调
             const surface = mixColors(primary, white, 0.03);
             const surfaceContainerLowest = mixColors(primary, white, 0.02);
@@ -1008,7 +1008,7 @@ export class SettingsPageManager {
             const surfaceContainer = mixColors(primary, white, 0.06);
             const surfaceContainerHigh = mixColors(primary, white, 0.08);
             const surfaceContainerHighest = mixColors(primary, white, 0.10);
-            
+
             html.style.setProperty('--monet-surface', rgbToHex(surface));
             html.style.setProperty('--monet-on-surface', '#1d1b20');
             html.style.setProperty('--monet-surface-variant', rgbToHex(mixColors(primary, { r: 231, g: 224, b: 236 }, 0.15)));
