@@ -320,7 +320,8 @@ cmd_config() {
             fi
             
             info "正在解析节点链接..."
-            if sh "$SCRIPTS_DIR/config/url2json.sh" "$node_link"; then
+            chmod +x "$MODDIR/bin/proxylink"
+            if "$MODDIR/bin/proxylink" -parse "$node_link" -insecure -format xray -dir "$OUTBOUNDS_DIR" -auto; then
                 info "节点添加成功"
             else
                 error "节点添加失败"

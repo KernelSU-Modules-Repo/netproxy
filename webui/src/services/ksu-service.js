@@ -143,13 +143,17 @@ export class KSUService {
         if (!filePaths || filePaths.length === 0) return new Map();
 
         const basePath = `${this.MODULE_PATH}/config/xray/outbounds`;
-        const files = filePaths.map(f => `"${basePath}/${f}"`).join(' ');
+        // 每个文件路径单独一行，通过 heredoc 传入 while read 循环
+        const fileList = filePaths.map(f => `${basePath}/${f}`).join('\n');
 
         const result = await this.exec(`
-            for f in ${files}; do
-                echo "===FILE:$(basename $f)==="
+            while IFS= read -r f; do
+                [ -z "$f" ] && continue
+                echo "===FILE:$(basename "$f")==="
                 head -30 "$f" 2>/dev/null | grep -E '"protocol"|"address"|"port"' | head -5
-            done
+            done << 'EOF'
+${fileList}
+EOF
         `);
 
         if (!result) return new Map();
@@ -185,7 +189,15 @@ export class KSUService {
     // 从节点链接导入配置
     static async importFromNodeLink(nodeLink) {
         try {
-            const cmd = `su -c "${this.MODULE_PATH}/scripts/config/url2json.sh '${nodeLink}'"`;
+            // Escape single quotes for shell safety
+            const escapedLink = nodeLink.replace(/'/g, "'\\''");
+
+            // 使用 proxylink 二进制解析
+            // -auto: 自动使用备注作为文件名
+            // -dir: 输出到 outbounds 目录 (确保目录存在)
+            // 先给予执行权限
+            const cmd = `su -c "cd '${this.MODULE_PATH}/config/xray/outbounds' && chmod +x '${this.MODULE_PATH}/bin/proxylink' && '${this.MODULE_PATH}/bin/proxylink' -parse '${escapedLink}' -insecure -format xray -auto"`;
+
             const result = await exec(cmd);
 
             if (result.errno === 0) {

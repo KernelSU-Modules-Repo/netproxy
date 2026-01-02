@@ -9,7 +9,6 @@ set -e
 
 readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
-readonly URL2JSON="$MODDIR/scripts/config/url2json.sh"
 readonly LOG_FILE="$MODDIR/logs/subscription.log"
 
 
@@ -210,53 +209,21 @@ update_subscription() {
     log "DEBUG" "URL: $url"
     log "DEBUG" "目标目录: $sub_dir"
     
-    echo "下载订阅内容..."
-    # 添加 User-Agent 模拟浏览器，尝试绕过简单的 Cloudflare 检测
-    local content=$(curl -sL --connect-timeout 15 \
-        -H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36" \
-        -H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" \
-        -H "Accept-Language: en-US,en;q=0.5" \
-        "$url")
-    
-    if [ -z "$content" ]; then
-        log "ERROR" "下载失败"
-        echo "错误: 下载失败"
-        exit 1
+    # 确保 proxylink 有执行权限
+    chmod +x "$MODDIR/bin/proxylink"
+
+    # 使用 proxylink 进行订阅转换
+    # -sub: 订阅链接
+    # -format xray: 输出 xray 格式
+    # -dir: 输出目录 (每个节点单独一个文件)
+    if "$MODDIR/bin/proxylink" -sub "$url" -insecure -format xray -dir "$sub_dir" >> "$LOG_FILE" 2>&1; then
+         log "INFO" "订阅更新完成"
+         echo "已导入节点"
+    else
+         log "ERROR" "订阅更新失败"
+         echo "错误: 订阅更新失败，请查看日志"
+         exit 1
     fi
-    
-    log "DEBUG" "下载内容长度: ${#content} 字符"
-    log "DEBUG" "内容前100字符: ${content:0:100}"
-    
-    # 解码 Base64 并去除 Windows 回车符
-    local decoded=$(base64_decode "$content" | tr -d '\r')
-    
-    if [ -z "$decoded" ]; then
-        log "ERROR" "Base64 解码失败"
-        echo "错误: Base64 解码失败"
-        exit 1
-    fi
-    
-    log "DEBUG" "解码后长度: ${#decoded} 字符"
-    log "DEBUG" "解码后前200字符: ${decoded:0:200}"
-    
-    # 按行分割节点链接
-    local count=0
-    echo "$decoded" | while IFS= read -r line; do
-        [ -z "$line" ] && continue
-        
-        # 检查是否是有效的节点链接
-        case "$line" in
-            vless://*|vmess://*|trojan://*|ss://*|socks://*|http://*)
-                log "DEBUG" "解析节点: ${line:0:50}..."
-                if sh "$URL2JSON" -d "$sub_dir" "$line" >> "$LOG_FILE" 2>&1; then
-                    count=$((count + 1))
-                fi
-                ;;
-        esac
-    done
-    
-    log "INFO" "订阅更新完成"
-    echo "已导入节点"
 }
 
 #######################################

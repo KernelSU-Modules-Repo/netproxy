@@ -174,7 +174,7 @@ set_permissions() {
     set_perm_recursive "$MODPATH/scripts/network/tproxy.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/core/switch-config.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/utils/update-xray.sh" 0 0 0755 0755
-    set_perm_recursive "$MODPATH/scripts/config/url2json.sh" 0 0 0755 0755
+    set_perm_recursive "$MODPATH/bin/proxylink" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/config/subscription.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/utils/oneplus_a16_fix.sh" 0 0 0755 0755
     set_perm_recursive "$MODPATH/scripts/cli" 0 0 0755 0755
