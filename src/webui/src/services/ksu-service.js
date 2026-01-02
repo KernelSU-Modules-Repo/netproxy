@@ -234,30 +234,63 @@ EOF
         }
     }
 
-    // 检查并更新 Xray 内核
-    static async updateXray() {
-        try {
-            const cmd = `su -c "sh ${this.MODULE_PATH}/scripts/utils/update-xray.sh"`;
-            const result = await exec(cmd);
+    // 检查并更新 Xray 内核（使用 spawn 非阻塞）
+    static updateXray() {
+        return new Promise((resolve) => {
+            let output = '';
+            let resolved = false;
 
-            if (result.errno === 0) {
-                const output = (result.stdout || '') + (result.stderr || '');
-
-
-                if (output.includes('已是最新版本') || output.includes('无需更新')) {
-                    return { success: true, isLatest: true, message: '已是最新版本，无需更新', output };
-                } else if (output.includes('更新成功') || output.includes('========== 更新成功')) {
-                    return { success: true, isLatest: false, message: '更新成功', output };
-                } else {
-                    return { success: true, isLatest: false, message: '操作完成', output };
+            // 60 秒超时保护
+            const timeout = setTimeout(() => {
+                if (!resolved) {
+                    resolved = true;
+                    resolve({ success: false, isLatest: false, message: '更新超时', error: '操作超时' });
                 }
-            } else {
-                return { success: false, isLatest: false, message: '更新失败', error: result.stderr };
+            }, 60000);
+
+            try {
+                const sh = spawn('su', ['-c', `sh ${this.MODULE_PATH}/scripts/utils/update-xray.sh`]);
+
+                sh.stdout.on('data', (data) => {
+                    output += data;
+                });
+
+                sh.stderr.on('data', (data) => {
+                    output += data;
+                });
+
+                sh.on('exit', (code) => {
+                    if (resolved) return;
+                    resolved = true;
+                    clearTimeout(timeout);
+
+                    if (code === 0) {
+                        if (output.includes('已是最新版本') || output.includes('无需更新')) {
+                            resolve({ success: true, isLatest: true, message: '已是最新版本，无需更新', output });
+                        } else if (output.includes('更新成功') || output.includes('========== 更新成功')) {
+                            resolve({ success: true, isLatest: false, message: '更新成功', output });
+                        } else {
+                            resolve({ success: true, isLatest: false, message: '操作完成', output });
+                        }
+                    } else {
+                        resolve({ success: false, isLatest: false, message: '更新失败', error: output });
+                    }
+                });
+
+                sh.on('error', (err) => {
+                    if (resolved) return;
+                    resolved = true;
+                    clearTimeout(timeout);
+                    resolve({ success: false, isLatest: false, message: '更新失败', error: err.message });
+                });
+            } catch (error) {
+                if (!resolved) {
+                    resolved = true;
+                    clearTimeout(timeout);
+                    resolve({ success: false, isLatest: false, message: '更新失败', error: error.message });
+                }
             }
-        } catch (error) {
-            console.error('Update Xray error:', error);
-            return { success: false, isLatest: false, message: '更新失败', error: error.message };
-        }
+        });
     }
 
     // 切换配置（支持热切换）
