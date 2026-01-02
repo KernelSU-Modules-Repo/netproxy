@@ -1,7 +1,7 @@
 /*
  * This file is auto-generated.  DO NOT MODIFY.
  */
-package www.netproxy.web.ui;
+package www.netproxy.web.ui.data.source;
 
 public interface IKsuWebuiStandaloneInterface extends android.os.IInterface {
     
@@ -20,7 +20,7 @@ public interface IKsuWebuiStandaloneInterface extends android.os.IInterface {
     
     /** Local-side IPC implementation stub class. */
     public static abstract class Stub extends android.os.Binder implements IKsuWebuiStandaloneInterface {
-        private static final String DESCRIPTOR = "www.netproxy.web.ui.IKsuWebuiStandaloneInterface";
+        private static final String DESCRIPTOR = "www.netproxy.web.ui.data.source.IKsuWebuiStandaloneInterface";
         static final int TRANSACTION_getPackages = (android.os.IBinder.FIRST_CALL_TRANSACTION + 0);
         
         /** Construct the stub at attach it to the interface. */

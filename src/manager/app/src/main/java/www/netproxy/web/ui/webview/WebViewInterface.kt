@@ -1,11 +1,10 @@
-package www.netproxy.web.ui
+package www.netproxy.web.ui.webview
 
 import android.app.Activity
 import android.content.Context
 import android.content.pm.ApplicationInfo
 import android.os.Handler
 import android.os.Looper
-import android.text.TextUtils
 import android.view.Window
 import android.webkit.JavascriptInterface
 import android.webkit.WebView
@@ -18,8 +17,13 @@ import com.topjohnwu.superuser.ShellUtils
 import com.topjohnwu.superuser.internal.UiThreadHandler
 import org.json.JSONArray
 import org.json.JSONObject
+import www.netproxy.web.ui.data.repository.AppRepository
+import www.netproxy.web.ui.ui.main.MainActivity
+import www.netproxy.web.ui.util.createRootShell
+import www.netproxy.web.ui.util.withNewRootShell
 import java.io.File
 import java.util.concurrent.CompletableFuture
+import android.text.TextUtils
 
 class WebViewInterface(
     val context: Context,
@@ -188,13 +192,12 @@ class WebViewInterface(
         currentModuleInfo.put("moduleDir", modDir)
         val moduleId = File(modDir).getName()
         currentModuleInfo.put("id", moduleId)
-        // TODO: more
         return currentModuleInfo.toString()
     }
 
     @JavascriptInterface
     fun listPackages(type: String): String {
-        val packageNames = AppList.getApplist()
+        val packageNames = AppRepository.getApplist()
             .filter { appInfo ->
                 val flags = appInfo.packageInfo.applicationInfo?.flags ?: 0
                 when (type.lowercase()) {
@@ -217,7 +220,7 @@ class WebViewInterface(
     fun getPackagesInfo(packageNamesJson: String): String {
         val packageNames = JSONArray(packageNamesJson)
         val jsonArray = JSONArray()
-        val appMap = AppList.getApplist().associateBy { it.packageName }
+        val appMap = AppRepository.getApplist().associateBy { it.packageName }
         for (i in 0 until packageNames.length()) {
             val pkgName = packageNames.getString(i)
             val appInfo = appMap[pkgName]

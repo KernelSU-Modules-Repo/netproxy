@@ -1,4 +1,4 @@
-package www.netproxy.web.ui.services
+package www.netproxy.web.ui.data.source
 
 import android.content.Intent
 import android.content.pm.PackageInfo
@@ -6,7 +6,6 @@ import android.os.IBinder
 import android.os.UserManager
 import android.util.Log
 import com.topjohnwu.superuser.ipc.RootService
-import www.netproxy.web.ui.IKsuWebuiStandaloneInterface
 import rikka.parcelablelist.ParcelableListSlice
 
 class RootServices : RootService() {

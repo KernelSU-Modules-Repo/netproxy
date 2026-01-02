@@ -17,7 +17,7 @@
         tools:targetApi="33">
 
         <activity
-            android:name="www.netproxy.web.ui.MainActivity"
+            android:name="www.netproxy.web.ui.ui.main.MainActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

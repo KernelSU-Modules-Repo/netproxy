@@ -1,4 +1,4 @@
-package www.netproxy.web.ui
+package www.netproxy.web.ui.data.source
 
 import android.content.ComponentName
 import android.content.Intent
@@ -8,6 +8,7 @@ import androidx.annotation.MainThread
 import com.topjohnwu.superuser.Shell
 import com.topjohnwu.superuser.ipc.RootService
 import com.topjohnwu.superuser.nio.FileSystemManager
+import www.netproxy.web.ui.App
 import java.util.concurrent.CopyOnWriteArraySet
 
 class FileSystemService : RootService() {

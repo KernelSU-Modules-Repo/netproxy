@@ -1,4 +1,4 @@
-package www.netproxy.web.ui
+package www.netproxy.web.ui.util
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -8,14 +8,14 @@ import android.graphics.drawable.Drawable
 import android.util.LruCache
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.scale
+import www.netproxy.web.ui.data.repository.AppRepository
 
 object AppIconUtil {
-    // Limit cache size to 200 icons
     private const val CACHE_SIZE = 200
     private val iconCache = LruCache<String?, Bitmap?>(CACHE_SIZE)
 
     fun getAppIconDrawable(context: Context, packageName: String): Drawable? {
-        val appList = AppList.getApplist()
+        val appList = AppRepository.getApplist()
         val appDetail = appList.find { it.packageName == packageName }
         return appDetail?.packageInfo?.applicationInfo?.loadIcon(context.packageManager)
     }

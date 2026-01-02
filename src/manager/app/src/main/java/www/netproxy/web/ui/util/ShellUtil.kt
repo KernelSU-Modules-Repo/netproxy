@@ -1,6 +1,7 @@
-package www.netproxy.web.ui
+package www.netproxy.web.ui.util
 
 import com.topjohnwu.superuser.Shell
+import www.netproxy.web.ui.BuildConfig
 
 inline fun <T> withNewRootShell(
     globalMnt: Boolean = false,

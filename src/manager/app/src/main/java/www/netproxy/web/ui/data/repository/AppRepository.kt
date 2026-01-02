@@ -1,24 +1,24 @@
-package www.netproxy.web.ui
+package www.netproxy.web.ui.data.repository
 
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
-import android.content.pm.PackageInfo
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import com.topjohnwu.superuser.ipc.RootService
-import www.netproxy.web.ui.services.RootServices
+import www.netproxy.web.ui.data.source.IKsuWebuiStandaloneInterface
+import www.netproxy.web.ui.data.source.RootServices
+import www.netproxy.web.ui.domain.model.AppInfo
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-data class AppInfo(val packageInfo: PackageInfo, val label: String) {
-    val packageName: String get() = packageInfo.packageName
-}
-
-object AppList {
+/**
+ * 应用列表仓库
+ */
+object AppRepository {
     private var cachedApps: List<AppInfo>? = null
 
     fun getApplist(): List<AppInfo> {

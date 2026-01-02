@@ -1,4 +1,4 @@
-package www.netproxy.web.ui;
+package www.netproxy.web.ui.webview;
 
 /*
  * Copyright 2023 The Android Open Source Project
@@ -25,11 +25,6 @@ class MimeUtil {
             return null;
         }
 
-        // Copying the logic and mapping that Chromium follows.
-        // First we check against the OS (this is a limited list by default)
-        // but app developers can extend this.
-        // We then check against a list of hardcoded mime types above if the
-        // OS didn't provide a result.
         String mimeType = URLConnection.guessContentTypeFromName(fileName);
 
         if (mimeType != null) {
@@ -39,10 +34,6 @@ class MimeUtil {
         return guessHardcodedMime(fileName);
     }
 
-    // We should keep this map in sync with the lists under
-    // //net/base/mime_util.cc in Chromium.
-    // A bunch of the mime types don't really apply to Android land
-    // like word docs so feel free to filter out where necessary.
     private static String guessHardcodedMime(String fileName) {
         int finalFullStop = fileName.lastIndexOf('.');
         if (finalFullStop == -1) {
