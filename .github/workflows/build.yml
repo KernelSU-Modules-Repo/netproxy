@@ -17,6 +17,8 @@ jobs:
   build:
     name: 构建
     runs-on: ubuntu-latest
+    outputs:
+      commit_count: ${{ steps.get_version.outputs.commit_count }}
     steps:
       - name: 拉取代码
         uses: actions/checkout@v4
@@ -40,10 +42,12 @@ jobs:
         run: npm install
 
       - name: 更新 versionCode
+        id: get_version
         run: |
           COMMIT_COUNT=$(git rev-list --count HEAD)
           sed -i "s/^versionCode=.*/versionCode=$COMMIT_COUNT/" src/module/module.prop
           echo "versionCode 已更新为: $COMMIT_COUNT"
+          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
 
       - name: 构建 WebUI
         run: python src/webui/build_webui.py
@@ -70,7 +74,7 @@ jobs:
       - name: 打包模块
         if: ${{ needs.build.result == 'success' }}
         run: |
-          COMMIT_COUNT=$(git rev-list --count HEAD)
+          COMMIT_COUNT=${{ needs.build.outputs.commit_count }}
           # 从 module.prop 读取 version
           VERSION=$(grep '^version=' src/module/module.prop | cut -d= -f2)
           ZIP_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}.zip"
