@@ -37,6 +37,12 @@ jobs:
         working-directory: src/webui
         run: npm install
 
+      - name: 更新 versionCode
+        run: |
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          sed -i "s/^versionCode=.*/versionCode=$COMMIT_COUNT/" src/module/module.prop
+          echo "versionCode 已更新为: $COMMIT_COUNT"
+
       - name: 构建 WebUI
         run: python src/webui/build_webui.py
 
