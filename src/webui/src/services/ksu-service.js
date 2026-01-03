@@ -651,7 +651,7 @@ EOF
             const timeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
-                    resolve('超时');
+                    resolve('timeout');
                 }
             }, 3000);
 
@@ -674,20 +674,20 @@ EOF
                             return;
                         }
                     }
-                    resolve('超时');
+                    resolve('timeout');
                 });
 
                 ping.on('error', () => {
                     if (resolved) return;
                     resolved = true;
                     clearTimeout(timeout);
-                    resolve('失败');
+                    resolve('failed');
                 });
             } catch (e) {
                 if (!resolved) {
                     resolved = true;
                     clearTimeout(timeout);
-                    resolve('失败');
+                    resolve('failed');
                 }
             }
         });

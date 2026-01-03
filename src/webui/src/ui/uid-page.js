@@ -1,5 +1,6 @@
 import { KSUService } from '../services/ksu-service.js';
 import { toast } from '../utils/toast.js';
+import { I18nService } from '../services/i18n-service.js';
 
 /**
  * 代理设置页面管理器
@@ -107,7 +108,7 @@ export class UIDPageManager {
 
             // 更新列表标题
             if (listTitle && currentModeValue !== 'off') {
-                listTitle.textContent = this.proxyMode === 'blacklist' ? '排除应用' : '代理应用';
+                listTitle.textContent = this.proxyMode === 'blacklist' ? I18nService.t('uid.title_blacklist') : I18nService.t('uid.title_whitelist');
             }
 
             // 获取代理应用列表 Array<{userId, packageName}>
@@ -115,8 +116,8 @@ export class UIDPageManager {
 
             if (this.proxyApps.length === 0) {
                 const emptyText = this.proxyMode === 'blacklist'
-                    ? '暂无排除应用，所有应用都会走代理'
-                    : '暂无代理应用，点击上方按钮添加';
+                    ? I18nService.t('uid.empty_blacklist')
+                    : I18nService.t('uid.empty_whitelist');
                 listEl.innerHTML = `<mdui-list-item><div slot="headline">${emptyText}</div></mdui-list-item>`;
                 return;
             }
@@ -171,7 +172,7 @@ export class UIDPageManager {
 
                 // 标题：应用名 + 用户ID（如果非主用户）
                 const headline = proxyApp.userId !== '0'
-                    ? `${label} [用户 ${proxyApp.userId}]`
+                    ? `${label} [${I18nService.t('uid.user_label')} ${proxyApp.userId}]`
                     : label;
                 item.setAttribute('headline', headline);
 
@@ -238,18 +239,18 @@ export class UIDPageManager {
                 // 关闭功能
                 await KSUService.setAppProxyEnabled(false);
                 this.appProxyEnabled = false;
-                toast('分应用代理已关闭');
+                toast(I18nService.t('uid.toast_proxy_disabled'));
             } else {
                 // 开启功能并设置模式
                 await KSUService.setAppProxyEnabled(true);
                 await KSUService.setAppProxyMode(modeValue);
                 this.appProxyEnabled = true;
                 this.proxyMode = modeValue;
-                toast(`已切换为${modeValue === 'blacklist' ? '黑名单' : '白名单'}模式`);
+                toast(I18nService.t('uid.toast_mode_switched') + (modeValue === 'blacklist' ? I18nService.t('uid.mode_blacklist') : I18nService.t('uid.mode_whitelist')));
             }
             this.update();
         } catch (error) {
-            toast('设置失败: ' + error.message, true);
+            toast(I18nService.t('common.set_failed') + error.message, true);
         }
     }
 
@@ -257,15 +258,15 @@ export class UIDPageManager {
         const userIdStr = userId.toString();
         const displayUser = userIdStr !== '0' ? `(用户 ${userIdStr})` : '';
         const displayName = appLabel || packageName;
-        if (await this.ui.confirm(`确定要移除 ${displayName} ${displayUser} 吗？`)) {
+        if (await this.ui.confirm(I18nService.t('uid.confirm_remove', { name: displayName + (displayUser ? ' ' + displayUser : '') }))) {
             try {
                 await KSUService.removeProxyApp(packageName, userIdStr);
-                toast(`已移除`);
+                toast(I18nService.t('uid.toast_removed'));
                 // 清除缓存并强制刷新
                 this.proxyApps = [];
                 await this.update(true);
             } catch (error) {
-                toast('移除失败: ' + error.message, true);
+                toast(I18nService.t('uid.toast_remove_failed') + error.message, true);
             }
         }
     }
@@ -281,8 +282,8 @@ export class UIDPageManager {
             this.allApps = await KSUService.fetchAppDetails(this.allApps);
             this.renderAppList(this.allApps);
         } catch (error) {
-            listEl.innerHTML = '<mdui-list-item><div slot="headline">加载失败</div></mdui-list-item>';
-            toast('加载应用列表失败: ' + error.message, true);
+            listEl.innerHTML = `<mdui-list-item><div slot="headline">${I18nService.t('logs.load_failed')}</div></mdui-list-item>`;
+            toast(I18nService.t('uid.toast_load_apps_failed') + error.message, true);
         }
     }
 
@@ -324,7 +325,7 @@ export class UIDPageManager {
         const btn = document.getElementById('app-selector-add-selected');
         if (btn) {
             const count = this.selectedApps.size;
-            btn.textContent = `添加选中 (${count})`;
+            btn.textContent = I18nService.t('uid.btn_add_selected', { count: count });
             btn.disabled = count === 0;
         }
     }
@@ -364,7 +365,7 @@ export class UIDPageManager {
             }
         }
 
-        toast(`成功添加 ${apps.length} 个应用`);
+        toast(I18nService.t('uid.toast_added_count', { count: apps.length }));
 
         document.getElementById('app-selector-dialog').open = false;
         this.selectedApps.clear();
@@ -381,7 +382,7 @@ export class UIDPageManager {
         const scrollContainer = listEl.parentElement;
 
         if (apps.length === 0) {
-            listEl.innerHTML = '<mdui-list-item><div slot="headline">没有找到应用</div></mdui-list-item>';
+            listEl.innerHTML = `<mdui-list-item><div slot="headline">${I18nService.t('uid.no_apps_found')}</div></mdui-list-item>`;
             return;
         }
 

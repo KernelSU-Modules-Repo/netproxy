@@ -1,5 +1,6 @@
 import { toast } from '../utils/toast.js';
 import { KSUService } from '../services/ksu-service.js';
+import { I18nService } from '../services/i18n-service.js';
 import { setColorScheme } from 'mdui/functions/setColorScheme.js';
 import { setTheme } from 'mdui/functions/setTheme.js';
 const logoUrl = 'https://ghfast.top/https://raw.githubusercontent.com/Fanju6/NetProxy-Magisk/refs/heads/main/image/logo.png';
@@ -20,6 +21,7 @@ export class SettingsPageManager {
         this.setupRoutingRulesPage();
         this.setupProxySettingsPage();
         this.setupThemePage();
+        this.setupLanguagePage();
         this.setupDnsPage();
         this.applyStoredTheme();
     }
@@ -82,9 +84,9 @@ export class SettingsPageManager {
             autoStartSwitch.addEventListener('change', async (e) => {
                 try {
                     await KSUService.setModuleSetting('AUTO_START', e.target.checked);
-                    toast(`开机自启已${e.target.checked ? '启用' : '禁用'}`);
+                    toast(I18nService.t('settings.module.toast_autostart') + (e.target.checked ? I18nService.t('common.enabled') : I18nService.t('common.disabled')));
                 } catch (error) {
-                    toast('设置失败: ' + error.message, true);
+                    toast(I18nService.t('common.set_failed') + error.message, true);
                     e.target.checked = !e.target.checked;
                 }
             });
@@ -99,12 +101,12 @@ export class SettingsPageManager {
                     // 如果启用，立即执行修复脚本
                     if (e.target.checked) {
                         await KSUService.executeOneplusFix();
-                        toast('OnePlus A16 兼容性修复已执行');
+                        toast(I18nService.t('settings.module.toast_oneplus'));
                     } else {
-                        toast('OnePlus A16 兼容性修复已禁用');
+                        toast(I18nService.t('settings.module.toast_oneplus_disabled'));
                     }
                 } catch (error) {
-                    toast('设置失败: ' + error.message, true);
+                    toast(I18nService.t('common.set_failed') + error.message, true);
                     e.target.checked = !e.target.checked;
                 }
             });
@@ -116,6 +118,15 @@ export class SettingsPageManager {
             themeEntry.addEventListener('click', () => {
                 this.ui.switchPage('theme');
                 this.loadThemeSettings();
+            });
+        }
+
+        // 语言设置入口
+        const languageEntry = document.getElementById('settings-language');
+        if (languageEntry) {
+            languageEntry.addEventListener('click', () => {
+                this.ui.switchPage('language');
+                this.loadLanguageSettings();
             });
         }
 
@@ -178,7 +189,7 @@ export class SettingsPageManager {
             this.renderRoutingRules();
         } catch (error) {
             console.error('加载路由规则失败:', error);
-            toast('加载路由规则失败');
+            toast(I18nService.t('settings.routing.toast_load_failed'));
         }
     }
 
@@ -191,7 +202,7 @@ export class SettingsPageManager {
         if (this.routingRules.length === 0) {
             listEl.innerHTML = `
                 <mdui-list-item>
-                    <span slot="description">暂无规则，点击右上角添加</span>
+                    <span slot="description">${I18nService.t('settings.routing.empty')}</span>
                 </mdui-list-item>
             `;
             return;
@@ -201,17 +212,18 @@ export class SettingsPageManager {
             const item = document.createElement('mdui-list-item');
 
             // 构建描述
+            // 构建描述
             const parts = [];
-            if (rule.domain) parts.push(`域名: ${rule.domain}`);
-            if (rule.ip) parts.push(`IP: ${rule.ip}`);
-            if (rule.port) parts.push(`端口: ${rule.port}`);
-            if (rule.network) parts.push(`网络: ${rule.network}`);
-            if (rule.protocol) parts.push(`协议: ${rule.protocol}`);
+            if (rule.domain) parts.push(`${I18nService.t('settings.routing.domain')}: ${rule.domain}`);
+            if (rule.ip) parts.push(`${I18nService.t('settings.routing.ip')}: ${rule.ip}`);
+            if (rule.port) parts.push(`${I18nService.t('settings.routing.port')}: ${rule.port}`);
+            if (rule.network) parts.push(`${I18nService.t('settings.routing.network')}: ${rule.network}`);
+            if (rule.protocol) parts.push(`${I18nService.t('settings.routing.protocol')}: ${rule.protocol}`);
 
-            const description = parts.length > 0 ? parts.join(' | ') : '无条件';
-            const outboundLabel = { proxy: '代理', direct: '直连', block: '阻断' }[rule.outboundTag] || rule.outboundTag;
+            const description = parts.length > 0 ? parts.join(' | ') : I18nService.t('settings.routing.unconditional');
+            const outboundLabel = { proxy: I18nService.t('settings.routing.outbound_proxy'), direct: I18nService.t('settings.routing.outbound_direct'), block: I18nService.t('settings.routing.outbound_block') }[rule.outboundTag] || rule.outboundTag;
 
-            item.setAttribute('headline', rule.name || `规则 ${index + 1}`);
+            item.setAttribute('headline', rule.name || `${I18nService.t('settings.routing.rule_prefix')}${index + 1}`);
 
             // 使用 description slot 显示详情和出站
             const descDiv = document.createElement('div');
@@ -259,7 +271,7 @@ export class SettingsPageManager {
 
             // 编辑
             const editItem = document.createElement('mdui-menu-item');
-            editItem.innerHTML = '<mdui-icon slot="icon" name="edit"></mdui-icon>编辑';
+            editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('common.edit')}`;
             editItem.addEventListener('click', (e) => {
                 e.stopPropagation();
                 dropdown.open = false;
@@ -269,12 +281,12 @@ export class SettingsPageManager {
 
             // 删除
             const deleteItem = document.createElement('mdui-menu-item');
-            deleteItem.innerHTML = '<mdui-icon slot="icon" name="delete"></mdui-icon>删除';
+            deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('common.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
             deleteItem.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 dropdown.open = false;
-                if (await this.ui.confirm(`确定要删除规则 "${rule.name || `规则 ${index + 1}`}" 吗？`)) {
+                if (await this.ui.confirm(I18nService.t('settings.routing.confirm_delete', { name: rule.name || `${I18nService.t('settings.routing.rule_prefix')}${index + 1}` }))) {
                     this.routingRules.splice(index, 1);
                     await this.saveRulesToBackend();
                     this.renderRoutingRules();
@@ -295,7 +307,7 @@ export class SettingsPageManager {
         const dialog = document.getElementById('routing-rule-dialog');
 
         // 设置标题
-        dialog.headline = rule ? '编辑规则' : '添加规则';
+        dialog.headline = rule ? I18nService.t('settings.routing.dialog_edit') : I18nService.t('settings.routing.dialog_add');
 
         // 填充表单
         document.getElementById('rule-name').value = rule?.name || '';
@@ -320,12 +332,12 @@ export class SettingsPageManager {
 
         // 验证
         if (!domain && !ip && !port && !protocol && !network) {
-            toast('请至少填写一个匹配条件');
+            toast(I18nService.t('settings.routing.toast_input_condition'));
             return;
         }
 
         const rule = {
-            name: name || (this.editingRuleIndex >= 0 ? `规则 ${this.editingRuleIndex + 1}` : `规则 ${this.routingRules.length + 1}`),
+            name: name || (this.editingRuleIndex >= 0 ? `${I18nService.t('settings.routing.rule_prefix')}${this.editingRuleIndex + 1}` : `${I18nService.t('settings.routing.rule_prefix')}${this.routingRules.length + 1}`),
             type: 'field',
             domain,
             ip,
@@ -347,7 +359,7 @@ export class SettingsPageManager {
         await this.saveRulesToBackend();
         this.renderRoutingRules();
         document.getElementById('routing-rule-dialog').open = false;
-        toast(this.editingRuleIndex >= 0 ? '规则已更新' : '规则已添加');
+        toast(this.editingRuleIndex >= 0 ? I18nService.t('settings.routing.toast_updated') : I18nService.t('settings.routing.toast_added'));
     }
 
     async saveRulesToBackend() {
@@ -356,7 +368,7 @@ export class SettingsPageManager {
             await KSUService.applyRoutingRules(this.routingRules);
         } catch (error) {
             console.error('保存规则失败:', error);
-            toast('保存失败: ' + error.message);
+            toast(I18nService.t('common.save_failed') + error.message);
         }
     }
 
@@ -425,7 +437,7 @@ export class SettingsPageManager {
             this.renderDnsHosts();
         } catch (error) {
             console.error('加载 DNS 配置失败:', error);
-            toast('加载 DNS 配置失败');
+            toast(I18nService.t('settings.dns.toast_load_failed'));
         }
     }
 
@@ -439,7 +451,7 @@ export class SettingsPageManager {
         if (servers.length === 0) {
             listEl.innerHTML = `
                 <mdui-list-item>
-                    <span slot="description">暂无 DNS 服务器，点击右上角添加</span>
+                    <span slot="description">${I18nService.t('settings.dns.empty_server')}</span>
                 </mdui-list-item>
             `;
             return;
@@ -455,8 +467,8 @@ export class SettingsPageManager {
             item.setAttribute('headline', address);
 
             const descParts = [];
-            if (domains.length > 0) descParts.push(`域名: ${domains.slice(0, 2).join(', ')}${domains.length > 2 ? '...' : ''}`);
-            if (tag) descParts.push(`标签: ${tag}`);
+            if (domains.length > 0) descParts.push(`${I18nService.t('settings.routing.domain')}: ${domains.slice(0, 2).join(', ')}${domains.length > 2 ? '...' : ''}`);
+            if (tag) descParts.push(`${I18nService.t('settings.dns.label_tag')}: ${tag}`);
 
             if (descParts.length > 0) {
                 const descSpan = document.createElement('span');
@@ -482,7 +494,7 @@ export class SettingsPageManager {
             const menu = document.createElement('mdui-menu');
 
             const editItem = document.createElement('mdui-menu-item');
-            editItem.innerHTML = '<mdui-icon slot="icon" name="edit"></mdui-icon>编辑';
+            editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('common.edit')}`;
             editItem.addEventListener('click', (e) => {
                 e.stopPropagation();
                 dropdown.open = false;
@@ -491,12 +503,12 @@ export class SettingsPageManager {
             menu.appendChild(editItem);
 
             const deleteItem = document.createElement('mdui-menu-item');
-            deleteItem.innerHTML = '<mdui-icon slot="icon" name="delete"></mdui-icon>删除';
+            deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('common.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
             deleteItem.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 dropdown.open = false;
-                if (await this.ui.confirm(`确定要删除服务器 "${address}" 吗？`)) {
+                if (await this.ui.confirm(I18nService.t('settings.dns.confirm_delete_server', { address: address }))) {
                     this.dnsConfig.dns.servers.splice(index, 1);
                     await this.saveDnsToBackend();
                     this.renderDnsServers();
@@ -523,7 +535,7 @@ export class SettingsPageManager {
         if (hostKeys.length === 0) {
             listEl.innerHTML = `
                 <mdui-list-item>
-                    <span slot="description">暂无静态 Host，点击右上角添加</span>
+                    <span slot="description">${I18nService.t('settings.dns.empty_host')}</span>
                 </mdui-list-item>
             `;
             return;
@@ -558,7 +570,7 @@ export class SettingsPageManager {
             const menu = document.createElement('mdui-menu');
 
             const editItem = document.createElement('mdui-menu-item');
-            editItem.innerHTML = '<mdui-icon slot="icon" name="edit"></mdui-icon>编辑';
+            editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('common.edit')}`;
             editItem.addEventListener('click', (e) => {
                 e.stopPropagation();
                 dropdown.open = false;
@@ -567,12 +579,12 @@ export class SettingsPageManager {
             menu.appendChild(editItem);
 
             const deleteItem = document.createElement('mdui-menu-item');
-            deleteItem.innerHTML = '<mdui-icon slot="icon" name="delete"></mdui-icon>删除';
+            deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('common.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
             deleteItem.addEventListener('click', async (e) => {
                 e.stopPropagation();
                 dropdown.open = false;
-                if (await this.ui.confirm(`确定要删除 Host "${domain}" 吗？`)) {
+                if (await this.ui.confirm(I18nService.t('settings.dns.confirm_delete_host', { domain: domain }))) {
                     delete this.dnsConfig.dns.hosts[domain];
                     await this.saveDnsToBackend();
                     this.renderDnsHosts();
@@ -591,7 +603,7 @@ export class SettingsPageManager {
     showServerDialog(server = null, index = -1) {
         this.editingServerIndex = index;
         const dialog = document.getElementById('dns-server-dialog');
-        dialog.headline = server ? '编辑服务器' : '添加服务器';
+        dialog.headline = server ? I18nService.t('settings.dns.server_dialog_edit') : I18nService.t('settings.dns.server_dialog_add');
 
         const isSimple = typeof server === 'string';
         const address = server ? (isSimple ? server : server.address) : '';
@@ -612,7 +624,7 @@ export class SettingsPageManager {
     showHostDialog(domain = null, value = null) {
         this.editingHostKey = domain;
         const dialog = document.getElementById('dns-host-dialog');
-        dialog.headline = domain ? '编辑 Host' : '添加 Host';
+        dialog.headline = domain ? I18nService.t('settings.dns.host_dialog_edit') : I18nService.t('settings.dns.host_dialog_add');
 
         const ips = value ? (Array.isArray(value) ? value.join(', ') : value) : '';
 
@@ -630,7 +642,7 @@ export class SettingsPageManager {
         const tag = document.getElementById('dns-server-tag').value.trim();
 
         if (!address) {
-            toast('请输入服务器地址');
+            toast(I18nService.t('settings.dns.toast_enter_address'));
             return;
         }
 
@@ -660,7 +672,7 @@ export class SettingsPageManager {
         await this.saveDnsToBackend();
         this.renderDnsServers();
         document.getElementById('dns-server-dialog').open = false;
-        toast(this.editingServerIndex >= 0 ? '服务器已更新' : '服务器已添加');
+        toast(this.editingServerIndex >= 0 ? I18nService.t('settings.dns.toast_server_updated') : I18nService.t('settings.dns.toast_server_added'));
     }
 
     async saveHost() {
@@ -668,11 +680,11 @@ export class SettingsPageManager {
         const ipStr = document.getElementById('dns-host-ip').value.trim();
 
         if (!domain) {
-            toast('请输入域名');
+            toast(I18nService.t('settings.dns.toast_enter_domain'));
             return;
         }
         if (!ipStr) {
-            toast('请输入目标 IP');
+            toast(I18nService.t('settings.dns.toast_enter_ip'));
             return;
         }
 
@@ -692,7 +704,7 @@ export class SettingsPageManager {
         await this.saveDnsToBackend();
         this.renderDnsHosts();
         document.getElementById('dns-host-dialog').open = false;
-        toast(this.editingHostKey ? 'Host 已更新' : 'Host 已添加');
+        toast(this.editingHostKey ? I18nService.t('settings.dns.toast_host_updated') : I18nService.t('settings.dns.toast_host_added'));
     }
 
     async saveDnsToBackend() {
@@ -700,7 +712,7 @@ export class SettingsPageManager {
             await KSUService.saveDnsConfig(this.dnsConfig);
         } catch (error) {
             console.error('保存 DNS 配置失败:', error);
-            toast('保存失败: ' + error.message);
+            toast(I18nService.t('common.save_failed') + error.message);
         }
     }
 
@@ -767,9 +779,9 @@ export class SettingsPageManager {
     async setProxySetting(key, value) {
         try {
             await KSUService.setProxySetting(key, value);
-            toast(`已${value ? '启用' : '禁用'}`);
+            toast(value ? I18nService.t('common.enabled') : I18nService.t('common.disabled'));
         } catch (error) {
-            toast('设置失败: ' + error.message);
+            toast(I18nService.t('common.set_failed') + error.message);
             // 恢复开关状态
             const htmlId = key.replace('_', '-');
             const switchEl = document.getElementById(htmlId);
@@ -783,10 +795,10 @@ export class SettingsPageManager {
         try {
             await KSUService.setProxyMode(value);
             this.updateProxyModeDesc(value);
-            const modeNames = { '0': '自动', '1': 'TPROXY', '2': 'REDIRECT' };
-            toast(`代理模式已设为: ${modeNames[value] || value}`);
+            const modeNames = { '0': I18nService.t('settings.proxy.mode_auto'), '1': I18nService.t('settings.proxy.mode_tproxy'), '2': I18nService.t('settings.proxy.mode_redirect') };
+            toast(I18nService.t('settings.proxy.toast_mode_set') + (modeNames[value] || value));
         } catch (error) {
-            toast('设置代理模式失败: ' + error.message);
+            toast(I18nService.t('common.set_failed') + error.message);
         }
     }
 
@@ -794,9 +806,9 @@ export class SettingsPageManager {
         const desc = document.getElementById('proxy-mode-desc-settings');
         if (!desc) return;
         const descs = {
-            '0': '自动检测最佳代理方式',
-            '1': '强制使用 TPROXY 透明代理',
-            '2': '强制使用 REDIRECT 重定向'
+            '0': I18nService.t('settings.proxy.desc_auto'),
+            '1': I18nService.t('settings.proxy.desc_tproxy'),
+            '2': I18nService.t('settings.proxy.desc_redirect')
         };
         desc.textContent = descs[String(mode)] || descs['0'];
     }
@@ -896,7 +908,8 @@ export class SettingsPageManager {
         }
 
         this.updateMonetToggleState();
-        toast(`已切换到${mode === 'auto' ? '自动' : mode === 'light' ? '浅色' : '深色'}模式`);
+        const modeName = mode === 'auto' ? I18nService.t('settings.theme.mode_auto') : mode === 'light' ? I18nService.t('settings.theme.mode_light') : I18nService.t('settings.theme.mode_dark');
+        toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
     }
 
     applyThemeColor(color) {
@@ -919,7 +932,7 @@ export class SettingsPageManager {
         }
 
         this.updateMonetToggleState();
-        toast('主题色已更改');
+        toast(I18nService.t('settings.theme.toast_color_changed'));
     }
 
     /**
@@ -1092,7 +1105,7 @@ export class SettingsPageManager {
             const enabled = e.target.checked;
             localStorage.setItem('monetEnabled', enabled);
             this.applyMonetSetting(enabled);
-            toast(`莫奈取色已${enabled ? '启用' : '禁用'}`);
+            toast(I18nService.t('settings.monet.toast_toggled') + (enabled ? I18nService.t('common.enabled') : I18nService.t('common.disabled')));
         });
     }
 
@@ -1139,12 +1152,12 @@ export class SettingsPageManager {
 
     showAboutDialog() {
         const dialog = document.createElement('mdui-dialog');
-        dialog.headline = '关于 NetProxy';
+        dialog.headline = I18nService.t('settings.about.title');
         dialog.innerHTML = `
             <div style="text-align: center; padding: 16px 0;">
                 <img src="${logoUrl}" alt="NetProxy" style="width: 72px; height: 72px; border-radius: 16px;">
                 <h2 style="margin: 16px 0 8px;">NetProxy</h2>
-                <p style="color: var(--mdui-color-on-surface-variant); margin: 0;">Android 系统级 Xray 透明代理模块</p>
+                <p style="color: var(--mdui-color-on-surface-variant); margin: 0;">${I18nService.t('settings.about.description')}</p>
                 <p style="margin-top: 16px;">
                     <mdui-chip icon="code">Xray Core</mdui-chip>
                     <mdui-chip icon="android">Magisk / KernelSU</mdui-chip>
@@ -1166,10 +1179,10 @@ export class SettingsPageManager {
                             <path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161c-.18 1.897-.962 6.502-1.359 8.627-.168.9-.5 1.201-.82 1.23-.696.064-1.225-.46-1.901-.903-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.477-1.635.099-.002.321.023.465.141.121.1.154.234.17.331.015.099.034.323.019.498z"/>
                         </svg>
                     </mdui-icon>
-                    Telegram 群组
+                    ${I18nService.t('settings.about.group')}
                 </mdui-list-item>
             </mdui-list>
-            <mdui-button slot="action" variant="text">关闭</mdui-button>
+            <mdui-button slot="action" variant="text">${I18nService.t('settings.about.close')}</mdui-button>
         `;
 
         document.body.appendChild(dialog);
@@ -1214,4 +1227,33 @@ export class SettingsPageManager {
         }
     }
 
+    // ===================== 语言设置页面 =====================
+
+    setupLanguagePage() {
+        // 返回按钮
+        const backBtn = document.getElementById('language-back-btn');
+        if (backBtn) {
+            backBtn.addEventListener('click', () => {
+                this.ui.switchPage('settings');
+            });
+        }
+
+        // 语言切换
+        const languageGroup = document.getElementById('language-group');
+        if (languageGroup) {
+            languageGroup.addEventListener('change', (e) => {
+                const lang = e.target.value;
+                I18nService.setLanguage(lang);
+                // 刷新当前页面状态
+                this.loadLanguageSettings();
+            });
+        }
+    }
+
+    loadLanguageSettings() {
+        const languageGroup = document.getElementById('language-group');
+        if (languageGroup) {
+            languageGroup.value = I18nService.getLanguage();
+        }
+    }
 }

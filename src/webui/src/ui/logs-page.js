@@ -1,5 +1,6 @@
 import { KSUService } from '../services/ksu-service.js';
 import { toast } from '../utils/toast.js';
+import { I18nService } from '../services/i18n-service.js';
 
 /**
  * 日志页面管理器
@@ -35,7 +36,7 @@ export class LogsPageManager {
             const log = await KSUService.getServiceLog();
             document.getElementById('service-log').textContent = log;
         } catch (error) {
-            document.getElementById('service-log').textContent = '加载失败';
+            document.getElementById('service-log').textContent = I18nService.t('logs.load_failed');
         }
     }
 
@@ -44,7 +45,7 @@ export class LogsPageManager {
             const log = await KSUService.getXrayLog();
             document.getElementById('xray-log').textContent = log;
         } catch (error) {
-            document.getElementById('xray-log').textContent = '加载失败';
+            document.getElementById('xray-log').textContent = I18nService.t('logs.load_failed');
         }
     }
 
@@ -53,7 +54,7 @@ export class LogsPageManager {
             const log = await KSUService.getTproxyLog();
             document.getElementById('tproxy-log').textContent = log;
         } catch (error) {
-            document.getElementById('tproxy-log').textContent = '加载失败';
+            document.getElementById('tproxy-log').textContent = I18nService.t('logs.load_failed');
         }
     }
 
@@ -66,13 +67,13 @@ export class LogsPageManager {
         try {
             const result = await KSUService.exportLogs();
             if (result.success) {
-                toast(`日志已保存到: ${result.path}`);
+                toast(I18nService.t('logs.saved_to') + result.path);
             } else {
-                toast('保存日志失败: ' + (result.error || '未知错误'));
+                toast(I18nService.t('logs.save_failed') + ': ' + (result.error || I18nService.t('logs.unknown_error')));
             }
         } catch (error) {
             console.error('导出日志失败:', error);
-            toast('保存日志失败');
+            toast(I18nService.t('logs.save_failed'));
         } finally {
             if (btn) btn.loading = false;
         }
@@ -85,13 +86,13 @@ export class LogsPageManager {
         try {
             const result = await KSUService.exportAll();
             if (result.success) {
-                toast(`日志与配置已保存到: ${result.path}`);
+                toast(I18nService.t('logs.saved_all_to') + result.path);
             } else {
-                toast('保存失败: ' + (result.error || '未知错误'));
+                toast(I18nService.t('common.save_failed') + (result.error || I18nService.t('logs.unknown_error')));
             }
         } catch (error) {
             console.error('导出日志与配置失败:', error);
-            toast('保存失败');
+            toast(I18nService.t('common.save_failed'));
         } finally {
             if (btn) btn.loading = false;
         }

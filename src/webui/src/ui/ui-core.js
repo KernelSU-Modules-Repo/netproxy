@@ -1,5 +1,6 @@
 import { setTheme } from 'mdui';
 import { KSUService } from '../services/ksu-service.js';
+import { I18nService } from '../services/i18n-service.js';
 import { toast } from '../utils/toast.js';
 import { StatusPageManager } from './status-page.js';
 import { ConfigPageManager } from './config-page.js';
@@ -30,6 +31,9 @@ export class UI {
     }
 
     init() {
+        // 初始化多语言服务
+        I18nService.init();
+
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 this.initializeMDUI();
@@ -94,7 +98,7 @@ export class UI {
                 if (typeof debugLogger !== 'undefined') {
                     debugLogger.clear();
                 }
-                toast('调试日志已清除');
+                toast(I18nService.t('logs.debug_cleared'));
             });
         }
     }
@@ -133,27 +137,27 @@ export class UI {
                 fab.classList.add('rotating');
 
                 if (status === 'running') {
-                    toast('正在停止服务...');
+                    toast(I18nService.t('status.service_stopping'));
                     const success = await KSUService.stopService();
                     if (success) {
-                        toast('服务已停止');
+                        toast(I18nService.t('status.service_stopped'));
                     } else {
-                        toast('停止超时，请检查服务状态');
+                        toast(I18nService.t('status.service_stop_timeout'));
                     }
                 } else {
-                    toast('正在启动服务...');
+                    toast(I18nService.t('status.service_starting'));
                     const success = await KSUService.startService();
                     if (success) {
-                        toast('服务已启动');
+                        toast(I18nService.t('status.service_started'));
                     } else {
-                        toast('启动超时，请检查服务状态');
+                        toast(I18nService.t('status.service_start_timeout'));
                     }
                 }
 
                 await this.statusPage.update();
             } catch (error) {
                 console.error('FAB error:', error);
-                toast('操作失败: ' + error.message);
+                toast(I18nService.t('common.operation_failed') + error.message);
             } finally {
                 fab.classList.remove('rotating');
                 fab.disabled = false;
@@ -167,11 +171,11 @@ export class UI {
 
         themeBtn.addEventListener('click', () => {
             const themes = ['light', 'dark', 'auto'];
-            const currentIndex = themes.indexOf(this.currentTheme);
             this.currentTheme = themes[(currentIndex + 1) % themes.length];
             localStorage.setItem('theme', this.currentTheme);
             this.applyTheme(this.currentTheme);
-            toast(`切换到${this.currentTheme === 'auto' ? '自动' : this.currentTheme === 'light' ? '浅色' : '深色'}主题`);
+            const modeName = this.currentTheme === 'auto' ? I18nService.t('settings.theme.mode_auto') : this.currentTheme === 'light' ? I18nService.t('settings.theme.mode_light') : I18nService.t('settings.theme.mode_dark');
+            toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
         });
     }
 
@@ -285,10 +289,10 @@ export class UI {
                                 setTimeout(() => this.statusPage.update(), 1500);
                             }
                         } else {
-                            toast('更新失败: ' + (result.error || result.message));
+                            toast(I18nService.t('common.update_failed') + (result.error || result.message));
                         }
                     } catch (error) {
-                        toast('检查失败: ' + error.message);
+                        toast(I18nService.t('common.check_failed') + error.message);
                     } finally {
                         checkUpdateBtn.disabled = false;
                         checkUpdateBtn.loading = false;

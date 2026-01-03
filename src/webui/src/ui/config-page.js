@@ -1,5 +1,6 @@
 import { KSUService } from '../services/ksu-service.js';
 import { toast } from '../utils/toast.js';
+import { I18nService } from '../services/i18n-service.js';
 
 /**
  * 配置页面管理器 - 支持分组显示
@@ -62,7 +63,7 @@ export class ConfigPageManager {
                 return { protocol, address, port };
             }
 
-            return { protocol: 'direct', address: '直连模式', port: '' };
+            return { protocol: 'direct', address: I18nService.t('config.parser.direct'), port: '' };
         } catch (e) {
             return { protocol: 'unknown', address: '', port: '' };
         }
@@ -160,7 +161,7 @@ export class ConfigPageManager {
     updateItemUI(item, info) {
         // 更新协议
         const protocolLine = item.querySelector('.protocol-line');
-        if (protocolLine) protocolLine.textContent = (info.protocol || '未知协议').toUpperCase();
+        if (protocolLine) protocolLine.textContent = (info.protocol || I18nService.t('config.parser.unknown')).toUpperCase();
 
         // 更新地址
         const addressSpan = item.querySelector('.address-span');
@@ -281,7 +282,8 @@ export class ConfigPageManager {
 
             // 左侧标题
             const title = document.createElement('span');
-            title.textContent = '节点列表';
+            title.textContent = I18nService.t('config.node_list');
+            title.setAttribute('data-i18n', 'config.node_list');
             title.style.cssText = 'font-size: 14px; font-weight: 500; color: var(--mdui-color-on-surface-variant);';
             actions.appendChild(title);
 
@@ -298,7 +300,7 @@ export class ConfigPageManager {
 
             // 全部测试
             const testItem = document.createElement('mdui-menu-item');
-            testItem.innerHTML = '<mdui-icon slot="icon" name="playlist_play"></mdui-icon>全部测试';
+            testItem.innerHTML = `<mdui-icon slot="icon" name="playlist_play"></mdui-icon>${I18nService.t('config.menu.test_all')}`;
             testItem.addEventListener('click', () => {
                 dropdown.open = false;
                 this.testGroupLatency(group.name);
@@ -307,7 +309,7 @@ export class ConfigPageManager {
 
             // 按延迟排序
             const sortItem = document.createElement('mdui-menu-item');
-            sortItem.innerHTML = '<mdui-icon slot="icon" name="sort"></mdui-icon>按延迟排序';
+            sortItem.innerHTML = `<mdui-icon slot="icon" name="sort"></mdui-icon>${I18nService.t('config.menu.sort')}`;
             sortItem.addEventListener('click', () => {
                 dropdown.open = false;
                 this.sortGroupNodes(group.name);
@@ -316,7 +318,7 @@ export class ConfigPageManager {
 
             // 清理无效节点
             const cleanItem = document.createElement('mdui-menu-item');
-            cleanItem.innerHTML = '<mdui-icon slot="icon" name="delete_sweep"></mdui-icon>清理无效节点';
+            cleanItem.innerHTML = `<mdui-icon slot="icon" name="delete_sweep"></mdui-icon>${I18nService.t('config.menu.clean')}`;
             cleanItem.style.color = 'var(--mdui-color-error)';
             cleanItem.addEventListener('click', () => {
                 dropdown.open = false;
@@ -327,7 +329,7 @@ export class ConfigPageManager {
             // 订阅专用操作
             if (group.type === 'subscription') {
                 const updateItem = document.createElement('mdui-menu-item');
-                updateItem.innerHTML = '<mdui-icon slot="icon" name="refresh"></mdui-icon>更新订阅';
+                updateItem.innerHTML = `<mdui-icon slot="icon" name="refresh"></mdui-icon>${I18nService.t('config.menu.update_sub')}`;
                 updateItem.addEventListener('click', () => {
                     dropdown.open = false;
                     this.updateSubscription(group.dirName, group.name);
@@ -335,7 +337,7 @@ export class ConfigPageManager {
                 menu.appendChild(updateItem);
 
                 const deleteItem = document.createElement('mdui-menu-item');
-                deleteItem.innerHTML = '<mdui-icon slot="icon" name="delete"></mdui-icon>删除订阅';
+                deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('config.menu.delete_sub')}`;
                 deleteItem.addEventListener('click', () => {
                     dropdown.open = false;
                     this.deleteSubscription(group.dirName, group.name);
@@ -459,12 +461,12 @@ export class ConfigPageManager {
 
         const protocolText = document.createElement('span');
         protocolText.className = 'protocol-line';
-        protocolText.textContent = info ? (info.protocol || '未知协议').toUpperCase() : 'LOADING...';
+        protocolText.textContent = info ? (info.protocol || I18nService.t('config.parser.unknown')).toUpperCase() : 'LOADING...';
         protocolLine.appendChild(protocolText);
 
         if (isCurrent) {
             const currentTag = document.createElement('span');
-            currentTag.textContent = '当前';
+            currentTag.textContent = I18nService.t('config.status.current');
             currentTag.style.cssText = 'font-size: 10px; padding: 1px 4px; border-radius: 4px; background: var(--mdui-color-primary); color: var(--mdui-color-on-surface-variant);';
             protocolLine.appendChild(currentTag);
         }
@@ -525,7 +527,7 @@ export class ConfigPageManager {
 
         // 编辑
         const editItem = document.createElement('mdui-menu-item');
-        editItem.innerHTML = '<mdui-icon slot="icon" name="edit"></mdui-icon>编辑';
+        editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('config.menu.edit')}`;
         editItem.addEventListener('click', async (e) => {
             e.stopPropagation();
             dropdown.open = false;
@@ -535,7 +537,7 @@ export class ConfigPageManager {
 
         // 测试
         const testItem = document.createElement('mdui-menu-item');
-        testItem.innerHTML = '<mdui-icon slot="icon" name="speed"></mdui-icon>测试';
+        testItem.innerHTML = `<mdui-icon slot="icon" name="speed"></mdui-icon>${I18nService.t('config.menu.test')}`;
         testItem.addEventListener('click', async (e) => {
             e.stopPropagation();
             dropdown.open = false;
@@ -546,7 +548,7 @@ export class ConfigPageManager {
         // 删除（非当前配置可删除）
         if (!isCurrent) {
             const deleteItem = document.createElement('mdui-menu-item');
-            deleteItem.innerHTML = '<mdui-icon slot="icon" name="delete"></mdui-icon>删除';
+            deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('config.menu.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
             deleteItem.addEventListener('click', async (e) => {
                 e.stopPropagation();
@@ -571,21 +573,25 @@ export class ConfigPageManager {
     async testConfig(displayName, address, itemElement) {
         const latencyLabel = itemElement?.querySelector('.latency-label');
 
-        if (!address || address === '直连模式') {
-            if (latencyLabel) latencyLabel.textContent = '直连';
+        if (!address || address === I18nService.t('config.parser.direct')) {
+            if (latencyLabel) latencyLabel.textContent = I18nService.t('config.status.direct');
             return;
         }
 
         try {
             if (latencyLabel) {
-                latencyLabel.textContent = '测试中...';
+                latencyLabel.textContent = I18nService.t('config.status.testing');
                 latencyLabel.style.color = 'var(--mdui-color-on-surface-variant)';
             }
             const latencyStr = await KSUService.getPingLatency(address);
             let latencyVal = 9999;
 
             if (latencyLabel) {
-                latencyLabel.textContent = latencyStr;
+                let displayStr = latencyStr;
+                if (latencyStr === 'timeout') displayStr = I18nService.t('config.status.timeout');
+                else if (latencyStr === 'failed') displayStr = I18nService.t('config.status.failed');
+
+                latencyLabel.textContent = displayStr;
                 // 根据延迟值设置颜色
                 const ms = parseInt(latencyStr);
                 if (!isNaN(ms)) {
@@ -597,7 +603,7 @@ export class ConfigPageManager {
                     } else {
                         latencyLabel.style.color = '#f44336'; // 红色
                     }
-                } else if (latencyStr === '失败' || latencyStr === '超时') {
+                } else if (latencyStr === 'failed' || latencyStr === 'timeout') {
                     latencyLabel.style.color = '#f44336';
                 }
             }
@@ -617,7 +623,7 @@ export class ConfigPageManager {
 
         } catch (error) {
             if (latencyLabel) {
-                latencyLabel.textContent = '失败';
+                latencyLabel.textContent = I18nService.t('config.status.failed');
                 latencyLabel.style.color = '#f44336';
             }
         }
@@ -634,11 +640,11 @@ export class ConfigPageManager {
         const items = Array.from(listEl.querySelectorAll('.config-item'));
         const total = items.length;
         if (total === 0) {
-            toast('没有可测试的节点');
+            toast(I18nService.t('config.toast.no_nodes'));
             return;
         }
 
-        const toastId = toast(`开始测试 ${total} 个节点...`, 0); // 持续显示
+        const toastId = toast(I18nService.t('config.toast.start_test', { count: total }), 0); // 持续显示
 
         // 无限制并发，同时测试所有节点
         await Promise.all(items.map(async (item) => {
@@ -651,7 +657,7 @@ export class ConfigPageManager {
 
         // 关闭 toast (重新显示一个自动消失的)
         // mdui 没提供直接关闭 toast 的 api，只能发个新的覆盖
-        toast('测试完成');
+        toast(I18nService.t('config.toast.test_complete'));
     }
 
     // 按延迟排序
@@ -669,7 +675,7 @@ export class ConfigPageManager {
             return latA - latB;
         });
 
-        toast('已重新排序');
+        toast(I18nService.t('config.toast.sorted'));
         await this.renderActiveTab(groupName);
     }
 
@@ -677,23 +683,23 @@ export class ConfigPageManager {
     async deleteInvalidNodes(groupName) {
         const infos = this._cachedConfigInfos.get(groupName);
         if (!infos) {
-            toast('请先进行测试');
+            toast(I18nService.t('config.toast.need_test'));
             return;
         }
 
         const invalidFiles = [];
         for (const [filename, info] of infos.entries()) {
-            if (info.latencyStr === '失败' || info.latencyStr === '超时') {
+            if (info.latencyStr === 'failed' || info.latencyStr === 'timeout') {
                 invalidFiles.push(filename);
             }
         }
 
         if (invalidFiles.length === 0) {
-            toast('没有发现无效节点 (需先测试)');
+            toast(I18nService.t('config.toast.no_invalid'));
             return;
         }
 
-        const confirmed = await this.ui.confirm(`发现 ${invalidFiles.length} 个无效节点，确定要删除吗？\n\n这属于破坏性操作，无法恢复。`);
+        const confirmed = await this.ui.confirm(I18nService.t('config.confirm.clean_invalid', { count: invalidFiles.length }));
         if (!confirmed) return;
 
         const group = this._cachedGroups.find(g => g.name === groupName);
@@ -707,7 +713,7 @@ export class ConfigPageManager {
             }
         }
 
-        toast(`已清理 ${successCount} 个节点`);
+        toast(I18nService.t('config.toast.clean_success', { count: successCount }));
         // 强制刷新
         this._cachedConfigInfos.delete(groupName);
         this.update();
@@ -715,28 +721,28 @@ export class ConfigPageManager {
 
     async deleteConfig(fullPath, displayName) {
         try {
-            const confirmed = await this.ui.confirm(`确定要删除节点 "${displayName}" 吗？\n\n此操作不可恢复。`);
+            const confirmed = await this.ui.confirm(I18nService.t('config.confirm.delete_node', { name: displayName }));
             if (!confirmed) return;
 
             const result = await KSUService.deleteConfig(fullPath);
             if (result && result.success) {
-                toast('配置已删除');
+                toast(I18nService.t('config.toast.deleted'));
                 // 强制刷新配置列表
                 this._cachedGroups = null;
                 this._cachedConfigInfos.clear();
                 await this.update(true);
             } else {
-                toast('删除失败: ' + (result?.error || '未知错误'));
+                toast(I18nService.t('config.toast.delete_failed') + (result?.error || I18nService.t('common.unknown')));
             }
         } catch (error) {
-            toast('删除失败: ' + error.message);
+            toast(I18nService.t('config.toast.delete_failed') + error.message);
         }
     }
 
     async switchConfig(fullPath, displayName) {
         try {
             await KSUService.switchConfig(fullPath);
-            toast('已切换到: ' + displayName);
+            toast(I18nService.t('config.toast.switch_success') + displayName);
             // 更新当前配置缓存
             this._cachedCurrentConfig = fullPath;
             // 强制重新渲染当前 tab 以更新"当前"标记
@@ -745,26 +751,26 @@ export class ConfigPageManager {
             }
             await this.ui.statusPage.update();
         } catch (error) {
-            toast('切换配置失败: ' + error.message);
+            toast(I18nService.t('config.toast.switch_failed') + error.message);
         }
     }
 
     // ===================== 订阅管理 =====================
 
     async updateSubscription(dirName, displayName) {
-        toast(`正在更新订阅...`);
+        toast(I18nService.t('config.toast.updating_sub'));
 
         // 使用 setTimeout 让浏览器先渲染 UI
         setTimeout(async () => {
             try {
                 // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
                 await KSUService.updateSubscription(displayName);
-                toast('订阅更新成功');
+                toast(I18nService.t('config.toast.sub_updated'));
                 // 清除该分组的缓存，强制重新加载
                 this._cachedConfigInfos.delete(displayName);
                 this.update();
             } catch (error) {
-                toast('更新失败: ' + error.message);
+                toast(I18nService.t('config.toast.update_failed') + error.message);
                 this.update();
             }
         }, 50);
@@ -772,18 +778,18 @@ export class ConfigPageManager {
 
     async deleteSubscription(dirName, displayName) {
         try {
-            const confirmed = await this.ui.confirm(`确定要删除订阅 "${displayName}" 吗？\n\n该订阅下的所有节点都将被删除。`);
+            const confirmed = await this.ui.confirm(I18nService.t('config.confirm.delete_sub', { name: displayName }));
             if (!confirmed) return;
 
             // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
             await KSUService.removeSubscription(displayName);
-            toast('订阅已删除');
+            toast(I18nService.t('config.toast.sub_deleted'));
             // 清除缓存，强制刷新分组列表
             this._cachedGroups = null;
             this._cachedConfigInfos.clear();
             await this.update(true);
         } catch (error) {
-            toast('删除失败: ' + error.message);
+            toast(I18nService.t('config.toast.delete_failed') + error.message);
         }
     }
 
@@ -808,12 +814,12 @@ export class ConfigPageManager {
         const url = urlInput.value.trim();
 
         if (!name) {
-            toast('请输入订阅名称');
+            toast(I18nService.t('config.toast.enter_sub_name'));
             return;
         }
 
         if (!url) {
-            toast('请输入订阅地址');
+            toast(I18nService.t('config.toast.enter_sub_url'));
             return;
         }
 
@@ -824,19 +830,19 @@ export class ConfigPageManager {
         nameInput.value = '';
         urlInput.value = '';
 
-        toast('正在下载订阅，请稍候...');
+        toast(I18nService.t('config.toast.downloading_sub'));
 
         // 使用 setTimeout 让浏览器先渲染 UI，再执行阻塞操作
         setTimeout(async () => {
             try {
                 await KSUService.addSubscription(name, url);
-                toast('订阅添加成功');
+                toast(I18nService.t('config.toast.sub_added'));
                 // 清除缓存，强制刷新分组列表
                 this._cachedGroups = null;
                 this._cachedConfigInfos.clear();
                 await this.update(true);
             } catch (error) {
-                toast('添加失败: ' + error.message);
+                toast(I18nService.t('config.toast.add_failed') + error.message);
             }
         }, 50);
     }
@@ -879,23 +885,23 @@ export class ConfigPageManager {
         const content = document.getElementById('config-content').value;
 
         if (!filename) {
-            toast('请输入文件名');
+            toast(I18nService.t('config.toast.enter_filename'));
             return;
         }
 
         if (!filename.endsWith('.json')) {
-            toast('文件名必须以 .json 结尾');
+            toast(I18nService.t('config.toast.filename_json'));
             return;
         }
 
         try {
             JSON.parse(content);
             await KSUService.saveConfig(filename, content);
-            toast('保存成功');
+            toast(I18nService.t('config.toast.save_success'));
             document.getElementById('config-dialog').open = false;
             this.update();
         } catch (error) {
-            toast('保存失败: ' + error.message);
+            toast(I18nService.t('config.toast.save_failed') + error.message);
         }
     }
 
@@ -904,7 +910,7 @@ export class ConfigPageManager {
         const nodeLink = input.value.trim();
 
         if (!nodeLink) {
-            toast('请输入节点链接');
+            toast(I18nService.t('config.toast.enter_link'));
             return;
         }
 
@@ -912,7 +918,7 @@ export class ConfigPageManager {
         const isValid = supportedProtocols.some(protocol => nodeLink.startsWith(protocol));
 
         if (!isValid) {
-            toast('不支持的节点链接格式');
+            toast(I18nService.t('config.toast.unsupported_link'));
             return;
         }
 
@@ -920,7 +926,7 @@ export class ConfigPageManager {
             const result = await KSUService.importFromNodeLink(nodeLink);
 
             if (result.success) {
-                toast('节点导入成功');
+                toast(I18nService.t('config.toast.import_success'));
                 document.getElementById('node-link-dialog').open = false;
                 input.value = '';
                 // 强制刷新配置列表
@@ -928,10 +934,10 @@ export class ConfigPageManager {
                 this._cachedConfigInfos.clear();
                 await this.update(true);
             } else {
-                toast('导入失败: ' + (result.error || '未知错误'));
+                toast(I18nService.t('config.toast.import_failed') + (result.error || I18nService.t('common.unknown')));
             }
         } catch (error) {
-            toast('导入失败: ' + error.message);
+            toast(I18nService.t('config.toast.import_failed') + error.message);
         }
     }
 }

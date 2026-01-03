@@ -1,4 +1,5 @@
 import { KSUService } from '../services/ksu-service.js';
+import { I18nService } from '../services/i18n-service.js';
 
 /**
  * 状态页面管理器
@@ -21,8 +22,8 @@ export class StatusPageManager {
 
             if (status === 'running') {
                 statusBadgeDot.className = 'status-badge-dot running';
-                statusBadgeText.textContent = '运行中';
-                statusChip.textContent = '正常';
+                statusBadgeText.textContent = I18nService.t('status.running_text');
+                statusChip.textContent = I18nService.t('status.normal');
                 statusChip.style.display = '';
                 statusChip.style.background = '';
 
@@ -32,24 +33,24 @@ export class StatusPageManager {
                     if (uptime && uptime !== '--' && uptime !== 'N/A' && !uptime.includes('failed')) {
                         this.startUptimeTimer(uptime);
                     } else {
-                        statusDetail.textContent = '运行时间获取失败';
+                        statusDetail.textContent = I18nService.t('status.uptime_failed');
                     }
                 }
                 statusDetail.style.display = '';
             } else {
                 statusBadgeDot.className = 'status-badge-dot stopped';
-                statusBadgeText.textContent = '已停止';
-                statusChip.textContent = '未启动';
+                statusBadgeText.textContent = I18nService.t('status.stopped_text');
+                statusChip.textContent = I18nService.t('status.not_started');
                 statusChip.style.display = '';
                 statusChip.style.background = 'var(--mdui-color-error-container)';
                 statusChip.style.color = 'var(--mdui-color-on-error-container)';
-                statusDetail.textContent = '点击右下角按钮启动服务';
+                statusDetail.textContent = I18nService.t('status.start_hint');
                 statusDetail.style.display = '';
 
                 this.stopUptimeTimer();
             }
 
-            document.getElementById('current-config-new').textContent = config || '无';
+            document.getElementById('current-config-new').textContent = config || I18nService.t('status.no_config');
 
             const fab = document.getElementById('service-fab');
             fab.icon = status === 'running' ? 'stop' : 'play_arrow';
@@ -135,7 +136,7 @@ export class StatusPageManager {
 
         const statusDetail = document.getElementById('status-detail');
         if (statusDetail) {
-            statusDetail.textContent = `运行 ${uptimeStr}`;
+            statusDetail.textContent = I18nService.t('status.uptime_prefix') + uptimeStr;
         }
     }
 
@@ -157,7 +158,12 @@ export class StatusPageManager {
                 const domain = site === 'baidu' ? 'baidu.com' :
                     site === 'google' ? '8.8.8.8' : 'github.com';
                 const latency = await KSUService.getPingLatency(domain);
-                this.updateLatencyHorizontal(site, latency);
+
+                let displayLatency = latency;
+                if (latency === 'timeout') displayLatency = I18nService.t('config.status.timeout');
+                else if (latency === 'failed') displayLatency = I18nService.t('config.status.failed');
+
+                this.updateLatencyHorizontal(site, displayLatency);
             } catch (error) {
                 this.updateLatencyHorizontal(site, null);
             }
