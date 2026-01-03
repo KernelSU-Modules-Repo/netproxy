@@ -28,4 +28,15 @@ data class Insets(
             appendLine("\t--f7-safe-area-right: var(--window-inset-right, 0px) !important;")
             append("}")
         }
+    companion object {
+        fun from(insets: android.view.WindowInsets?): Insets {
+            if (insets == null) return Insets(0, 0, 0, 0)
+            return Insets(
+                top = insets.systemWindowInsetTop,
+                bottom = insets.systemWindowInsetBottom,
+                left = insets.systemWindowInsetLeft,
+                right = insets.systemWindowInsetRight
+            )
+        }
+    }
 }

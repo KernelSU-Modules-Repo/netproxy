@@ -18,4 +18,22 @@
     <string name="tile_tap_to_start">Tap to start</string>
     <string name="tile_on">On</string>
     <string name="tile_off">Off</string>
+    
+    <!-- Welcome Activity -->
+    <string name="welcome_title">选择应用模式</string>
+    <string name="btn_module_mode">模块模式 (Root)</string>
+    <string name="desc_module_mode">需要 Root 权限和 NetProxy 模块\n拥有完整功能</string>
+    <string name="btn_software_mode">软件模式 (预览)</string>
+    <string name="desc_software_mode">功能受限的预览版本\n无需 Root 权限</string>
+    
+    <!-- Dialogs -->
+    <string name="dialog_root_required_title">需要 Root 权限</string>
+    <string name="dialog_root_required_msg">使用模块模式需要授予 Root 权限。</string>
+    <string name="dialog_module_missing_title">未检测到模块</string>
+    <string name="dialog_module_missing_msg">未检测到 NetProxy Magisk 模块，或模块未生效。\n\n请前往 GitHub 下载安装。</string>
+    <string name="dialog_btn_download">下载模块</string>
+    <string name="dialog_preview_title">预览模式</string>
+    <string name="dialog_preview_msg">即将进入软件模式 (预览版)。\n\n注意：此模式下核心功能不可用，仅用于界面展示。\n\n是否继续？</string>
+    <string name="btn_continue">继续</string>
+    <string name="btn_cancel">取消</string>
 </resources>
