@@ -8,6 +8,9 @@ readonly SCRIPT_DIR="$_SCRIPT_DIR"
 readonly CONFIG_FILE="${TPROXY_CONFIG:-$SCRIPT_DIR/../../config/tproxy.conf}"
 readonly LOG_FILE="$SCRIPT_DIR/../../logs/tproxy.log"
 
+# 内核配置缓存（避免重复解压 /proc/config.gz）
+_KERNEL_CONFIG_CACHE=""
+
 
 log() {
     local level="$1"
@@ -53,53 +56,73 @@ load_config() {
     log Info "端口=$PROXY_TCP_PORT 模式=$APP_PROXY_MODE"
 }
 
+# 验证纯数字（使用 shell 内置，替代 grep -E）
+is_valid_number() {
+    case "$1" in
+        '' | *[!0-9]*) return 1 ;;
+        *) return 0 ;;
+    esac
+}
+
+# 验证端口范围
+is_valid_port() {
+    is_valid_number "$1" && [ "$1" -ge 1 ] && [ "$1" -le 65535 ]
+}
+
 validate_config() {
     log Debug "正在验证配置..."
 
-    if ! echo "$PROXY_TCP_PORT" | grep -E '^[0-9]+$' > /dev/null || [ "$PROXY_TCP_PORT" -lt 1 ] || [ "$PROXY_TCP_PORT" -gt 65535 ]; then
+    if ! is_valid_port "$PROXY_TCP_PORT"; then
         log Error "无效的 PROXY_TCP_PORT (TCP代理端口)：$PROXY_TCP_PORT"
         return 1
     fi
 
-    if ! echo "$PROXY_UDP_PORT" | grep -E '^[0-9]+$' > /dev/null || [ "$PROXY_UDP_PORT" -lt 1 ] || [ "$PROXY_UDP_PORT" -gt 65535 ]; then
+    if ! is_valid_port "$PROXY_UDP_PORT"; then
         log Error "无效的 PROXY_UDP_PORT (UDP代理端口)：$PROXY_UDP_PORT"
         return 1
     fi
 
-    if ! echo "$PROXY_MODE" | grep -E '^[0-2]$' > /dev/null; then
-        log Error "无效的 PROXY_MODE (代理模式)：$PROXY_MODE (必须是 0=自动, 1=强制TPROXY, 2=强制REDIRECT)"
-        return 1
-    fi
+    case "$PROXY_MODE" in
+        0|1|2) ;;
+        *)
+            log Error "无效的 PROXY_MODE (代理模式)：$PROXY_MODE (必须是 0=自动, 1=强制TPROXY, 2=强制REDIRECT)"
+            return 1
+            ;;
+    esac
 
-    if ! echo "$DNS_HIJACK_ENABLE" | grep -E '^[0-2]$' > /dev/null; then
-        log Error "无效的 DNS_HIJACK_ENABLE (DNS劫持开关)：$DNS_HIJACK_ENABLE (必须是 0=禁用, 1=tproxy, 2=redirect)"
-        return 1
-    fi
+    case "$DNS_HIJACK_ENABLE" in
+        0|1|2) ;;
+        *)
+            log Error "无效的 DNS_HIJACK_ENABLE (DNS劫持开关)：$DNS_HIJACK_ENABLE (必须是 0=禁用, 1=tproxy, 2=redirect)"
+            return 1
+            ;;
+    esac
 
-    if ! echo "$DNS_PORT" | grep -E '^[0-9]+$' > /dev/null || [ "$DNS_PORT" -lt 1 ] || [ "$DNS_PORT" -gt 65535 ]; then
+    if ! is_valid_port "$DNS_PORT"; then
         log Error "无效的 DNS_PORT (DNS端口)：$DNS_PORT"
         return 1
     fi
 
-    if ! echo "$MARK_VALUE" | grep -E '^[0-9]+$' > /dev/null || [ "$MARK_VALUE" -lt 1 ] || [ "$MARK_VALUE" -gt 2147483647 ]; then
+    if ! is_valid_number "$MARK_VALUE" || [ "$MARK_VALUE" -lt 1 ] || [ "$MARK_VALUE" -gt 2147483647 ]; then
         log Error "无效的 MARK_VALUE (IPv4标记值)：$MARK_VALUE"
         return 1
     fi
 
-    if ! echo "$MARK_VALUE6" | grep -E '^[0-9]+$' > /dev/null || [ "$MARK_VALUE6" -lt 1 ] || [ "$MARK_VALUE6" -gt 2147483647 ]; then
+    if ! is_valid_number "$MARK_VALUE6" || [ "$MARK_VALUE6" -lt 1 ] || [ "$MARK_VALUE6" -gt 2147483647 ]; then
         log Error "无效的 MARK_VALUE6 (IPv6标记值)：$MARK_VALUE6"
         return 1
     fi
 
-    if ! echo "$TABLE_ID" | grep -E '^[0-9]+$' > /dev/null || [ "$TABLE_ID" -lt 1 ] || [ "$TABLE_ID" -gt 65535 ]; then
+    if ! is_valid_number "$TABLE_ID" || [ "$TABLE_ID" -lt 1 ] || [ "$TABLE_ID" -gt 65535 ]; then
         log Error "无效的 TABLE_ID (路由表ID)：$TABLE_ID"
         return 1
     fi
 
     case "$CORE_USER_GROUP" in
         *:*)
-            CORE_USER=$(echo "$CORE_USER_GROUP" | cut -d: -f1)
-            CORE_GROUP=$(echo "$CORE_USER_GROUP" | cut -d: -f2)
+            # 使用 shell 参数展开替代 cut
+            CORE_USER="${CORE_USER_GROUP%%:*}"
+            CORE_GROUP="${CORE_USER_GROUP#*:}"
             log Debug "解析用户:组为 '$CORE_USER:$CORE_GROUP'"
             ;;
         *)
@@ -182,18 +205,30 @@ check_kernel_feature() {
     local feature="$1"
     local config_name="CONFIG_${feature}"
 
-    if [ -f /proc/config.gz ]; then
-        if zcat /proc/config.gz 2> /dev/null | grep -qE "^${config_name}=[ym]$"; then
-            log Debug "内核特性 $feature 已启用"
-            return 0
+    # 缓存内核配置，避免每次都解压
+    if [ -z "$_KERNEL_CONFIG_CACHE" ]; then
+        if [ -f /proc/config.gz ]; then
+            _KERNEL_CONFIG_CACHE=$(zcat /proc/config.gz 2>/dev/null) || _KERNEL_CONFIG_CACHE="UNAVAILABLE"
         else
-            log Debug "内核特性 $feature 已禁用或未找到"
-            return 1
+            _KERNEL_CONFIG_CACHE="UNAVAILABLE"
         fi
-    else
+    fi
+
+    if [ "$_KERNEL_CONFIG_CACHE" = "UNAVAILABLE" ]; then
         log Debug "无法检查内核特性 $feature：/proc/config.gz 不可用"
         return 1
     fi
+
+    case "$_KERNEL_CONFIG_CACHE" in
+        *"${config_name}=y"* | *"${config_name}=m"*)
+            log Debug "内核特性 $feature 已启用"
+            return 0
+            ;;
+        *)
+            log Debug "内核特性 $feature 已禁用或未找到"
+            return 1
+            ;;
+    esac
 }
 
 check_tproxy_support() {
@@ -302,7 +337,7 @@ get_package_uid() {
 }
 
 find_packages_uid() {
-    local out
+    local out=""
     local token
     local uid_base
     local final_uid
@@ -312,8 +347,9 @@ find_packages_uid() {
         local package="$token"
         case "$token" in
             *:*)
-                user_prefix=$(echo "$token" | cut -d: -f1)
-                package=$(echo "$token" | cut -d: -f2-)
+                # 使用 shell 参数展开替代 cut，性能更好
+                user_prefix="${token%%:*}"
+                package="${token#*:}"
                 case "$user_prefix" in
                     '' | *[!0-9]*)
                         log Warn "令牌中的用户前缀无效：$token，使用 0"
@@ -330,7 +366,8 @@ find_packages_uid() {
             log Warn "无法解析包的 UID：$package"
         fi
     done
-    echo "$out" | awk '{$1=$1;print}'
+    # 去除首尾空格
+    echo "${out# }"
 }
 
 safe_chain_exists() {
