@@ -1,5 +1,6 @@
 import { KSUService } from '../services/ksu-service.js';
 import { I18nService } from '../services/i18n-service.js';
+import { toast } from '../utils/toast.js';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
 
@@ -395,11 +396,6 @@ export class StatusPageManager {
 
                 // 显示加载状态
                 option.classList.add('loading');
-                const originalLabel = option.querySelector('.mode-label');
-                const originalText = originalLabel?.textContent || '';
-                if (originalLabel) {
-                    originalLabel.textContent = '...';
-                }
 
                 try {
                     const success = await KSUService.setOutboundMode(mode);
@@ -408,32 +404,14 @@ export class StatusPageManager {
                         // 更新所有按钮状态
                         modeOptions.forEach(opt => opt.classList.remove('active'));
                         option.classList.add('active');
-
-                        // 显示成功提示
-                        const modeNames = {
-                            'rule': I18nService.t('status.mode_rule') || '规则',
-                            'global': I18nService.t('status.mode_global') || '全局',
-                            'direct': I18nService.t('status.mode_direct') || '直连'
-                        };
-                        import('../utils/toast.js').then(({ toast }) => {
-                            toast(I18nService.t('status.mode_switched') || `已切换到${modeNames[mode]}模式`);
-                        });
                     } else {
-                        import('../utils/toast.js').then(({ toast }) => {
-                            toast(I18nService.t('status.mode_switch_failed') || '模式切换失败');
-                        });
+                        toast(I18nService.t('status.mode_switch_failed') || '模式切换失败');
                     }
                 } catch (error) {
                     console.error('模式切换失败:', error);
-                    import('../utils/toast.js').then(({ toast }) => {
-                        toast(error.message || '模式切换失败');
-                    });
+                    toast(error.message || '模式切换失败');
                 } finally {
-                    // 恢复按钮状态
                     option.classList.remove('loading');
-                    if (originalLabel) {
-                        originalLabel.textContent = originalText;
-                    }
                 }
             });
         });
