@@ -19,7 +19,7 @@ export class StatusPageManager {
             download: [],
             upload: []
         };
-        this.maxDataPoints = 60;
+        this.maxDataPoints = 10;
 
         // 流量统计
         this.trafficStats = { rx: 0, tx: 0 };
@@ -82,11 +82,19 @@ export class StatusPageManager {
                 headerSpeedEl.textContent = `↑ ${formatSpeed(uploadValue)}   ↓ ${formatSpeed(downloadValue)}`;
             }
 
-            // 更新图数据 (滑动窗口：X保持不变，只移动Y)
+            // 获取下一个索引值 (基于最后一个 X 值 + 1)
+            let nextIndex = 0;
+            if (this.speedHistory.time.length > 0) {
+                nextIndex = this.speedHistory.time[this.speedHistory.time.length - 1] + 1;
+            }
+
+            this.speedHistory.time.push(nextIndex);
             this.speedHistory.download.push(downloadValue);
             this.speedHistory.upload.push(uploadValue);
 
-            if (this.speedHistory.download.length > this.maxDataPoints) {
+            // 限制窗口大小
+            if (this.speedHistory.time.length > this.maxDataPoints) {
+                this.speedHistory.time.shift();
                 this.speedHistory.download.shift();
                 this.speedHistory.upload.shift();
             }
@@ -94,7 +102,7 @@ export class StatusPageManager {
             // 更新图表
             if (this.speedChart) {
                 this.speedChart.setData([
-                    this.speedHistory.time, // X轴数据固定为 [0..59]
+                    this.speedHistory.time,
                     this.speedHistory.download,
                     this.speedHistory.upload
                 ]);
@@ -224,15 +232,11 @@ export class StatusPageManager {
         const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--monet-primary').trim() || '#4CAF50';
         const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--monet-secondary').trim() || '#2196F3';
 
-        // 初始化数据: X轴固定为 0~59 (60个点)
-        this.speedHistory.time = [];
-        this.speedHistory.download = [];
-        this.speedHistory.upload = [];
-        for (let i = 0; i < this.maxDataPoints; i++) {
-            this.speedHistory.time.push(i);
-            this.speedHistory.download.push(0);
-            this.speedHistory.upload.push(0);
-        }
+        // 初始化数据: 使用两个点 (0, 1) 但值为 0，形成初始横线铺满宽度
+        this.speedHistory.time = [0, 1];
+        this.speedHistory.download = [0, 0];
+        this.speedHistory.upload = [0, 0];
+
 
         const opts = {
             width: container.clientWidth,
@@ -244,6 +248,7 @@ export class StatusPageManager {
                     stroke: secondaryColor,
                     width: 2,
                     paths: uPlot.paths.spline(),
+                    points: { show: false }, // 隐藏数据点
                     // 填充满底部: 使用极小值确保填充覆盖到图表底部（负值区域）
                     fillTo: -1e9,
                     fill: (u, seriesIdx) => {
@@ -258,6 +263,7 @@ export class StatusPageManager {
                     stroke: primaryColor,
                     width: 2,
                     paths: uPlot.paths.spline(),
+                    points: { show: false }, // 隐藏数据点
                     fillTo: -1e9,
                     fill: (u, seriesIdx) => {
                         const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
@@ -274,7 +280,6 @@ export class StatusPageManager {
             scales: {
                 x: {
                     time: false,
-                    range: [0, this.maxDataPoints - 1] // 固定 X 轴范围
                 },
                 y: {
                     auto: true,
