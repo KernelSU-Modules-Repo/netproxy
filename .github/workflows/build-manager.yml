@@ -49,21 +49,21 @@ jobs:
           ./gradlew assemble
 
       - name: 上传 Release APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: "NetProxy-release"
           path: "Manager/app/build/outputs/apk/release/*.apk"
           compression-level: 9
 
       - name: 上传 Release Mapping
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: "NetProxy-release-mappings"
           path: "Manager/app/build/outputs/mapping/release"
           compression-level: 9
 
       - name: 上传 Debug APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: "NetProxy-debug"
           path: "Manager/app/build/outputs/apk/debug/*.apk"

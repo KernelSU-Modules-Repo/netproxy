@@ -53,7 +53,7 @@ jobs:
         run: python src/webui/build_webui.py
 
       - name: 上传构建产物
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: NetProxy-Module
           path: src/module/
