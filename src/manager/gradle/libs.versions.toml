@@ -4,7 +4,7 @@ kotlin = "2.3.0"
 
 core = "1.17.0"
 activity = "1.12.2"
-lifecycle = "2.8.7"
+lifecycle = "2.10.0"
 appcompat = "1.7.1"
 recyclerview = "1.4.0"
 swiperefreshlayout = "1.2.0"
