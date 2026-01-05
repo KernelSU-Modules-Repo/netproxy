@@ -27,6 +27,11 @@ export default {
     'status.uptime_failed': 'وقت حاصل کرنے میں ناکام',
     'status.uptime_prefix': 'چل رہا ہے ',
     'status.no_config': 'کوئی نہیں',
+    'status.network_chart': 'نیٹ ورک کی رفتار',
+    'status.internal_ip': 'اندرونی IP',
+    'status.external_ip': 'نیٹ ورک کی جانچ',
+    'status.traffic_today': 'ٹریفک کا استعمال',
+    'status.service_status': 'سروس کی حیثیت',
 
     // Config Page Extra
     'config.management': 'نوڈ کا انتظام',

@@ -8,8 +8,9 @@
     "build": "parcel build --no-source-maps --dist-dir ../module/webroot"
   },
   "dependencies": {
+    "kernelsu": "^3.0.0",
     "mdui": "^2.1.4",
-    "kernelsu": "^3.0.0"
+    "uplot": "^1.6.32"
   },
   "devDependencies": {
     "parcel": "^2.16.3"

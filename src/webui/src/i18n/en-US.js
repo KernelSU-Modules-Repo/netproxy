@@ -27,6 +27,13 @@ export default {
     'status.uptime_failed': 'Failed to get uptime',
     'status.uptime_prefix': 'Running ',
     'status.no_config': 'None',
+    'status.network_chart': 'Network Speed',
+    'status.internal_ip': 'Internal IP',
+    'status.external_ip': 'Network Detection',
+    'status.network_detection': 'Network Detection',
+    'status.traffic_today': 'Traffic Usage',
+    'status.service_status': 'Service Status',
+    'status.outbound_mode': 'Outbound Mode',
 
     // Config Page Extra
     'config.management': 'Node Management',

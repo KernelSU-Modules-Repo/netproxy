@@ -1,5 +1,7 @@
 import { KSUService } from '../services/ksu-service.js';
 import { I18nService } from '../services/i18n-service.js';
+import uPlot from 'uplot';
+import 'uplot/dist/uPlot.min.css';
 
 /**
  * 状态页面管理器
@@ -9,83 +11,298 @@ export class StatusPageManager {
         this.ui = ui;
         this.uptimeStartTime = null;
         this.uptimeInterval = null;
+
+        // 网速图表相关
+        this.speedChart = null;
+        this.speedHistory = {
+            time: [],
+            download: [],
+            upload: []
+        };
+        this.maxDataPoints = 60;
+
+        // 流量统计
+        this.trafficStats = { rx: 0, tx: 0 };
     }
 
     async update() {
         try {
-            const { status, config } = await KSUService.getStatus();
+            const { status } = await KSUService.getStatus();
 
-            const statusBadgeDot = document.getElementById('status-badge-dot');
-            const statusBadgeText = document.getElementById('status-badge-text');
-            const statusDetail = document.getElementById('status-detail');
-            const statusChip = document.getElementById('status-chip-new');
+            // 更新 FAB 按钮状态
+            const fab = document.getElementById('service-fab');
+            const fabContainer = document.getElementById('dashboard-fab');
 
             if (status === 'running') {
-                statusBadgeDot.className = 'status-badge-dot running';
-                statusBadgeText.textContent = I18nService.t('status.running_text');
-                statusChip.textContent = I18nService.t('status.normal');
-                statusChip.style.display = '';
-                statusChip.style.background = '';
+                fab.icon = 'stop';
+                fabContainer.classList.add('running');
 
                 if (!this.uptimeInterval) {
                     const uptime = await KSUService.getUptime();
-
                     if (uptime && uptime !== '--' && uptime !== 'N/A' && !uptime.includes('failed')) {
                         this.startUptimeTimer(uptime);
-                    } else {
-                        statusDetail.textContent = I18nService.t('status.uptime_failed');
                     }
                 }
-                statusDetail.style.display = '';
             } else {
-                statusBadgeDot.className = 'status-badge-dot stopped';
-                statusBadgeText.textContent = I18nService.t('status.stopped_text');
-                statusChip.textContent = I18nService.t('status.not_started');
-                statusChip.style.display = '';
-                statusChip.style.background = 'var(--mdui-color-error-container)';
-                statusChip.style.color = 'var(--mdui-color-on-error-container)';
-                statusDetail.textContent = I18nService.t('status.start_hint');
-                statusDetail.style.display = '';
-
+                fab.icon = 'play_arrow';
+                fabContainer.classList.remove('running');
+                document.getElementById('fab-runtime').textContent = '';
                 this.stopUptimeTimer();
             }
 
-            document.getElementById('current-config-new').textContent = config || I18nService.t('status.no_config');
+            // 更新网速和图表
+            await this.updateNetworkSpeed();
 
-            const fab = document.getElementById('service-fab');
-            fab.icon = status === 'running' ? 'stop' : 'play_arrow';
+            // 更新 IP 和流量信息
+            await this.updateIPAndTraffic();
 
-            // 更新内存占用显示
-            const memoryEl = document.getElementById('status-memory');
-            if (memoryEl) {
-                if (status === 'running') {
-                    KSUService.getMemoryUsage().then(memory => {
-                        memoryEl.textContent = memory;
-                    }).catch(() => {
-                        memoryEl.textContent = '--';
-                    });
-                } else {
-                    memoryEl.textContent = '--';
-                }
+            // 初始化图表
+            if (!this.speedChart) {
+                this.initSpeedChart();
             }
-
-            // 异步更新网速
-            KSUService.getNetworkSpeed().then(speed => {
-                const downloadValue = speed.download.replace(' KB/s', '').trim();
-                const uploadValue = speed.upload.replace(' KB/s', '').trim();
-                document.getElementById('download-new').textContent = `${downloadValue} KB/s`;
-                document.getElementById('upload-new').textContent = `${uploadValue} KB/s`;
-            }).catch(() => { });
-
-            // 异步获取 Xray 版本号
-            KSUService.getXrayVersion().then(version => {
-                document.getElementById('xray-version').textContent = version;
-            }).catch(() => {
-                document.getElementById('xray-version').textContent = '--';
-            });
         } catch (error) {
             console.error('Update status failed:', error);
         }
+    }
+
+    async updateNetworkSpeed() {
+        try {
+            const speed = await KSUService.getNetworkSpeed();
+            const downloadValue = parseFloat(speed.download.replace(' KB/s', '').trim()) || 0;
+            const uploadValue = parseFloat(speed.upload.replace(' KB/s', '').trim()) || 0;
+
+            // 更新 Header 速度显示
+            const headerSpeedEl = document.getElementById('header-speed-text');
+            if (headerSpeedEl) {
+                const formatSpeed = (val) => {
+                    if (val >= 1024) return `${(val / 1024).toFixed(1)} MB/s`;
+                    if (val >= 1) return `${val.toFixed(0)} KB/s`;
+                    return `${(val * 1024).toFixed(0)} B/s`;
+                };
+                headerSpeedEl.textContent = `↑ ${formatSpeed(uploadValue)}   ↓ ${formatSpeed(downloadValue)}`;
+            }
+
+            // 更新图数据 (滑动窗口：X保持不变，只移动Y)
+            this.speedHistory.download.push(downloadValue);
+            this.speedHistory.upload.push(uploadValue);
+
+            if (this.speedHistory.download.length > this.maxDataPoints) {
+                this.speedHistory.download.shift();
+                this.speedHistory.upload.shift();
+            }
+
+            // 更新图表
+            if (this.speedChart) {
+                this.speedChart.setData([
+                    this.speedHistory.time, // X轴数据固定为 [0..59]
+                    this.speedHistory.download,
+                    this.speedHistory.upload
+                ]);
+            }
+        } catch (error) {
+            console.error('Update network speed failed:', error);
+        }
+    }
+
+    async updateIPAndTraffic() {
+        // 内网 IP
+        try {
+            const ips = await KSUService.getInternalIP();
+            const internalEl = document.getElementById('internal-ip');
+            if (internalEl) {
+                if (ips && ips.length > 0) {
+                    internalEl.textContent = ips[0].ip;
+                    internalEl.title = ips.map(i => `${i.ip} (${i.iface})`).join('\n');
+                } else {
+                    internalEl.textContent = I18nService.t('status.no_network') || '无网络';
+                }
+            }
+        } catch (e) {
+            const el = document.getElementById('internal-ip');
+            if (el) el.textContent = '--';
+        }
+
+        // 外网 IP
+        try {
+            const externalIP = await KSUService.getExternalIP();
+            const el = document.getElementById('external-ip');
+            if (el) {
+                el.textContent = externalIP || '--';
+            }
+        } catch (e) {
+            const el = document.getElementById('external-ip');
+            if (el) el.textContent = '--';
+        }
+
+        // 流量统计
+        try {
+            const stats = await KSUService.getTrafficStats();
+            this.trafficStats = stats;
+
+            // 更新上传/下载显示
+            const uploadEl = document.getElementById('traffic-upload');
+            const downloadEl = document.getElementById('traffic-download');
+
+            if (uploadEl && downloadEl) {
+                const { value: uploadValue, unit: uploadUnit } = this.formatTraffic(stats.tx);
+                const { value: downloadValue, unit: downloadUnit } = this.formatTraffic(stats.rx);
+
+                uploadEl.textContent = uploadValue;
+                uploadEl.nextElementSibling.textContent = uploadUnit;
+                downloadEl.textContent = downloadValue;
+                downloadEl.nextElementSibling.textContent = downloadUnit;
+            }
+
+            // 更新环形图
+            this.updateDonutChart(stats.tx, stats.rx);
+        } catch (e) {
+            const uploadEl = document.getElementById('traffic-upload');
+            const downloadEl = document.getElementById('traffic-download');
+            if (uploadEl) uploadEl.textContent = '0';
+            if (downloadEl) downloadEl.textContent = '0';
+        }
+    }
+
+    formatTraffic(bytes) {
+        if (bytes >= 1024 * 1024 * 1024) {
+            return { value: (bytes / 1024 / 1024 / 1024).toFixed(2), unit: 'GB' };
+        } else if (bytes >= 1024 * 1024) {
+            return { value: (bytes / 1024 / 1024).toFixed(1), unit: 'MB' };
+        } else if (bytes >= 1024) {
+            return { value: (bytes / 1024).toFixed(0), unit: 'KB' };
+        }
+        return { value: bytes.toString(), unit: 'B' };
+    }
+
+    updateDonutChart(upload, download) {
+        const container = document.getElementById('traffic-donut');
+        if (!container) return;
+
+        const total = upload + download;
+        if (total === 0) {
+            container.innerHTML = `
+                <svg viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="35" fill="none" stroke="var(--mdui-color-outline-variant, #ccc)" stroke-width="10"/>
+                </svg>
+            `;
+            return;
+        }
+
+        const uploadPercent = upload / total;
+        const radius = 35;
+        const circumference = 2 * Math.PI * radius;
+        const uploadDash = uploadPercent * circumference;
+        const downloadDash = (1 - uploadPercent) * circumference;
+
+        container.innerHTML = `
+            <svg viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="${radius}" fill="none" 
+                    stroke="var(--monet-secondary, #2196F3)" stroke-width="10"
+                    stroke-dasharray="${downloadDash} ${circumference}"
+                    transform="rotate(-90 50 50)"/>
+                <circle cx="50" cy="50" r="${radius}" fill="none" 
+                    stroke="var(--monet-primary, #4CAF50)" stroke-width="10"
+                    stroke-dasharray="${uploadDash} ${circumference}"
+                    stroke-dashoffset="${-downloadDash}"
+                    transform="rotate(-90 50 50)"/>
+            </svg>
+        `;
+    }
+
+    initSpeedChart() {
+        const container = document.getElementById('speed-chart-container');
+        if (!container || container.clientWidth === 0) {
+            // 容器还没准备好，稍后再试
+            setTimeout(() => this.initSpeedChart(), 100);
+            return;
+        }
+
+        const isDark = document.documentElement.classList.contains('mdui-theme-dark') ||
+            (document.documentElement.classList.contains('mdui-theme-auto') &&
+                window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--monet-primary').trim() || '#4CAF50';
+        const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--monet-secondary').trim() || '#2196F3';
+
+        // 初始化数据: X轴固定为 0~59 (60个点)
+        this.speedHistory.time = [];
+        this.speedHistory.download = [];
+        this.speedHistory.upload = [];
+        for (let i = 0; i < this.maxDataPoints; i++) {
+            this.speedHistory.time.push(i);
+            this.speedHistory.download.push(0);
+            this.speedHistory.upload.push(0);
+        }
+
+        const opts = {
+            width: container.clientWidth,
+            height: container.clientHeight || 80,
+            series: [
+                {},
+                {
+                    label: 'Download',
+                    stroke: secondaryColor,
+                    width: 2,
+                    paths: uPlot.paths.spline(),
+                    // 填充满底部: 使用极小值确保填充覆盖到图表底部（负值区域）
+                    fillTo: -1e9,
+                    fill: (u, seriesIdx) => {
+                        const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
+                        gradient.addColorStop(0, secondaryColor + '60');
+                        gradient.addColorStop(1, secondaryColor + '1A');
+                        return gradient;
+                    },
+                },
+                {
+                    label: 'Upload',
+                    stroke: primaryColor,
+                    width: 2,
+                    paths: uPlot.paths.spline(),
+                    fillTo: -1e9,
+                    fill: (u, seriesIdx) => {
+                        const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
+                        gradient.addColorStop(0, primaryColor + '60');
+                        gradient.addColorStop(1, primaryColor + '1A');
+                        return gradient;
+                    },
+                }
+            ],
+            axes: [
+                { show: false },
+                { show: false }
+            ],
+            scales: {
+                x: {
+                    time: false,
+                    range: [0, this.maxDataPoints - 1] // 固定 X 轴范围
+                },
+                y: {
+                    auto: true,
+                    // 悬浮效果：将 0 线抬高
+                    range: (u, min, max) => {
+                        const effectiveMax = Math.max(max, 100);
+                        // 底部负值区域作为"悬浮"支撑
+                        return [-effectiveMax * 0.45, effectiveMax];
+                    }
+                }
+            },
+            legend: { show: false },
+            cursor: { show: false },
+            padding: [0, 0, 0, 0],
+        };
+
+        this.speedChart = new uPlot(opts, [
+            this.speedHistory.time,
+            this.speedHistory.download,
+            this.speedHistory.upload
+        ], container);
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', () => {
+            if (this.speedChart && container && container.clientWidth > 0) {
+                this.speedChart.setSize({ width: container.clientWidth, height: container.clientHeight || 80 });
+            }
+        });
     }
 
     startUptimeTimer(uptimeString) {
@@ -122,78 +339,18 @@ export class StatusPageManager {
         if (!this.uptimeStartTime) return;
 
         const elapsed = Math.floor((Date.now() - this.uptimeStartTime) / 1000);
-        const days = Math.floor(elapsed / 86400);
-        const hours = Math.floor((elapsed % 86400) / 3600);
+        const hours = Math.floor(elapsed / 3600);
         const minutes = Math.floor((elapsed % 3600) / 60);
         const seconds = elapsed % 60;
 
-        let uptimeStr = '';
-        if (days > 0) {
-            uptimeStr = `${days}-${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        } else {
-            uptimeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        }
+        const uptimeStr = `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 
-        const statusDetail = document.getElementById('status-detail');
-        if (statusDetail) {
-            statusDetail.textContent = I18nService.t('status.uptime_prefix') + uptimeStr;
+        const fabRuntime = document.getElementById('fab-runtime');
+        if (fabRuntime) {
+            // 添加两个空格作为物理占位符，防止右侧紧贴
+            fabRuntime.textContent = uptimeStr + '\u00A0\u00A0';
         }
     }
 
-    async refreshLatency() {
-        const btn = document.getElementById('refresh-latency-btn');
-        if (btn) {
-            btn.disabled = true;
-        }
 
-        const sites = ['baidu', 'google', 'github'];
-        sites.forEach(site => {
-            const valueEl = document.getElementById(`latency-${site}-compact`);
-            valueEl.className = 'latency-value-horizontal';
-            valueEl.textContent = '...';
-        });
-
-        sites.forEach(async (site) => {
-            try {
-                const domain = site === 'baidu' ? 'baidu.com' :
-                    site === 'google' ? '8.8.8.8' : 'github.com';
-                const latency = await KSUService.getPingLatency(domain);
-
-                let displayLatency = latency;
-                if (latency === 'timeout') displayLatency = I18nService.t('config.status.timeout');
-                else if (latency === 'failed') displayLatency = I18nService.t('config.status.failed');
-
-                this.updateLatencyHorizontal(site, displayLatency);
-            } catch (error) {
-                this.updateLatencyHorizontal(site, null);
-            }
-        });
-
-        setTimeout(() => {
-            if (btn) {
-                btn.disabled = false;
-                btn.loading = false;
-            }
-        }, 1000);
-    }
-
-    updateLatencyHorizontal(site, latencyText) {
-        const valueEl = document.getElementById(`latency-${site}-compact`);
-        valueEl.textContent = latencyText;
-
-        const match = latencyText.match(/(\d+)/);
-        if (match) {
-            const latency = parseInt(match[1]);
-            if (latency < 300) {
-                valueEl.className = 'latency-value-horizontal excellent';
-            } else if (latency < 500) {
-                valueEl.className = 'latency-value-horizontal good';
-            } else {
-                valueEl.className = 'latency-value-horizontal poor';
-            }
-        } else {
-            valueEl.className = 'latency-value-horizontal';
-        }
-    }
 }
-

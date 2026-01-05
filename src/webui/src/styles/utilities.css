@@ -97,31 +97,6 @@
   animation: shake 0.5s;
 }
 
-/* ==================== 悬浮操作按钮 (FAB) ==================== */
-
-#service-fab {
-  position: fixed;
-  right: calc(16px + var(--window-inset-right, 0px));
-  /* 底部：导航栏高度 (80px) + 额外间距 (16px) + 系统 inset */
-  bottom: calc(96px + var(--window-inset-bottom, 0px));
-  z-index: 150;
-}
-
-/* FAB 加载动画 */
-.rotating {
-  animation: rotate 1s linear infinite;
-}
-
-@keyframes rotate {
-  from {
-    transform: rotate(0deg);
-  }
-
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ==================== 主题颜色选择器 ==================== */
 
 .color-item {

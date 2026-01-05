@@ -116,6 +116,12 @@ export class UI {
         document.getElementById(`${pageName}-page`).classList.add('active');
         this.currentPage = pageName;
 
+        // 更新 FAB 可见性
+        const fabContainer = document.getElementById('dashboard-fab');
+        if (fabContainer) {
+            fabContainer.style.display = pageName === 'status' ? 'block' : 'none';
+        }
+
         // 延迟执行更新，让导航栏动画完全完成
         // MDUI 导航栏动画大约需要 200ms 完成
         setTimeout(() => {
@@ -131,31 +137,34 @@ export class UI {
 
     setupFAB() {
         const fab = document.getElementById('service-fab');
+        if (!fab) {
+            console.warn('FAB element not found');
+            return;
+        }
 
-        fab.addEventListener('click', async () => {
-            fab.disabled = true;
+        fab.addEventListener('click', async (e) => {
+            e.stopPropagation(); // 防止事件冒泡
+
+            // 防止重复点击
+            if (fab.loading) return;
+            fab.loading = true;
 
             try {
-                const { status } = await KSUService.getStatus();
+                // 如果当前显示为运行中（有 running 类），则意图是停止；否则是启动
+                const fabContainer = document.getElementById('dashboard-fab');
+                const isRunning = fabContainer && fabContainer.classList.contains('running');
 
-                // 立即显示 loading 状态
-                fab.icon = 'sync';
-                fab.classList.add('rotating');
+                // 显示加载状态
+                fab.icon = 'hourglass_empty';
 
-                if (status === 'running') {
-                    toast(I18nService.t('status.service_stopping'));
+                if (isRunning) {
                     const success = await KSUService.stopService();
-                    if (success) {
-                        toast(I18nService.t('status.service_stopped'));
-                    } else {
+                    if (!success) {
                         toast(I18nService.t('status.service_stop_timeout'));
                     }
                 } else {
-                    toast(I18nService.t('status.service_starting'));
                     const success = await KSUService.startService();
-                    if (success) {
-                        toast(I18nService.t('status.service_started'));
-                    } else {
+                    if (!success) {
                         toast(I18nService.t('status.service_start_timeout'));
                     }
                 }
@@ -165,8 +174,7 @@ export class UI {
                 console.error('FAB error:', error);
                 toast(I18nService.t('common.operation_failed') + error.message);
             } finally {
-                fab.classList.remove('rotating');
-                fab.disabled = false;
+                fab.loading = false;
             }
         });
     }

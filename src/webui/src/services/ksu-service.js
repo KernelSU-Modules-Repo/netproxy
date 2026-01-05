@@ -630,6 +630,62 @@ EOF
         }
     }
 
+    // 获取内网IP (wlan0, rmnet_data0 等)
+    static async getInternalIP() {
+        try {
+            const result = await exec(`ip -4 addr show 2>/dev/null | awk '/inet / && !/127\\.0\\.0\\.1/ {gsub(/\\/.*/, "", $2); print $2, $NF}' | head -3`);
+            if (result.errno !== 0 || !result.stdout.trim()) {
+                return [];
+            }
+            // 解析格式: "192.168.1.100 wlan0"
+            return result.stdout.trim().split('\n').map(line => {
+                const parts = line.trim().split(/\s+/);
+                return { ip: parts[0], iface: parts[1] || 'unknown' };
+            }).filter(item => item.ip);
+        } catch (error) {
+            return [];
+        }
+    }
+
+    // 获取外网IP (通过 ip.sb)
+    static async getExternalIP() {
+        try {
+            const result = await exec(`curl -s --connect-timeout 3 --max-time 5 ip.sb 2>/dev/null`);
+            if (result.errno === 0 && result.stdout.trim()) {
+                return result.stdout.trim();
+            }
+            return null;
+        } catch (error) {
+            return null;
+        }
+    }
+
+    // 获取流量统计 (今日累计)
+    static async getTrafficStats() {
+        try {
+            // 获取所有接口的总流量
+            const result = await exec(`awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`);
+            if (result.errno !== 0) {
+                return { rx: 0, tx: 0 };
+            }
+            const parts = result.stdout.trim().split(/\s+/);
+            return {
+                rx: parseInt(parts[0]) || 0,
+                tx: parseInt(parts[1]) || 0
+            };
+        } catch (error) {
+            return { rx: 0, tx: 0 };
+        }
+    }
+
+    // 格式化字节为可读单位
+    static formatBytes(bytes) {
+        if (bytes === 0) return '0 B';
+        const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+        return (bytes / Math.pow(1024, i)).toFixed(1) + ' ' + units[i];
+    }
+
     // 获取Xray内存占用
     static async getMemoryUsage() {
         try {

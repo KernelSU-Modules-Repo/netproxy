@@ -27,6 +27,13 @@ export default {
     'status.uptime_failed': '运行时间获取失败',
     'status.uptime_prefix': '运行 ',
     'status.no_config': '无',
+    'status.network_chart': '网络速度',
+    'status.internal_ip': '内网IP',
+    'status.external_ip': '网络检测',
+    'status.network_detection': '网络检测',
+    'status.traffic_today': '流量统计',
+    'status.service_status': '服务状态',
+    'status.outbound_mode': '出站模式',
 
     // Config Page Extra
     'config.management': '节点管理',

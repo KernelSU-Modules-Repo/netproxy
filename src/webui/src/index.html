@@ -163,89 +163,103 @@
     <mdui-layout-main id="main-content">
       <!-- Status Page -->
       <div id="status-page" class="page active">
-        <div class="container">
-          <!-- Service Status Card (redesigned) -->
-          <mdui-card variant="elevated" class="compact-card status-card-new">
-            <!-- Main Status Display -->
-            <div class="status-main">
-              <div class="status-left">
-                <div class="status-badge" id="status-badge">
-                  <div class="status-badge-dot" id="status-badge-dot"></div>
-                  <span id="status-badge-text" data-i18n="common.loading">检测中</span>
-                </div>
-                <div class="status-detail" id="status-detail">运行时间 --</div>
-              </div>
-              <mdui-chip id="status-chip-new">--</mdui-chip>
+        <div class="dashboard-grid">
+          <!-- 网络速度 (全宽, 2格高) -->
+          <div class="common-card full-width height-2 speed-card">
+            <div class="card-header">
+              <mdui-icon name="speed" class="card-icon"></mdui-icon>
+              <span class="card-title" data-i18n="status.network_chart">网络速度</span>
+              <div class="header-speed-text" id="header-speed-text"></div>
             </div>
+            <div class="card-content">
+              <div class="chart-area" id="speed-chart-container"></div>
+            </div>
+          </div>
 
-            <!-- Info Grid -->
-            <div class="info-grid">
-              <div class="info-item">
-                <mdui-icon name="settings" class="info-icon"></mdui-icon>
-                <div class="info-content">
-                  <div class="info-label" data-i18n="nav.config">配置</div>
-                  <div class="info-value" id="current-config-new">--</div>
+          <!-- 左列: 出站模式 (2格高) -->
+          <div class="common-card half-width height-2 mode-card">
+            <div class="card-header">
+              <mdui-icon name="call_split" class="card-icon"></mdui-icon>
+              <span class="card-title" data-i18n="status.outbound_mode">出站模式</span>
+            </div>
+            <div class="card-content">
+              <div class="mode-options">
+                <div class="mode-option active" id="mode-rule" data-mode="rule">
+                  <div class="mode-radio"></div>
+                  <span class="mode-label">规则</span>
                 </div>
-              </div>
-              <div class="info-divider"></div>
-              <div class="info-item">
-                <mdui-icon name="memory" class="info-icon"></mdui-icon>
-                <div class="info-content">
-                  <div class="info-label" data-i18n="status.memory">内存</div>
-                  <div class="info-value" id="status-memory">--</div>
+                <div class="mode-option" id="mode-global" data-mode="global">
+                  <div class="mode-radio"></div>
+                  <span class="mode-label">全局</span>
                 </div>
-              </div>
-              <div class="info-divider"></div>
-              <div class="info-item">
-                <mdui-icon name="download" class="info-icon"></mdui-icon>
-                <div class="info-content">
-                  <div class="info-label" data-i18n="status.download">下载</div>
-                  <div class="info-value" id="download-new">-- KB/s</div>
+                <div class="mode-option" id="mode-direct" data-mode="direct">
+                  <div class="mode-radio"></div>
+                  <span class="mode-label">直连</span>
                 </div>
-              </div>
-              <div class="info-divider"></div>
-              <div class="info-item">
-                <mdui-icon name="upload" class="info-icon"></mdui-icon>
-                <div class="info-content">
-                  <div class="info-label" data-i18n="status.upload">上传</div>
-                  <div class="info-value" id="upload-new">-- KB/s</div>
-                </div>
-              </div>
-              <div class="info-divider"></div>
-              <div class="info-item">
-                <mdui-icon name="code" class="info-icon"></mdui-icon>
-                <div class="info-content">
-                  <div class="info-label" data-i18n="status.kernel">内核</div>
-                  <div class="info-value" id="xray-version">--</div>
-                </div>
-                <mdui-button-icon id="check-update-btn" icon="system_update"
-                  style="margin-left: auto;"></mdui-button-icon>
               </div>
             </div>
-          </mdui-card>
+          </div>
 
-          <!-- Latency Detection Card (truly horizontal) -->
-          <mdui-card variant="elevated" class="compact-card">
-            <div class="compact-header">
-              <span class="card-compact-title" data-i18n="status.latency_test">延迟检测</span>
-              <mdui-button-icon id="refresh-latency-btn" icon="refresh"></mdui-button-icon>
+          <!-- 右列: 网络检测 (1格高) -->
+          <div class="common-card half-width height-1">
+            <div class="card-header">
+              <mdui-icon name="network_check" class="card-icon"></mdui-icon>
+              <span class="card-title" data-i18n="status.network_detection">网络检测</span>
             </div>
-            <div class="latency-row">
-              <div class="latency-cell">
-                <span class="latency-label" data-i18n="status.latency_baidu">百度</span>
-                <span class="latency-value-horizontal" id="latency-baidu-compact">--</span>
+            <div class="card-content">
+              <div class="card-value" id="external-ip">--</div>
+            </div>
+          </div>
+
+          <!-- 左列: 内网IP (1格高) -->
+          <div class="common-card half-width height-1">
+            <div class="card-header">
+              <mdui-icon name="devices" class="card-icon"></mdui-icon>
+              <span class="card-title" data-i18n="status.internal_ip">内网IP</span>
+            </div>
+            <div class="card-content">
+              <div class="card-value" id="internal-ip">--</div>
+            </div>
+          </div>
+
+          <!-- 右列: 流量统计 (2格高) -->
+          <div class="common-card half-width height-2 traffic-card">
+            <div class="card-header">
+              <mdui-icon name="data_saver_off" class="card-icon"></mdui-icon>
+              <span class="card-title" data-i18n="status.traffic_today">流量统计</span>
+            </div>
+            <div class="card-content">
+              <div class="traffic-donut-container">
+                <div class="donut-chart-wrapper" id="traffic-donut"></div>
+                <div class="traffic-legend">
+                  <div class="legend-item">
+                    <span class="legend-color upload"></span>
+                    <span data-i18n="status.upload">上传</span>
+                  </div>
+                  <div class="legend-item">
+                    <span class="legend-color download"></span>
+                    <span data-i18n="status.download">下载</span>
+                  </div>
+                </div>
               </div>
-              <div class="latency-cell">
-                <span class="latency-label" data-i18n="status.latency_google">谷歌</span>
-                <span class="latency-value-horizontal" id="latency-google-compact">--</span>
-              </div>
-              <div class="latency-cell">
-                <span class="latency-label" data-i18n="status.latency_github">GitHub</span>
-                <span class="latency-value-horizontal" id="latency-github-compact">--</span>
+              <div class="traffic-stats">
+                <div class="traffic-stat-row">
+                  <span class="stat-label"><mdui-icon name="arrow_upward"
+                      style="color: var(--monet-primary, #4CAF50);"></mdui-icon><span
+                      data-i18n="status.upload">上传</span></span>
+                  <span><span class="stat-value" id="traffic-upload">0</span><span class="stat-unit">MB</span></span>
+                </div>
+                <div class="traffic-stat-row">
+                  <span class="stat-label"><mdui-icon name="arrow_downward"
+                      style="color: var(--monet-secondary, #2196F3);"></mdui-icon><span
+                      data-i18n="status.download">下载</span></span>
+                  <span><span class="stat-value" id="traffic-download">0</span><span class="stat-unit">MB</span></span>
+                </div>
               </div>
             </div>
-          </mdui-card>
+          </div>
         </div>
+
       </div>
 
       <!-- Config Page -->
@@ -777,8 +791,12 @@
     </mdui-navigation-bar>
   </mdui-layout>
 
-  <!-- Floating Action Button -->
-  <mdui-fab id="service-fab" icon="play_arrow"></mdui-fab>
+  <!-- FAB Start/Stop Button (Global) -->
+  <div class="dashboard-fab" id="dashboard-fab">
+    <mdui-fab id="service-fab" icon="play_arrow" extended>
+      <span class="fab-runtime" id="fab-runtime"></span>
+    </mdui-fab>
+  </div>
 
   <!-- 确认删除对话框 -->
   <mdui-dialog id="confirm-dialog" close-on-esc close-on-overlay-click style="--mdui-dialog-max-width: 400px;">
