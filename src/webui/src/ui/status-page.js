@@ -376,6 +376,12 @@ export class StatusPageManager {
                     option.classList.remove('active');
                 }
             });
+
+            // 直连模式下隐藏节点页面入口
+            const navConfig = document.getElementById('nav-config');
+            if (navConfig) {
+                navConfig.style.display = currentMode === 'direct' ? 'none' : '';
+            }
         } catch (error) {
             console.error('更新模式 UI 失败:', error);
         }
@@ -397,14 +403,29 @@ export class StatusPageManager {
                 // 显示加载状态
                 option.classList.add('loading');
 
+                // 立即更新 UI (乐观更新)
+                const navConfig = document.getElementById('nav-config');
+                if (navConfig) {
+                    navConfig.style.display = mode === 'direct' ? 'none' : '';
+                }
+
+                // 记录当前激活的按钮用于回滚
+                const previousActive = document.querySelector('.mode-option.active');
+
+                // 立即更新按钮状态
+                modeOptions.forEach(opt => opt.classList.remove('active'));
+                option.classList.add('active');
+
                 try {
                     const success = await KSUService.setOutboundMode(mode);
 
-                    if (success) {
-                        // 更新所有按钮状态
+                    if (!success) {
+                        // 切换失败，恢复状态
                         modeOptions.forEach(opt => opt.classList.remove('active'));
-                        option.classList.add('active');
-                    } else {
+                        if (previousActive) previousActive.classList.add('active');
+                        if (navConfig) {
+                            navConfig.style.display = previousActive?.dataset.mode === 'direct' ? 'none' : '';
+                        }
                         toast(I18nService.t('status.mode_switch_failed') || '模式切换失败');
                     }
                 } catch (error) {
