@@ -2,7 +2,7 @@ import { ConfigService } from '../services/config-service.js';
 import { StatusService } from '../services/status-service.js';
 import { ShellService } from '../services/shell-service.js';
 import { toast } from '../utils/toast.js';
-import { I18nService } from '../services/i18n-service.js';
+import { I18nService } from '../i18n/i18n-service.js';
 
 /**
  * 配置页面管理器 - 支持分组显示

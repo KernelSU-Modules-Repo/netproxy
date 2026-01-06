@@ -1,6 +1,6 @@
-import zhCN from '../i18n/zh-CN.js';
-import enUS from '../i18n/en-US.js';
-import urPK from '../i18n/ur-PK.js';
+import zhCN from './zh-CN.js';
+import enUS from './en-US.js';
+import urPK from './ur-PK.js';
 
 /**
  * I18nService - Internationalization Service

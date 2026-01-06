@@ -1,6 +1,6 @@
 import { AppService } from '../services/app-service.js';
 import { toast } from '../utils/toast.js';
-import { I18nService } from '../services/i18n-service.js';
+import { I18nService } from '../i18n/i18n-service.js';
 
 /**
  * 代理设置页面管理器

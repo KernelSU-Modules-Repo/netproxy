@@ -1,6 +1,6 @@
 import { SettingsService } from '../services/settings-service.js';
 import { toast } from '../utils/toast.js';
-import { I18nService } from '../services/i18n-service.js';
+import { I18nService } from '../i18n/i18n-service.js';
 
 /**
  * 日志页面管理器 - 使用 mdui-tabs 横向分组

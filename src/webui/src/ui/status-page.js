@@ -1,5 +1,5 @@
 import { StatusService } from '../services/status-service.js';
-import { I18nService } from '../services/i18n-service.js';
+import { I18nService } from '../i18n/i18n-service.js';
 import { toast } from '../utils/toast.js';
 import uPlot from '../libs/uPlot.esm.js';
 import '../libs/uPlot.min.css';
