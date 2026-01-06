@@ -2,10 +2,11 @@
   "name": "netproxy-webui",
   "private": true,
   "version": "1.0.0",
-  "source": "src/index.html",
+  "type": "module",
   "scripts": {
-    "start": "parcel",
-    "build": "parcel build --no-source-maps --dist-dir ../module/webroot"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
     "kernelsu": "^3.0.0",
@@ -13,6 +14,7 @@
     "uplot": "^1.6.32"
   },
   "devDependencies": {
-    "parcel": "^2.16.3"
+    "typescript": "~5.9.3",
+    "vite": "^8.0.0-beta.5"
   }
 }

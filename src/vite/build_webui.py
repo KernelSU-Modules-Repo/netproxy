@@ -2,12 +2,10 @@ import os
 import shutil
 import subprocess
 import sys
-import io
 
 # 项目路径配置
 WEBUI_DIR = os.path.dirname(os.path.abspath(__file__))
 TARGET_DIR = os.path.abspath(os.path.join(WEBUI_DIR, "..", "module", "webroot"))
-PARCEL_CACHE_DIR = os.path.join(WEBUI_DIR, ".parcel-cache")
 
 def run_command(cmd, cwd=None):
     """运行命令并返回结果"""
@@ -31,13 +29,6 @@ def run_command(cmd, cwd=None):
         print(f"标准输出: {e.stdout}")
         print(f"标准错误: {e.stderr}")
         sys.exit(1)
-
-def clear_parcel_cache():
-    """清除parcel缓存"""
-    if os.path.exists(PARCEL_CACHE_DIR):
-        print(f"清除parcel缓存: {PARCEL_CACHE_DIR}")
-        shutil.rmtree(PARCEL_CACHE_DIR)
-        print("  缓存已清除")
 
 def clear_target_dir():
     """清空目标目录"""
@@ -122,10 +113,7 @@ def verify_build_files():
 
 def build_webui():
     """构建webui"""
-    print("开始构建webui...")
-    
-    # 清除parcel缓存以确保完整重建
-    clear_parcel_cache()
+    print("开始构建webui (Vite)...")
     
     # 清空目标目录
     clear_target_dir()
@@ -136,7 +124,7 @@ def build_webui():
 
 def main():
     """主函数"""
-    print("=== NetProxy WebUI 构建脚本 ===")
+    print("=== NetProxy WebUI 构建脚本 (Vite) ===")
     
     build_webui()
     
