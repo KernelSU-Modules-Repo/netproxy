@@ -12,6 +12,9 @@ readonly LIVE_DIR="/data/adb/modules/$MODULE_ID"
 readonly CONFIG_DIR="$LIVE_DIR/config"
 readonly BACKUP_DIR="$TMPDIR/netproxy_backup"
 
+# 全局状态: Xray 是否在运行
+XRAY_WAS_RUNNING=false
+
 # 需要保留的配置文件/目录 (相对于 config/)
 readonly PRESERVE_CONFIGS="
     module.conf
@@ -136,7 +139,11 @@ restore_config() {
         local dst="$MODPATH/config/$config_item"
         
         if [ -e "$src" ]; then
+            # 创建父目录
             mkdir -p "$(dirname "$dst")"
+            # 删除目标 (防止目录嵌套)
+            rm -rf "$dst" 2>/dev/null
+            # 复制
             if cp -r "$src" "$dst" 2>/dev/null; then
                 print_ok "已恢复: $config_item"
             else
@@ -144,6 +151,23 @@ restore_config() {
             fi
         fi
     done
+    
+    return 0
+}
+
+# 停止 Xray 服务 (如果运行中)
+stop_xray_if_running() {
+    # 如果 LIVE_DIR 不存在，无需停止
+    if [ ! -d "$LIVE_DIR" ]; then
+        return 0
+    fi
+    
+    if pidof -s "$LIVE_DIR/bin/xray" >/dev/null 2>&1; then
+        XRAY_WAS_RUNNING=true
+        print_step "检测到 Xray 正在运行，停止服务..."
+        sh "$LIVE_DIR/scripts/core/service.sh" stop >/dev/null 2>&1
+        print_ok "服务已停止"
+    fi
     
     return 0
 }
@@ -187,6 +211,17 @@ sync_to_live() {
     return 0
 }
 
+# 重新启动 Xray 服务 (如果之前在运行)
+restart_xray_if_needed() {
+    if [ "$XRAY_WAS_RUNNING" = true ]; then
+        print_step "重新启动 Xray 服务..."
+        sh "$LIVE_DIR/scripts/core/service.sh" start >/dev/null 2>&1
+        print_ok "服务已启动"
+    fi
+    
+    return 0
+}
+
 # 设置文件权限
 set_permissions() {
     print_step "设置文件权限..."
@@ -202,7 +237,7 @@ set_permissions() {
     done
     
     # 设置目录权限
-    set_perm_recursive "$MODPATH" 0 0 0755 0644
+    set_perm_recursive "$MODPATH" 0 0 0755 0755
     
     print_ok "权限设置完成"
     return 0
@@ -250,8 +285,10 @@ unzip -o "$ZIPFILE" "module.prop" -d "$TMPDIR" >/dev/null 2>&1
 if backup_config && \
    extract_module && \
    restore_config && \
+   stop_xray_if_running && \
    sync_to_live && \
    set_permissions && \
+   restart_xray_if_needed && \
    install_app; then
     
     cleanup
