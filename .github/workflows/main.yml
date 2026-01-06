@@ -20,13 +20,12 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           
-          # 添加上游仓库
           git remote add upstream https://github.com/Fanju6/NetProxy-Magisk.git
           git fetch upstream
           
-          # 合并上游 main 分支
+          # 强制使用上游的 main 分支
           git checkout main
-          git merge upstream/main --no-edit
+          git reset --hard upstream/main
           
-          # 推送到 Fork
-          git push origin main
+          # 强制推送到 Fork
+          git push origin main --force
