@@ -5,7 +5,7 @@ import { I18nService } from '../i18n/i18n-service.js';
 /**
  * 代理设置页面管理器
  */
-export class UIDPageManager {
+export class AppPageManager {
     constructor(ui) {
         this.ui = ui;
         this.allApps = [];

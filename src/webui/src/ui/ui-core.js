@@ -5,7 +5,7 @@ import { I18nService } from '../i18n/i18n-service.js';
 import { toast } from '../utils/toast.js';
 import { StatusPageManager } from './status-page.js';
 import { ConfigPageManager } from './config-page.js';
-import { UIDPageManager } from './uid-page.js';
+import { AppPageManager } from './app-page.js';
 import { LogsPageManager } from './logs-page.js';
 import { SettingsPageManager } from './settings-page.js';
 
@@ -21,7 +21,7 @@ export class UI {
         // 初始化页面管理器
         this.statusPage = new StatusPageManager(this);
         this.configPage = new ConfigPageManager(this);
-        this.uidPage = new UIDPageManager(this);
+        this.appPage = new AppPageManager(this);
         this.logsPage = new LogsPageManager(this);
         this.settingsPage = new SettingsPageManager(this);
 
@@ -48,7 +48,7 @@ export class UI {
         this.setupThemeToggle();
         this.setupDialogs();
         this.setupAppSelector();
-        this.uidPage.init();
+        this.appPage.init();
         this.statusPage.setupModeButtons();
         this.logsPage.init();
 
@@ -129,7 +129,7 @@ export class UI {
         setTimeout(() => {
             if (pageName === 'status') this.statusPage.update();
             if (pageName === 'config') this.configPage.update();
-            if (pageName === 'uid') this.uidPage.update();
+            if (pageName === 'uid') this.appPage.update();
             if (pageName === 'logs') this.logsPage.update();
             if (pageName === 'debug' && typeof debugLogger !== 'undefined') {
                 debugLogger.updateUI();
@@ -263,7 +263,7 @@ export class UI {
         });
 
         document.getElementById('app-selector-search').addEventListener('input', (e) => {
-            this.uidPage.filterApps(e.target.value);
+            this.appPage.filterApps(e.target.value);
         });
 
         // Refresh button handlers removed - now using tab-based auto-load
@@ -303,7 +303,7 @@ export class UI {
 
             if (addAppBtn) {
                 addAppBtn.addEventListener('click', () => {
-                    this.uidPage.showAppSelector();
+                    this.appPage.showAppSelector();
                 });
             }
         } catch (error) {
