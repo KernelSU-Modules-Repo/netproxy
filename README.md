@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/logo.png" alt="NetProxy Logo" width="120" />
+  <img src="image/logo.png" alt="NetProxy Logo" width="120" />
 </p>
 
 <h1 align="center">NetProxy</h1>
@@ -19,28 +19,34 @@
   <img src="https://img.shields.io/badge/Xray-Core-blueviolet?style=flat-square" alt="Xray Core" />
 </p>
 
+<p align="center">
+  中文 | <a href="docs/README_EN.md">English</a>
+</p>
+
 ---
 
 ## ✨ 功能特性
 
 | 功能 | 描述 |
 |------|------|
-| 🖥️ **WebUI 管理** | Material Design 3 现代化界面，支持莫奈取色，功能全面 |
-| 🌐 **TPROXY 透明代理** | 支持 TCP + UDP，完整接管系统流量 |
-| 📶 **IPv6 支持** | 全面支持 IPv4 和 IPv6 网络 |
-| 🎯 **分应用代理** | 黑名单 / 白名单模式，精准控制代理范围 |
-| 📦 **订阅管理** | 在线添加、更新订阅，自动解析节点 |
-| ⚡ **热切换配置** | 无需重启即可切换节点 |
-| 📊 **延迟测试** | 实时测试节点连接状态 |
+| **WebUI 管理** | Material Design 3 现代化界面，支持莫奈取色 |
+| **透明代理** | 支持 TPROXY / REDIRECT 两种模式，TCP + UDP 全接管 |
+| **分应用代理** | 黑名单 / 白名单模式，精准控制代理范围 |
+| **路由设置** | 自定义域名、IP、端口等路由规则 |
+| **DNS 设置** | 自定义 DNS 服务器和静态 Hosts 映射 |
+| **订阅管理** | 在线添加、更新订阅，自动解析节点 |
+| **热点共享** | 支持代理 WiFi 热点和 USB 共享的流量 |
+| **热切换配置** | 无需重启即可切换节点 |
 
 ---
 
 ## 🖼️ 界面预览
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/Screenshots/Screenshot1.png" width="30%" alt="状态页面" />
-  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/Screenshots/Screenshot2.png" width="30%" alt="配置管理" />
-  <img src="https://raw.githubusercontent.com/KernelSU-Modules-Repo/netproxy/refs/heads/main/Screenshots/Screenshot3.png" width="30%" alt="应用控制" />
+  <img src="image/Screenshot1.jpg" width="24%" alt="状态页面" />
+  <img src="image/Screenshot2.jpg" width="24%" alt="节点管理" />
+  <img src="image/Screenshot3.jpg" width="24%" alt="应用控制" />
+  <img src="image/Screenshot4.jpg" width="24%" alt="设置页面" />
 </div>
 
 ---
@@ -58,14 +64,23 @@
 
 ```
 /data/adb/modules/netproxy/
+├── bin/                      # Xray 二进制文件
 ├── config/
 │   ├── xray/
-│   │   ├── confdir/        # 入站、DNS、路由等配置
-│   │   └── outbounds/      # 出站节点配置（含订阅分组）
-│   ├── proxy.conf          # 代理模式配置
-│   └── proxy_apps.list     # 白名单/黑名单应用列表
-├── scripts/                # 启动、停止、订阅等脚本
-└── bin/xray                # Xray 二进制
+│   │   ├── confdir/          # Xray 核心配置
+│   │   │   ├── 00_log.json
+│   │   │   ├── 01_inbounds.json
+│   │   │   ├── 02_dns.json
+│   │   │   ├── 03_routing.json
+│   │   │   └── ...
+│   │   └── outbounds/        # 出站节点配置（含订阅分组）
+│   ├── module.conf           # 模块设置（开机自启等）
+│   ├── tproxy.conf           # 代理模式配置
+│   └── routing_rules.json    # 自定义路由规则
+├── logs/                     # 运行日志
+├── scripts/                  # 启动、停止、订阅等脚本
+├── webroot/                  # WebUI 静态资源
+└── service.sh                # 模块启动入口
 ```
 
 ---
@@ -92,28 +107,15 @@ vless://... 或 vmess://... 或 trojan://... 等
 {
   "outbounds": [
     {
-      "protocol": "vless",
       "tag": "proxy",
+      "protocol": "vless",
       "settings": { ... }
-    },
-    { "protocol": "freedom", "tag": "direct" },
-    { "protocol": "blackhole", "tag": "block" }
+    }
   ]
 }
 ```
 
----
 
-## ⚙️ 代理模式
-
-| 模式 | 说明 |
-|------|------|
-| **黑名单** | 列表中的应用**不走**代理 |
-| **白名单** | 仅列表中的应用**走**代理 |
-
-在 WebUI 应用页面可以选择模式并管理应用列表。
-
----
 
 ## 📢 交流群组
 
@@ -129,14 +131,27 @@ vless://... 或 vmess://... 或 trojan://... 等
 
 欢迎参与项目！
 
-- 🐛 提交 Issue 反馈 BUG
-- 💡 提出功能建议
-- 🔧 提交 Pull Request
-- ⭐ Star 支持项目！
+- 提交 Issue 反馈 BUG
+- 提出功能建议
+- 提交 Pull Request
+- Star 支持项目！
+
+---
+
+## 🙏 鸣谢
+
+本项目的开发离不开以下优秀的开源项目：
+
+| 项目 | 说明 |
+|------|------|
+| [Xray-core](https://github.com/XTLS/Xray-core) | 核心代理引擎，支持 VLESS、XTLS、REALITY 等先进协议 |
+| [v2rayNG](https://github.com/2dust/v2rayNG) | 节点链接解析逻辑参考 |
+| [AndroidTProxyShell](https://github.com/CHIZI-0618/AndroidTProxyShell) | Android TProxy 透明代理实现参考 |
+| [KsuWebUIStandalone](https://github.com/KOWX712/KsuWebUIStandalone) | WebUI 独立运行方案参考 |
+| [Proxylink](https://github.com/Fanju6/Proxylink) | 代理链接解析器，用于订阅解析和配置生成 |
 
 ---
 
 ## 📜 许可证
 
 [GPL-3.0 License](LICENSE)
-
