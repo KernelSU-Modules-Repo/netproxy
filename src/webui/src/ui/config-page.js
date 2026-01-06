@@ -9,14 +9,15 @@ import { I18nService } from '../i18n/i18n-service.js';
  */
 export class ConfigPageManager {
     constructor(ui) {
-        this.ui = ui;
-        this.currentOpenDropdown = null;
-        this._tabEventBound = false; // 防止重复绑定 tab 事件
-        this._cachedGroups = null;
-        this._cachedCurrentConfig = null;
-        this._cachedConfigInfos = new Map(); // groupName -> Map<filename, info>
-        this._loadingChunks = new Set(); // 防止并发加载同一 chunk
-        this._selectedTab = null; // 持久化当前选中的 tab
+         this.ui = ui;
+         this.currentOpenDropdown = null;
+         this._tabEventBound = false; // 防止重复绑定 tab 事件
+         this._cachedGroups = null;
+         this._cachedCurrentConfig = null;
+         this._cachedConfigInfos = new Map(); // groupName -> Map<filename>, info
+         this._latencyCache = new Map();
+         this._loadingChunks = new Set(); // 防止并发加载同一 chunk
+         this._selectedTab = null; // 持久化当前选中的 tab
 
         // 懒加载观察器
         this.observer = new IntersectionObserver((entries) => {
@@ -168,6 +169,24 @@ export class ConfigPageManager {
         // 更新地址
         const addressSpan = item.querySelector('.address-span');
         if (addressSpan) addressSpan.textContent = info.port ? `${info.address}:${info.port}` : info.address;
+    }
+
+    setLatencyDisplay(latencyLabel, latencyCache) {
+        if (!latencyLabel || !latencyCache) return;
+
+        latencyLabel.textContent = latencyCache.latencyStr;
+        const ms = parseInt(latencyCache.latencyStr);
+        if (!isNaN(ms)) {
+            if (ms < 100) {
+                latencyLabel.style.color = '#4caf50';
+            } else if (ms < 300) {
+                latencyLabel.style.color = '#ff9800';
+            } else {
+                latencyLabel.style.color = '#f44336';
+            }
+        } else if (latencyCache.latencyStr === 'failed' || latencyCache.latencyStr === 'timeout') {
+            latencyLabel.style.color = '#f44336';
+        }
     }
 
     // 加载分组详情并刷新
@@ -487,6 +506,12 @@ export class ConfigPageManager {
         latencyLabel.className = 'latency-label';
         latencyLabel.style.cssText = 'font-size: 12px; color: var(--mdui-color-on-surface-variant);';
 
+        const cachedLatency = this._latencyCache.get(filename);
+        if (cachedLatency) {
+            latencyLabel.textContent = cachedLatency.latencyStr;
+            this.setLatencyDisplay(latencyLabel, cachedLatency);
+        }
+
         statusContainer.appendChild(latencyLabel);
 
 
@@ -588,40 +613,20 @@ export class ConfigPageManager {
             const latencyStr = await ShellService.getPingLatency(address);
             let latencyVal = 9999;
 
+            const displayStr = latencyStr === 'timeout' ? I18nService.t('config.status.timeout') :
+                              latencyStr === 'failed' ? I18nService.t('config.status.failed') : latencyStr;
+            const ms = parseInt(latencyStr);
+            if (!isNaN(ms)) latencyVal = ms;
+
+            const latencyCache = { latency: latencyVal, latencyStr: latencyStr };
             if (latencyLabel) {
-                let displayStr = latencyStr;
-                if (latencyStr === 'timeout') displayStr = I18nService.t('config.status.timeout');
-                else if (latencyStr === 'failed') displayStr = I18nService.t('config.status.failed');
-
                 latencyLabel.textContent = displayStr;
-                // 根据延迟值设置颜色
-                const ms = parseInt(latencyStr);
-                if (!isNaN(ms)) {
-                    latencyVal = ms;
-                    if (ms < 100) {
-                        latencyLabel.style.color = '#4caf50'; // 绿色
-                    } else if (ms < 300) {
-                        latencyLabel.style.color = '#ff9800'; // 橙色
-                    } else {
-                        latencyLabel.style.color = '#f44336'; // 红色
-                    }
-                } else if (latencyStr === 'failed' || latencyStr === 'timeout') {
-                    latencyLabel.style.color = '#f44336';
-                }
+                this.setLatencyDisplay(latencyLabel, latencyCache);
             }
 
-            // 缓存测试结果，用于排序和清理
-            // config-list-item 的 dataset.filename 是文件名
-            const filename = itemElement?.dataset.filename || displayName + '.json'; // 尽可能获取文件名
-            // 找到对应的 group 和 info
-            for (const [groupName, infos] of this._cachedConfigInfos.entries()) {
-                if (infos.has(filename)) {
-                    const info = infos.get(filename);
-                    info.latency = latencyVal;
-                    info.latencyStr = latencyStr;
-                    break;
-                }
-            }
+            // 缓存测试结果到独立缓存
+            const filename = itemElement?.dataset.filename || displayName + '.json';
+            this._latencyCache.set(filename, latencyCache);
 
         } catch (error) {
             if (latencyLabel) {
@@ -668,14 +673,14 @@ export class ConfigPageManager {
         if (!group) return;
 
         const infos = this._cachedConfigInfos.get(groupName);
-        if (!infos) return; // 还没加载过
+         if (!infos) return;
 
-        // 排序：有延迟的在前（按数值升序），没延迟的在后（保持原序或排最后）
-        group.configs.sort((a, b) => {
-            const latA = infos.get(a)?.latency ?? 99999;
-            const latB = infos.get(b)?.latency ?? 99999;
-            return latA - latB;
-        });
+         // 排序：有延迟的在前（按数值升序），没延迟的在后（保持原序或排最后）
+         group.configs.sort((a, b) => {
+             const latA = this._latencyCache.get(a)?.latency ?? 99999;
+             const latB = this._latencyCache.get(b)?.latency ?? 99999;
+             return latA - latB;
+         });
 
         toast(I18nService.t('config.toast.sorted'));
         await this.renderActiveTab(groupName);
@@ -691,8 +696,10 @@ export class ConfigPageManager {
 
         const invalidFiles = [];
         for (const [filename, info] of infos.entries()) {
-            if (info.latencyStr === 'failed' || info.latencyStr === 'timeout') {
+            const cachedLatency = this._latencyCache.get(filename);
+            if (cachedLatency && (cachedLatency.latencyStr === 'failed' || cachedLatency.latencyStr === 'timeout')) {
                 invalidFiles.push(filename);
+                this._latencyCache.delete(filename);
             }
         }
 
