@@ -2,8 +2,8 @@ import { StatusService } from '../services/status-service.js';
 import { I18nService } from '../i18n/i18n-service.js';
 import { toast } from '../utils/toast.js';
 import Sortable from 'sortablejs';
-import uPlot from '../assets/libs/uPlot.esm.js';
-import '../assets/libs/uPlot.min.css';
+import uPlot from 'uplot';
+import 'uplot/dist/uPlot.min.css';
 import { UI } from './ui-core.js';
 
 interface SpeedHistory {
