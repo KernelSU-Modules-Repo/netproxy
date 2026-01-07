@@ -34,7 +34,7 @@ export class ShellService {
      */
     static async exec(command: string, options: ExecOptions = {}): Promise<string> {
         try {
-            const { errno, stdout, stderr } = await exec(command, options) as ExecResult;
+            const { errno, stdout, stderr } = await exec(command, options as any) as ExecResult;
             if (errno !== 0) {
                 throw new Error(stderr || 'Command execution failed');
             }

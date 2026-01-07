@@ -7,12 +7,22 @@ import 'mdui/mdui.css';
 import 'mdui';
 import { UI } from './ui/ui-core.js';
 
-
+// Declare KernelSU global type
+declare global {
+    interface Window {
+        ksu?: {
+            exec: (command: string) => { errno: number; stdout: string; stderr: string };
+            spawn: (command: string, args: string[], options?: object) => object;
+            toast: (message: string) => void;
+            fullScreen: (enable: boolean) => void;
+        };
+    }
+}
 
 /**
  * 等待 KernelSU 环境准备好再初始化
  */
-function initializeApp() {
+function initializeApp(): void {
     // 检查 ksu 对象是否可用
     if (typeof window.ksu !== 'undefined') {
         new UI();

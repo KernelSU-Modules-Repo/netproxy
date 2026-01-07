@@ -5,14 +5,14 @@ import { snackbar } from 'mdui';
  * @param {string} msg - Message to display
  * @param {boolean} closeable - Whether the toast is closeable
  */
-export function toast(msg, closeable = false) {
+export function toast(msg: string, closeable: boolean = false): void {
     try {
         snackbar({
             message: msg,
             closeable: closeable,
-            timeout: closeable ? 0 : 3000,
+            autoCloseDelay: closeable ? 0 : 3000,
             placement: 'bottom'
-        });
+        } as any);
     } catch (error) {
         console.error('Toast error:', error);
     }

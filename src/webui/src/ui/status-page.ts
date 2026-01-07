@@ -23,7 +23,7 @@ export class StatusPageManager {
     ui: UI;
     uptimeStartTime: number | null;
     uptimeInterval: ReturnType<typeof setInterval> | null;
-    speedChart: uPlot | null;
+    speedChart: any;
     speedHistory: SpeedHistory;
     maxDataPoints: number;
     trafficStats: TrafficStats;
@@ -276,7 +276,7 @@ export class StatusPageManager {
                     points: { show: false }, // 隐藏数据点
                     // 填充满底部: 使用极小值确保填充覆盖到图表底部（负值区域）
                     fillTo: -1e9,
-                    fill: (u: uPlot, seriesIdx: number) => {
+                    fill: (u: any, seriesIdx: number) => {
                         const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
                         gradient.addColorStop(0, secondaryColor + '60');
                         gradient.addColorStop(1, secondaryColor + '1A');
@@ -290,7 +290,7 @@ export class StatusPageManager {
                     paths: uPlot.paths.spline(),
                     points: { show: false }, // 隐藏数据点
                     fillTo: -1e9,
-                    fill: (u: uPlot, seriesIdx: number) => {
+                    fill: (u: any, seriesIdx: number) => {
                         const gradient = u.ctx.createLinearGradient(0, 0, 0, u.height);
                         gradient.addColorStop(0, primaryColor + '60');
                         gradient.addColorStop(1, primaryColor + '1A');
@@ -309,7 +309,7 @@ export class StatusPageManager {
                 y: {
                     auto: true,
                     // 悬浮效果：将 0 线抬高
-                    range: (u: uPlot, min: number, max: number) => {
+                    range: (u: any, min: number, max: number) => {
                         const effectiveMax = Math.max(max, 100);
                         // 底部负值区域作为"悬浮"支撑
                         return [-effectiveMax * 0.45, effectiveMax];
@@ -321,7 +321,7 @@ export class StatusPageManager {
             padding: [0, 0, 0, 0],
         };
 
-        this.speedChart = new uPlot(opts, [
+        this.speedChart = new (uPlot as any)(opts, [
             this.speedHistory.time,
             this.speedHistory.download,
             this.speedHistory.upload

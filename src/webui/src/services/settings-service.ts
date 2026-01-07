@@ -189,7 +189,7 @@ export class SettingsService {
             const base64 = btoa(unescape(encodeURIComponent(json)));
             await ShellService.exec(`echo '${base64}' | base64 -d > ${ShellService.MODULE_PATH}/config/xray/confdir/02_dns.json`);
             return { success: true };
-        } catch (error) {
+        } catch (error: any) {
             console.error('保存 DNS 配置失败:', error);
             return { success: false, error: error.message };
         }
@@ -216,7 +216,7 @@ export class SettingsService {
             const base64 = btoa(unescape(encodeURIComponent(json)));
             await ShellService.exec(`echo '${base64}' | base64 -d > ${ShellService.MODULE_PATH}/config/routing_rules.json`);
             return { success: true };
-        } catch (error) {
+        } catch (error: any) {
             console.error('保存路由规则失败:', error);
             return { success: false, error: error.message };
         }
@@ -293,7 +293,7 @@ export class SettingsService {
             await ShellService.exec(`echo '${base64}' | base64 -d > ${ShellService.MODULE_PATH}/config/xray/confdir/03_routing.json`);
 
             return { success: true };
-        } catch (error) {
+        } catch (error: any) {
             console.error('应用路由规则失败:', error);
             return { success: false, error: error.message };
         }
@@ -316,7 +316,7 @@ export class SettingsService {
             await ShellService.exec(`cd ${ShellService.MODULE_PATH} && tar -czf ${outputPath} logs/`);
 
             return { success: true, path: outputPath };
-        } catch (error) {
+        } catch (error: any) {
             console.error('导出日志失败:', error);
             return { success: false, error: error.message };
         }
@@ -337,7 +337,7 @@ export class SettingsService {
             await ShellService.exec(`cd ${ShellService.MODULE_PATH} && tar -czf ${outputPath} logs/ config/`);
 
             return { success: true, path: outputPath };
-        } catch (error) {
+        } catch (error: any) {
             console.error('导出日志与配置失败:', error);
             return { success: false, error: error.message };
         }
@@ -400,7 +400,7 @@ export class SettingsService {
                     clearTimeout(timeout);
                     resolve({ success: false, isLatest: false, message: '更新失败', error: err.message });
                 });
-            } catch (error) {
+            } catch (error: any) {
                 if (!resolved) {
                     resolved = true;
                     clearTimeout(timeout);
@@ -440,7 +440,7 @@ export class SettingsService {
         try {
             const result = await exec(`su -c "sh ${ShellService.MODULE_PATH}/scripts/network/tproxy.sh restart"`);
             return { success: result.errno === 0, output: result.stdout };
-        } catch (error) {
+        } catch (error: any) {
             return { success: false, error: error.message };
         }
     }

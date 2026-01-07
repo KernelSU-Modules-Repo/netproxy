@@ -21,8 +21,11 @@
     /* Allow JS */
     "allowJs": true,
     "checkJs": false,
-    /* Linting - relaxed for migration */
-    "strict": false,
+    /* Linting - strict mode with relaxed null checks */
+    "strict": true,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "useUnknownInCatchVariables": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true

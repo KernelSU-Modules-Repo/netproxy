@@ -139,10 +139,12 @@ export class ConfigPageManager {
             this._cachedConfigInfos.set(groupName, new Map());
         }
         const groupInfos = this._cachedConfigInfos.get(groupName);
+        if (!groupInfos) return;
 
         // 如果已经有数据，直接渲染（可能刚加载完）
-        if (groupInfos.has(filename) && groupInfos.get(filename).protocol !== 'loading...') {
-            this.updateItemUI(item, groupInfos.get(filename));
+        const existingInfo = groupInfos.get(filename);
+        if (existingInfo && existingInfo.protocol !== 'loading...') {
+            this.updateItemUI(item, existingInfo);
             return;
         }
 
@@ -270,7 +272,7 @@ export class ConfigPageManager {
 
         // 检查现有 tabs 是否匹配缓存（如果匹配则跳过重建，只刷新内容）
         const existingTabs = tabsEl.querySelectorAll('mdui-tab');
-        const existingNames = Array.from(existingTabs).map(t => t.value);
+        const existingNames = Array.from(existingTabs).map(t => (t as any).value);
         const cachedNames = this._cachedGroups.map(g => g.name);
         const tabsMatch = existingNames.length === cachedNames.length &&
             existingNames.every((name, i) => name === cachedNames[i]);
@@ -288,7 +290,7 @@ export class ConfigPageManager {
 
         // 1. 创建所有 tab 标签
         for (const group of this._cachedGroups) {
-            const tab = document.createElement('mdui-tab');
+            const tab = document.createElement('mdui-tab') as any;
             tab.value = group.name;
             tab.textContent = `${group.name} (${group.configs.length})`;
             tabsEl.appendChild(tab);
@@ -300,7 +302,7 @@ export class ConfigPageManager {
             if (shadowRoot) {
                 const container = shadowRoot.querySelector('[part="container"]');
                 if (container) {
-                    container.style.cssText = 'display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;';
+                    (container as HTMLElement).style.cssText = 'display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;';
                 }
 
                 // 让每个 tab 保持自然宽度不收缩
@@ -309,7 +311,7 @@ export class ConfigPageManager {
                     const assignedElements = slot.assignedElements();
                     assignedElements.forEach(el => {
                         if (el.tagName === 'MDUI-TAB') {
-                            el.style.cssText = 'flex-shrink: 0; white-space: nowrap;';
+                            (el as HTMLElement).style.cssText = 'flex-shrink: 0; white-space: nowrap;';
                         }
                     });
                 });
@@ -325,7 +327,7 @@ export class ConfigPageManager {
         // 2. 创建所有 tab-panel
         // 2. 创建所有 tab-panel
         for (const group of this._cachedGroups) {
-            const panel = document.createElement('mdui-tab-panel');
+            const panel = document.createElement('mdui-tab-panel') as any;
             panel.slot = 'panel';
             panel.value = group.name;
 
@@ -422,7 +424,7 @@ export class ConfigPageManager {
                     // 找到并点击目标 tab
                     const targetTab = tabsEl.querySelector(`mdui-tab[value="${validTab}"]`);
                     if (targetTab) {
-                        targetTab.click();
+                        (targetTab as HTMLElement).click();
                     }
                     // 为当前 tab 加载并渲染内容
                     await this.renderActiveTab(validTab);
@@ -434,10 +436,13 @@ export class ConfigPageManager {
         if (this._tabChangeHandler) {
             tabsEl.removeEventListener('change', this._tabChangeHandler);
         }
-        this._tabChangeHandler = async (e) => {
-            const newTab = e.target.value;
-            this._selectedTab = newTab;
-            await this.renderActiveTab(newTab);
+        this._tabChangeHandler = async (e: Event) => {
+            const target = e.target as any;
+            const newTab = target?.value;
+            if (newTab) {
+                this._selectedTab = newTab;
+                await this.renderActiveTab(newTab);
+            }
         };
         tabsEl.addEventListener('change', this._tabChangeHandler);
     }
@@ -683,11 +688,11 @@ export class ConfigPageManager {
             return;
         }
 
-        const toastId = toast(I18nService.t('config.toast.start_test', { count: total }), 0); // 持续显示
+        const toastId = toast(I18nService.t('config.toast.start_test', { count: String(total) }), true); // 持续显示
 
         // 无限制并发，同时测试所有节点
         await Promise.all(items.map(async (item) => {
-            const filename = item.dataset.filename;
+            const filename = (item as HTMLElement).dataset.filename;
             const info = this._cachedConfigInfos.get(groupName)?.get(filename);
             if (info && info.address) {
                 await this.testConfig(filename.replace(/\.json$/i, ''), info.address, item);
@@ -829,27 +834,29 @@ export class ConfigPageManager {
             this._cachedGroups = null;
             this._cachedConfigInfos.clear();
             await this.update(true);
-        } catch (error) {
+        } catch (error: any) {
             toast(I18nService.t('config.toast.delete_failed') + error.message);
         }
     }
 
-    async addSubscription() {
-        const dialog = document.getElementById('subscription-dialog');
-        const nameInput = document.getElementById('subscription-name');
-        const urlInput = document.getElementById('subscription-url');
+    async addSubscription(): Promise<void> {
+        const dialog = document.getElementById('subscription-dialog') as any;
+        const nameInput = document.getElementById('subscription-name') as HTMLInputElement | null;
+        const urlInput = document.getElementById('subscription-url') as HTMLInputElement | null;
 
-        nameInput.value = '';
-        urlInput.value = '';
-        dialog.open = true;
+        if (nameInput) nameInput.value = '';
+        if (urlInput) urlInput.value = '';
+        if (dialog) dialog.open = true;
     }
 
-    async saveSubscription() {
-        const nameInput = document.getElementById('subscription-name');
-        const urlInput = document.getElementById('subscription-url');
+    async saveSubscription(): Promise<void> {
+        const nameInput = document.getElementById('subscription-name') as HTMLInputElement | null;
+        const urlInput = document.getElementById('subscription-url') as HTMLInputElement | null;
         const saveBtn = document.getElementById('subscription-save');
         const cancelBtn = document.getElementById('subscription-cancel');
-        const dialog = document.getElementById('subscription-dialog');
+        const dialog = document.getElementById('subscription-dialog') as any;
+
+        if (!nameInput || !urlInput) return;
 
         const name = nameInput.value.trim();
         const url = urlInput.value.trim();
@@ -865,7 +872,7 @@ export class ConfigPageManager {
         }
 
         // 关闭对话框
-        dialog.open = false;
+        if (dialog) dialog.open = false;
 
         // 清空输入
         nameInput.value = '';
@@ -882,7 +889,7 @@ export class ConfigPageManager {
                 this._cachedGroups = null;
                 this._cachedConfigInfos.clear();
                 await this.update(true);
-            } catch (error) {
+            } catch (error: any) {
                 toast(I18nService.t('config.toast.add_failed') + error.message);
             }
         }, 50);
@@ -890,10 +897,12 @@ export class ConfigPageManager {
 
     // ===================== 原有方法 =====================
 
-    async showDialog(filename = null) {
-        const dialog = document.getElementById('config-dialog');
-        const filenameInput = document.getElementById('config-filename');
-        const contentInput = document.getElementById('config-content');
+    async showDialog(filename: string | null = null): Promise<void> {
+        const dialog = document.getElementById('config-dialog') as any;
+        const filenameInput = document.getElementById('config-filename') as HTMLInputElement | null;
+        const contentInput = document.getElementById('config-content') as HTMLTextAreaElement | null;
+
+        if (!filenameInput || !contentInput) return;
 
         if (filename) {
             filenameInput.value = filename;
@@ -918,12 +927,17 @@ export class ConfigPageManager {
             }, null, 2);
         }
 
-        dialog.open = true;
+        if (dialog) dialog.open = true;
     }
 
-    async saveConfig() {
-        const filename = document.getElementById('config-filename').value.trim();
-        const content = document.getElementById('config-content').value;
+    async saveConfig(): Promise<void> {
+        const filenameInput = document.getElementById('config-filename') as HTMLInputElement | null;
+        const contentInput = document.getElementById('config-content') as HTMLTextAreaElement | null;
+
+        if (!filenameInput || !contentInput) return;
+
+        const filename = filenameInput.value.trim();
+        const content = contentInput.value;
 
         if (!filename) {
             toast(I18nService.t('config.toast.enter_filename'));
@@ -939,15 +953,18 @@ export class ConfigPageManager {
             JSON.parse(content);
             await ConfigService.saveConfig(filename, content);
             toast(I18nService.t('config.toast.save_success'));
-            document.getElementById('config-dialog').open = false;
+            const dialog = document.getElementById('config-dialog') as any;
+            if (dialog) dialog.open = false;
             this.update();
-        } catch (error) {
+        } catch (error: any) {
             toast(I18nService.t('config.toast.save_failed') + error.message);
         }
     }
 
-    async importNodeLink() {
-        const input = document.getElementById('node-link-input');
+    async importNodeLink(): Promise<void> {
+        const input = document.getElementById('node-link-input') as HTMLInputElement | null;
+        if (!input) return;
+
         const nodeLink = input.value.trim();
 
         if (!nodeLink) {
@@ -968,7 +985,8 @@ export class ConfigPageManager {
 
             if (result.success) {
                 toast(I18nService.t('config.toast.import_success'));
-                document.getElementById('node-link-dialog').open = false;
+                const dialog = document.getElementById('node-link-dialog') as any;
+                if (dialog) dialog.open = false;
                 input.value = '';
                 // 强制刷新配置列表
                 this._cachedGroups = null;
@@ -977,7 +995,7 @@ export class ConfigPageManager {
             } else {
                 toast(I18nService.t('config.toast.import_failed') + (result.error || I18nService.t('common.unknown')));
             }
-        } catch (error) {
+        } catch (error: any) {
             toast(I18nService.t('config.toast.import_failed') + error.message);
         }
     }
