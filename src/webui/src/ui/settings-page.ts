@@ -6,7 +6,6 @@ import { setTheme } from 'mdui/functions/setTheme.js';
 import { UI } from './ui-core.js';
 import Sortable from 'sortablejs';
 
-// import logoUrl from '../assets/img/logo.png';
 const logoUrl = '/logo.png';
 
 interface RoutingRule {
