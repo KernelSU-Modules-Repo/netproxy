@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  中文 | <a href="docs/README_EN.md">English</a>
+  中文 | <a href="README_EN.md">English</a>
 </p>
 
 ---
