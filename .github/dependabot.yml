@@ -9,9 +9,7 @@ updates:
       interval: "daily"
     commit-message:
       prefix: "chore(deps)"
-    labels:
-      - "dependencies"
-      - "npm"
+
 
   # Gradle 依赖 (Android Manager)
   - package-ecosystem: "gradle"
@@ -20,9 +18,7 @@ updates:
       interval: "daily"
     commit-message:
       prefix: "chore(deps)"
-    labels:
-      - "dependencies"
-      - "gradle"
+
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -31,7 +27,5 @@ updates:
       interval: "daily"
     commit-message:
       prefix: "ci(deps)"
-    labels:
-      - "dependencies"
-      - "ci"
+
 
