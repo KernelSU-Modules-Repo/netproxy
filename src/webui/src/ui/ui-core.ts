@@ -223,15 +223,31 @@ export class UI {
 
     applyTheme(theme: string): void {
         const html = document.documentElement;
+        const savedMonet = localStorage.getItem('monetEnabled');
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
-        // 首先移除所有主题类
+        // 移除所有主题类
         html.classList.remove('mdui-theme-light', 'mdui-theme-dark', 'mdui-theme-auto');
 
-        // 添加对应的主题类
-        html.classList.add(`mdui-theme-${theme}`);
-
-        // 同时调用MDUI的setTheme确保组件内部状态正确
-        setTheme(theme as any);
+        if (theme === 'light') {
+            html.classList.add('mdui-theme-light');
+            setTheme('light');
+        } else if (theme === 'dark') {
+            html.classList.add('mdui-theme-dark');
+            setTheme('dark');
+        } else {
+            // 自动模式
+            const monetEnabled = savedMonet !== 'false';
+            if (monetEnabled) {
+                // 莫奈取色开启：使用 mdui-theme-auto
+                html.classList.add('mdui-theme-auto');
+                setTheme('auto');
+            } else {
+                // 莫奈取色关闭：根据系统偏好设置主题
+                html.classList.add(isDark ? 'mdui-theme-dark' : 'mdui-theme-light');
+                setTheme(isDark ? 'dark' : 'light');
+            }
+        }
     }
 
     setupDialogs(): void {

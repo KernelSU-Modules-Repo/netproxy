@@ -393,7 +393,7 @@ const enUS: Record<string, string> = {
     'uid.toast_removed': 'Removed',
     'uid.toast_remove_failed': 'Failed to remove: ',
     'uid.toast_load_apps_failed': 'Failed to load app list: ',
-    'uid.btn_add_selected': 'Add Selected ({count})',
+    'uid.btn_add_selected': 'Confirm ({count})',
     'uid.toast_added_count': 'Successfully added {count} apps',
     'uid.no_apps_found': 'No apps found',
 

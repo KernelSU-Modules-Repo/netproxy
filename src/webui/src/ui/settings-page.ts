@@ -50,6 +50,7 @@ export class SettingsPageManager {
     _logsAutoRefreshEnabled: boolean;
     _logsAutoRefreshInterval: ReturnType<typeof setInterval> | null;
     _logsAutoRefreshMs: number;
+    lastAppliedThemeMode: string;
 
     constructor(ui: UI) {
         this.ui = ui;
@@ -1037,6 +1038,7 @@ export class SettingsPageManager {
     loadThemeSettings(): void {
         const savedTheme = localStorage.getItem('theme') || 'auto';
         const savedColor = localStorage.getItem('themeColor') || '#6750A4';
+        this.lastAppliedThemeMode = savedTheme;
 
         // 设置模式选择
         const modeGroup = document.getElementById('theme-mode-group') as any;
@@ -1063,6 +1065,10 @@ export class SettingsPageManager {
     }
 
     applyThemeMode(mode) {
+        if (mode === this.lastAppliedThemeMode) {
+            return;
+        }
+        this.lastAppliedThemeMode = mode;
         localStorage.setItem('theme', mode);
         setTheme(mode);
 
@@ -1264,7 +1270,7 @@ export class SettingsPageManager {
         const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         const html = document.documentElement;
 
-        if (savedMonet === 'true' && savedTheme === 'auto') {
+        if (savedMonet !== 'false' && savedTheme === 'auto') {
             // 自动模式 + 莫奈取色开启：使用 KernelSU 注入的变量
             html.classList.add('mdui-theme-auto');
             html.classList.remove('mdui-theme-light', 'mdui-theme-dark');
@@ -1336,6 +1342,7 @@ export class SettingsPageManager {
 
     showAboutDialog() {
         const dialog = document.createElement('mdui-dialog') as any;
+        dialog.id = 'about-dialog';
         dialog.headline = I18nService.t('settings.about.title');
         dialog.innerHTML = `
             <div style="text-align: center; padding: 16px 0;">

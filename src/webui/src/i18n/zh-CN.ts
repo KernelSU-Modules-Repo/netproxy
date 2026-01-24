@@ -393,7 +393,7 @@ const zhCN: Record<string, string> = {
     'uid.toast_removed': '已移除',
     'uid.toast_remove_failed': '移除失败: ',
     'uid.toast_load_apps_failed': '加载应用列表失败: ',
-    'uid.btn_add_selected': '添加选中 ({count})',
+    'uid.btn_add_selected': '确认 ({count})',
     'uid.toast_added_count': '成功添加 {count} 个应用',
     'uid.no_apps_found': '没有找到应用',
 

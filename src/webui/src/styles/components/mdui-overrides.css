@@ -190,6 +190,24 @@ mdui-dialog#confirm-dialog::part(panel) {
   width: 90% !important;
 }
 
+/* 关于对话框 - 从底部滑入动画 */
+mdui-dialog#about-dialog::part(panel) {
+  background-color: var(--monet-surface-container-high, var(--mdui-color-surface-container-high)) !important;
+  animation: slideUpIn 250ms cubic-bezier(0.2, 0, 0, 1) forwards;
+  transform-origin: center bottom;
+}
+
+@keyframes slideUpIn {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 /* ==================== 列表 ==================== */
 
 mdui-list {
@@ -567,4 +585,27 @@ mdui-divider {
 /* 将 snackbar 提升到底部导航栏上方 (底部导航栏高度约 80px) */
 mdui-snackbar[placement="bottom"] {
   bottom: 88px !important;
+}
+
+/* ==================== 当前节点标签文字颜色 ==================== */
+
+/* 应用浅色模式：半透明白色文字 */
+.mdui-theme-light .current-tag-text {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* 应用深色模式：半透明黑色文字 */
+.mdui-theme-dark .current-tag-text {
+  color: rgba(0, 0, 0, 0.75) !important;
+}
+
+/* 应用自动模式：跟随系统深浅色模式 */
+.mdui-theme-auto .current-tag-text {
+  color: rgba(255, 255, 255, 0.85) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .mdui-theme-auto .current-tag-text {
+    color: rgba(0, 0, 0, 0.75) !important;
+  }
 }

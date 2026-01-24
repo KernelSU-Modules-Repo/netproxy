@@ -366,7 +366,7 @@ const urPK: Record<string, string> = {
     'uid.toast_removed': 'ہٹا دیا گیا',
     'uid.toast_remove_failed': 'ہٹانے میں ناکام: ',
     'uid.toast_load_apps_failed': 'ایپ لسٹ لوڈ کرنے میں ناکام: ',
-    'uid.btn_add_selected': 'منتخب شامل کریں ({count})',
+    'uid.btn_add_selected': 'تصدیق کریں ({count})',
     'uid.toast_added_count': '{count} ایپس کامیابی سے شامل ہو گئیں',
     'uid.no_apps_found': 'کوئی ایپس نہیں ملیں',
 

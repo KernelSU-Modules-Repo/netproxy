@@ -524,7 +524,8 @@ export class ConfigPageManager {
         if (isCurrent) {
             const currentTag = document.createElement('span');
             currentTag.textContent = I18nService.t('config.status.current');
-            currentTag.style.cssText = 'font-size: 10px; padding: 1px 4px; border-radius: 4px; background: var(--mdui-color-primary); color: #ffffff;';
+            currentTag.className = 'current-tag-text';
+            currentTag.style.cssText = 'font-size: 10px; padding: 1px 4px; border-radius: 4px; background: var(--mdui-color-primary);';
             protocolLine.appendChild(currentTag);
         }
 

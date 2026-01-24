@@ -31,6 +31,7 @@ export class AppPageManager {
     proxyMode: string;
     proxyApps: ProxyAppConfig[];
     selectedApps: Map<string, AppInfo>;
+    originalProxyApps: Map<string, AppInfo>;
     users: UserInfo[];
     currentUserId: string;
     showSystemApps: boolean;
@@ -42,7 +43,8 @@ export class AppPageManager {
         this.allApps = [];
         this.proxyMode = 'blacklist';
         this.proxyApps = [];
-        this.selectedApps = new Map(); // 用于多选, key: "userId:packageName"
+        this.selectedApps = new Map();
+        this.originalProxyApps = new Map();
         this.users = [];
         this.currentUserId = '0';
         this.showSystemApps = false; // 默认不显示系统应用 (-3 only)
@@ -326,6 +328,12 @@ export class AppPageManager {
         const listEl = document.getElementById('app-selector-list');
         const addSelectedBtn = document.getElementById('app-selector-add-selected');
 
+        // 清空搜索输入框并重置筛选状态
+        const filterInput = document.getElementById('app-selector-search') as HTMLInputElement | null;
+        if (filterInput) {
+            filterInput.value = '';
+        }
+
         // 加载用户列表
         const userSelect = document.getElementById('app-selector-user') as any;
         if (userSelect) {
@@ -343,6 +351,21 @@ export class AppPageManager {
 
         // 清空选中状态
         this.selectedApps.clear();
+        this.originalProxyApps.clear();
+
+        // 预填充已在代理列表中的应用
+        for (const proxyApp of this.proxyApps) {
+            const key = `${proxyApp.userId}:${proxyApp.packageName}`;
+            const appInfo: AppInfo = {
+                packageName: proxyApp.packageName,
+                userId: proxyApp.userId,
+                appLabel: proxyApp.appLabel,
+                icon: proxyApp.icon
+            };
+            this.selectedApps.set(key, appInfo);
+            this.originalProxyApps.set(key, appInfo);
+        }
+
         this.updateAddSelectedButton();
 
         // 绑定批量添加按钮事件（每次打开都重新绑定）
@@ -360,7 +383,9 @@ export class AppPageManager {
         if (btn) {
             const count = this.selectedApps.size;
             btn.textContent = I18nService.t('uid.btn_add_selected', { count: String(count) });
-            btn.disabled = count === 0;
+            const hasChanges = count > 0 ||
+                this.originalProxyApps.size !== this.selectedApps.size;
+            btn.disabled = !hasChanges;
         }
     }
 
@@ -387,11 +412,28 @@ export class AppPageManager {
     }
 
     async addSelectedApps(): Promise<void> {
-        if (this.selectedApps.size === 0) return;
+        // 找出需要移除的应用（在原始列表中但不在选中列表中）
+        const appsToRemove: AppInfo[] = [];
+        for (const [key, app] of this.originalProxyApps) {
+            if (!this.selectedApps.has(key)) {
+                appsToRemove.push(app);
+            }
+        }
 
-        const apps = Array.from(this.selectedApps.values());
+        // 找出需要添加的应用
+        const appsToAdd = Array.from(this.selectedApps.values());
 
-        for (const app of apps) {
+        // 移除被取消勾选的应用
+        for (const app of appsToRemove) {
+            try {
+                await AppService.removeProxyApp(app.packageName, app.userId);
+            } catch (error) {
+                // 忽略错误
+            }
+        }
+
+        // 添加新选中的应用
+        for (const app of appsToAdd) {
             try {
                 await AppService.addProxyApp(app.packageName, app.userId);
             } catch (error) {
@@ -399,12 +441,20 @@ export class AppPageManager {
             }
         }
 
-        toast(I18nService.t('uid.toast_added_count', { count: String(apps.length) }));
+        // 根据操作显示提示
+        if (appsToRemove.length > 0 && appsToAdd.length > 0) {
+            toast(I18nService.t('uid.toast_added_count', { count: String(appsToAdd.length) }));
+        } else if (appsToRemove.length > 0) {
+            toast(I18nService.t('uid.toast_removed'));
+        } else if (appsToAdd.length > 0) {
+            toast(I18nService.t('uid.toast_added_count', { count: String(appsToAdd.length) }));
+        }
 
+        // 关闭对话框并刷新列表
         const dialog = document.getElementById('app-selector-dialog') as any;
         if (dialog) dialog.open = false;
         this.selectedApps.clear();
-        // 清除缓存并强制刷新
+        this.originalProxyApps.clear();
         this.proxyApps = [];
         await this.update(true);
     }
