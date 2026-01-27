@@ -20,6 +20,11 @@ interface InternalIP {
     iface: string;
 }
 
+interface ExternalIPInfo {
+    ip: string;
+    countryCode: string;
+}
+
 interface XrayRule {
     type: string;
     inboundTag?: string[];
@@ -271,18 +276,18 @@ export class StatusService {
         }
     }
 
-    // 获取外网IP (多 API Race 模式，使用 spawn 非阻塞)
-    static async getExternalIP(): Promise<string | null> {
+    // 获取外网IP信息 (IP + 国家代码)
+    static async getExternalIPInfo(): Promise<ExternalIPInfo | null> {
+        // 定义支持国家代码的 API 配置
         const ipApis = [
-            { url: 'https://ipwho.is', field: 'ip' },
-            { url: 'https://api.myip.com', field: 'ip' },
-            { url: 'https://ipapi.co/json', field: 'ip' },
-            { url: 'http://ip-api.com/json', field: 'query' },
-            { url: 'https://api.ip.sb/geoip', field: 'ip' },
+            { url: 'https://ipwho.is', ipField: 'ip', countryField: 'country_code' },
+            { url: 'https://api.ip.sb/geoip', ipField: 'ip', countryField: 'country_code' },
+            { url: 'https://ipapi.co/json', ipField: 'ip', countryField: 'country_code' },
+            { url: 'http://ip-api.com/json', ipField: 'query', countryField: 'countryCode' },
         ];
 
         const fetchPromises = ipApis.map((api) => {
-            return new Promise<string>((resolve, reject) => {
+            return new Promise<ExternalIPInfo>((resolve, reject) => {
                 let output = '';
                 let resolved = false;
 
@@ -308,10 +313,16 @@ export class StatusService {
                         if (code === 0 && output.trim()) {
                             try {
                                 const json = JSON.parse(output.trim());
-                                const ip = json[api.field];
+                                const ip = json[api.ipField];
+                                const countryCode = json[api.countryField];
+
+                                // 验证 IP 格式
                                 if (ip && typeof ip === 'string' && /^[\d.:a-fA-F]+$/.test(ip)) {
-                                    resolve(ip);
-                                    return;
+                                    // 验证国家代码（2位大写字母）
+                                    if (countryCode && typeof countryCode === 'string' && /^[A-Z]{2}$/.test(countryCode)) {
+                                        resolve({ ip, countryCode });
+                                        return;
+                                    }
                                 }
                             } catch {
                                 // JSON parse failed

@@ -1,0 +1,28 @@
+@font-face {
+    font-family: 'Twemoji';
+    font-style: normal;
+    font-weight: 400;
+    font-display: block;
+    src: url('./fonts/Twemoji.Mozilla.ttf') format('truetype');
+}
+
+/* 国旗图标使用 Twemoji 字体 */
+.flag-icon,
+.twemoji {
+    font-family: 'Twemoji',
+                 'Apple Color Emoji',
+                 'Segoe UI Emoji',
+                 'Segoe UI Symbol',
+                 'Noto Color Emoji',
+                 'Android Emoji',
+                 'EmojiOne Color',
+                 sans-serif;
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+}

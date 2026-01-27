@@ -75,7 +75,7 @@ export class UI {
             if (statusPage && statusPage.classList.contains('active')) {
                 this.statusPage.update();
             }
-        }, 5000);
+        }, 9000);
 
         setTimeout(() => {
             const latencyBtn = document.getElementById('refresh-latency-btn') as any;
