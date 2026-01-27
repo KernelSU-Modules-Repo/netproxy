@@ -80,6 +80,9 @@
   <!-- 1. Material Icons（本地字体文件，支持离线使用） -->
   <link rel="stylesheet" href="/material-icons.css">
 
+  <!-- Twemoji 字体（用于国旗显示） -->
+  <link rel="stylesheet" href="/twemoji.css">
+
   <!-- 3. KernelSU WebUI 边到边适配 -->
   <!-- 在 KernelSU/APatch Manager WebView 中运行时动态提供 -->
   <link rel="stylesheet" href="https://mui.kernelsu.org/internal/insets.css">
@@ -201,7 +204,7 @@
           <div class="common-card half-width height-1" id="card-external-ip">
             <div class="card-delete-btn"><mdui-icon name="close"></mdui-icon></div>
             <div class="card-header">
-              <mdui-icon name="network_check" class="card-icon"></mdui-icon>
+              <mdui-icon name="network_check" class="card-icon" id="network-detection-icon"></mdui-icon>
               <span class="card-title" data-i18n="status.network_detection">网络检测</span>
             </div>
             <div class="card-content">

@@ -20,6 +20,11 @@ interface InternalIP {
     iface: string;
 }
 
+interface ExternalIPInfo {
+    ip: string;
+    countryCode: string;
+}
+
 interface XrayRule {
     type: string;
     inboundTag?: string[];
@@ -312,6 +317,80 @@ export class StatusService {
                                 if (ip && typeof ip === 'string' && /^[\d.:a-fA-F]+$/.test(ip)) {
                                     resolve(ip);
                                     return;
+                                }
+                            } catch {
+                                // JSON parse failed
+                            }
+                        }
+                        reject(new Error('failed'));
+                    });
+
+                    curl.on('error', () => {
+                        if (resolved) return;
+                        resolved = true;
+                        clearTimeout(timeout);
+                        reject(new Error('error'));
+                    });
+                } catch {
+                    if (!resolved) {
+                        resolved = true;
+                        clearTimeout(timeout);
+                        reject(new Error('spawn failed'));
+                    }
+                }
+            });
+        });
+
+        return Promise.any(fetchPromises).catch(() => null);
+    }
+
+    // 获取外网IP信息 (IP + 国家代码)
+    static async getExternalIPInfo(): Promise<ExternalIPInfo | null> {
+        // 定义支持国家代码的 API 配置
+        const ipApis = [
+            { url: 'https://ipwho.is', ipField: 'ip', countryField: 'country_code' },
+            { url: 'https://api.ip.sb/geoip', ipField: 'ip', countryField: 'country_code' },
+            { url: 'https://ipapi.co/json', ipField: 'ip', countryField: 'country_code' },
+            { url: 'http://ip-api.com/json', ipField: 'query', countryField: 'countryCode' },
+        ];
+
+        const fetchPromises = ipApis.map((api) => {
+            return new Promise<ExternalIPInfo>((resolve, reject) => {
+                let output = '';
+                let resolved = false;
+
+                const timeout = setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        reject(new Error('timeout'));
+                    }
+                }, 5000);
+
+                try {
+                    const curl = KSU.spawn('curl', ['-s', '--connect-timeout', '3', '--max-time', '5', api.url]);
+
+                    curl.stdout.on('data', (data: string) => {
+                        output += data;
+                    });
+
+                    curl.on('exit', (code: number) => {
+                        if (resolved) return;
+                        resolved = true;
+                        clearTimeout(timeout);
+
+                        if (code === 0 && output.trim()) {
+                            try {
+                                const json = JSON.parse(output.trim());
+                                const ip = json[api.ipField];
+                                const countryCode = json[api.countryField];
+
+                                // 验证 IP 格式
+                                if (ip && typeof ip === 'string' && /^[\d.:a-fA-F]+$/.test(ip)) {
+                                    // 验证国家代码（2位大写字母）
+                                    if (countryCode && typeof countryCode === 'string' && /^[A-Z]{2}$/.test(countryCode)) {
+                                        resolve({ ip, countryCode });
+                                        return;
+                                    }
                                 }
                             } catch {
                                 // JSON parse failed

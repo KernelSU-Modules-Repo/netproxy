@@ -6,6 +6,7 @@ import sys
 # 项目路径配置
 WEBUI_DIR = os.path.dirname(os.path.abspath(__file__))
 TARGET_DIR = os.path.abspath(os.path.join(WEBUI_DIR, "..", "module", "webroot"))
+FONTS_DIR = os.path.join(WEBUI_DIR, "public", "fonts")
 
 def run_command(cmd, cwd=None):
     """运行命令并返回结果"""
@@ -51,6 +52,29 @@ def clear_target_dir():
         os.makedirs(TARGET_DIR, exist_ok=True)
         print(f"  已创建目标目录: {TARGET_DIR}")
 
+def copy_public_assets():
+    """复制 public 目录下的静态资源"""
+    print("复制静态资源...")
+    
+    public_dir = os.path.join(WEBUI_DIR, "public")
+    target_fonts_dir = os.path.join(TARGET_DIR, "fonts")
+    
+    os.makedirs(target_fonts_dir, exist_ok=True)
+    
+    fonts_copied = 0
+    twemoji_font = "Twemoji.Mozilla.ttf"
+    material_font = "MaterialIcons-Regular.ttf"
+    
+    for filename in os.listdir(FONTS_DIR):
+        if filename.endswith('.ttf'):
+            src = os.path.join(FONTS_DIR, filename)
+            dst = os.path.join(target_fonts_dir, filename)
+            shutil.copy2(src, dst)
+            fonts_copied += 1
+            print(f"  复制: {filename}")
+    
+    print(f"  复制了 {fonts_copied} 个字体文件")
+
 def verify_build_files():
     """验证构建文件是否完整"""
     print("验证构建产物完整性...")
@@ -76,13 +100,12 @@ def verify_build_files():
                 js_files.append(rel_path)
             elif file.endswith('.css'):
                 css_files.append(rel_path)
-            elif 'MaterialIcons' in file:
+            elif file.endswith('.ttf'):
                 font_files.append(rel_path)
     
     print(f"  找到 {len(all_files)} 个文件和 {len(all_dirs)} 个目录")
-    print(f"  所有文件: {all_files}")
-    print(f"  JavaScript文件: {js_files}")
-    print(f"  CSS文件: {css_files}")
+    print(f"  JavaScript文件: {len(js_files)} 个")
+    print(f"  CSS文件: {len(css_files)} 个")
     print(f"  字体文件: {font_files}")
     
     issues = []
@@ -95,8 +118,15 @@ def verify_build_files():
         issues.append("缺少JavaScript文件")
     if not css_files:
         issues.append("缺少CSS文件")
-    if not font_files:
+    
+    # 检查字体文件
+    has_material = any('MaterialIcons' in f for f in font_files)
+    has_twemoji = any('Twemoji' in f for f in font_files)
+    
+    if not has_material:
         issues.append("缺少Material Icons字体文件")
+    if not has_twemoji:
+        issues.append("缺少Twemoji字体文件")
     
     if issues:
         print(f"❌ 验证失败: {issues}")
@@ -117,6 +147,9 @@ def build_webui():
     
     # 清空目标目录
     clear_target_dir()
+    
+    # 复制字体文件（Vite 不会自动复制 public 目录）
+    copy_public_assets()
     
     print(f"执行构建，直接输出到: {TARGET_DIR}")
     run_command(["npm", "run", "build"], cwd=WEBUI_DIR)

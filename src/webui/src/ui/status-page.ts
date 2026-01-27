@@ -18,6 +18,21 @@ interface TrafficStats {
 }
 
 /**
+ * 将国家代码转换为国旗 Emoji
+ * @param countryCode - 两位国家代码（如 CN、US）
+ * @returns 国旗 Emoji 字符串
+ */
+const countryCodeToEmoji = (countryCode: string): string => {
+    const code = countryCode.toUpperCase();
+    if (code.length !== 2) {
+        return countryCode;
+    }
+    const firstLetter = code.codePointAt(0)! - 0x41 + 0x1F1E6;
+    const secondLetter = code.codePointAt(1)! - 0x41 + 0x1F1E6;
+    return String.fromCodePoint(firstLetter) + String.fromCodePoint(secondLetter);
+};
+
+/**
  * 为十六进制颜色添加透明度
  * @param hexColor - 十六进制颜色值（支持 #RRGGBB 或 #RRGGBBAA 格式）
  * @param alpha - 两位十六进制透明度值
@@ -409,22 +424,39 @@ export class StatusPageManager {
     }
 
     /**
-     * 更新外网 IP
+     * 更新外网 IP 和国旗图标
      * 使用 fire-and-forget 模式，不影响其他 UI 更新
      */
     updateExternalIP(): void {
-        const el = document.getElementById('external-ip');
-        if (!el) return;
-
+        const ipEl = document.getElementById('external-ip');
+        const iconEl = document.getElementById('network-detection-icon');
+        
         // 显示加载状态
-        el.innerHTML = '<span class="loading-spinner"></span>';
+        if (ipEl) ipEl.innerHTML = '<span class="loading-spinner"></span>';
 
-        StatusService.getExternalIP()
-            .then(ip => {
-                el.textContent = ip || '--';
+        StatusService.getExternalIPInfo()
+            .then(ipInfo => {
+                // 更新图标位置显示国旗
+                 if (iconEl) {
+                     if (ipInfo) {
+                         const flag = countryCodeToEmoji(ipInfo.countryCode);
+                         iconEl.outerHTML = `<span class="flag-icon twemoji">${flag}</span>`;
+                     } else {
+                         iconEl.outerHTML = `<mdui-icon name="network_check" class="card-icon" id="network-detection-icon"></mdui-icon>`;
+                     }
+                 }
+                
+                // 更新 IP 显示
+                if (ipEl) {
+                    ipEl.textContent = ipInfo?.ip || '--';
+                }
             })
             .catch(() => {
-                el.textContent = '--';
+                // 恢复默认图标
+                if (iconEl) {
+                    iconEl.outerHTML = `<mdui-icon name="network_check" class="card-icon" id="network-detection-icon"></mdui-icon>`;
+                }
+                if (ipEl) ipEl.textContent = '--';
             });
     }
 
