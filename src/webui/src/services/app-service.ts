@@ -34,7 +34,9 @@ export class AppService {
 
     // 设置分应用代理模式
     static async setAppProxyMode(mode: string): Promise<void> {
-        await KSU.exec(`sed -i 's/^APP_PROXY_MODE=.*/APP_PROXY_MODE="${mode}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(
+            `sed -i 's/^APP_PROXY_MODE=.*/APP_PROXY_MODE="${mode}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        );
     }
 
     // 获取分应用代理启用状态
@@ -52,7 +54,9 @@ export class AppService {
     // 设置分应用代理启用状态
     static async setAppProxyEnabled(enabled: boolean): Promise<void> {
         const val = enabled ? '1' : '0';
-        await KSU.exec(`sed -i 's/^APP_PROXY_ENABLE=.*/APP_PROXY_ENABLE=${val}/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(
+            `sed -i 's/^APP_PROXY_ENABLE=.*/APP_PROXY_ENABLE=${val}/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        );
     }
 
     // 获取已安装应用列表
@@ -70,7 +74,7 @@ export class AppService {
                 if (match) {
                     users.push({
                         id: match[1],
-                        name: match[2]
+                        name: match[2],
                     });
                 }
             }
@@ -103,7 +107,7 @@ export class AppService {
                     packageName: packageName,
                     appLabel: packageName, // 懒加载 Label
                     userId: userId,
-                    icon: null // 懒加载 Icon
+                    icon: null, // 懒加载 Icon
                 });
             }
 
@@ -125,7 +129,9 @@ export class AppService {
 
                 // 检查是否获取到有效数据
                 if (!infos || infos.length === 0) {
-                    console.warn(`fetchAppDetails attempt ${attempt + 1}: empty result, retrying...`);
+                    console.warn(
+                        `fetchAppDetails attempt ${attempt + 1}: empty result, retrying...`,
+                    );
                     await new Promise(resolve => setTimeout(resolve, 300));
                     continue;
                 }
@@ -142,12 +148,16 @@ export class AppService {
                 });
 
                 // 检查是否至少有一个应用获取到了 appLabel
-                const hasLabels = apps.some(app => app.appLabel && app.appLabel !== app.packageName);
+                const hasLabels = apps.some(
+                    app => app.appLabel && app.appLabel !== app.packageName,
+                );
                 if (hasLabels) {
                     return apps; // 成功获取
                 }
 
-                console.warn(`fetchAppDetails attempt ${attempt + 1}: no labels populated, retrying...`);
+                console.warn(
+                    `fetchAppDetails attempt ${attempt + 1}: no labels populated, retrying...`,
+                );
                 await new Promise(resolve => setTimeout(resolve, 300));
             } catch (e) {
                 console.warn(`fetchAppDetails attempt ${attempt + 1} failed:`, e);
@@ -171,14 +181,17 @@ export class AppService {
             const match = content.match(new RegExp(`${listKey}="([^"]*)"`));
 
             if (match && match[1]) {
-                return match[1].split(' ').filter(item => item.trim()).map(item => {
-                    const parts = item.split(':');
-                    if (parts.length === 2) {
-                        return { userId: parts[0], packageName: parts[1] };
-                    }
-                    // 兼容旧格式 (纯包名)，默认为主用户 0
-                    return { userId: '0', packageName: item };
-                });
+                return match[1]
+                    .split(' ')
+                    .filter(item => item.trim())
+                    .map(item => {
+                        const parts = item.split(':');
+                        if (parts.length === 2) {
+                            return { userId: parts[0], packageName: parts[1] };
+                        }
+                        // 兼容旧格式 (纯包名)，默认为主用户 0
+                        return { userId: '0', packageName: item };
+                    });
             }
             return [];
         } catch (error) {
@@ -201,7 +214,9 @@ export class AppService {
         }
 
         const newList = currentList.length > 0 ? `${currentListStr} ${newItem}` : newItem;
-        await KSU.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(
+            `sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        );
     }
 
     // 删除代理应用
@@ -215,12 +230,16 @@ export class AppService {
 
         const targetItem = `${userId}:${packageName}`;
         // 过滤掉完全匹配的项
-        const newList = currentList.filter(item => {
-            // 兼容处理：如果列表中是纯包名 (旧数据)，我们也尝试匹配
-            if (item === packageName && userId === '0') return false;
-            return item !== targetItem;
-        }).join(' ');
+        const newList = currentList
+            .filter(item => {
+                // 兼容处理：如果列表中是纯包名 (旧数据)，我们也尝试匹配
+                if (item === packageName && userId === '0') return false;
+                return item !== targetItem;
+            })
+            .join(' ');
 
-        await KSU.exec(`sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(
+            `sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        );
     }
 }

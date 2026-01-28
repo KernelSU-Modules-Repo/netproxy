@@ -10,7 +10,7 @@ import {
     toast as ksuToast,
     moduleInfo,
     listPackages as ksuListPackages,
-    getPackagesInfo as ksuGetPackagesInfo
+    getPackagesInfo as ksuGetPackagesInfo,
 } from 'kernelsu';
 
 // ==================== 类型定义 ====================
@@ -75,7 +75,7 @@ export class KSU {
      */
     static async exec(command: string, options: ExecOptions = {}): Promise<string> {
         try {
-            const { errno, stdout, stderr } = await ksuExec(command, options) as ExecResult;
+            const { errno, stdout, stderr } = (await ksuExec(command, options)) as ExecResult;
             if (errno !== 0) {
                 throw new Error(stderr || `Command failed with code ${errno}`);
             }
@@ -110,10 +110,14 @@ export class KSU {
                 emit(event: string, ...data: any[]) {
                     if (listeners[event]) {
                         listeners[event].forEach(cb => {
-                            try { cb(...data); } catch (e) { console.error(`Error in ${callbackName} ${event}`, e); }
+                            try {
+                                cb(...data);
+                            } catch (e) {
+                                console.error(`Error in ${callbackName} ${event}`, e);
+                            }
                         });
                     }
-                }
+                },
             };
         };
 
@@ -125,16 +129,16 @@ export class KSU {
             stdout: {
                 on: (event: string, cb: any) => stdout.on(event, cb),
                 // 供 Native 调用
-                emit: stdout.emit
+                emit: stdout.emit,
             },
             stderr: {
                 on: (event: string, cb: any) => stderr.on(event, cb),
                 // 供 Native 调用
-                emit: stderr.emit
+                emit: stderr.emit,
             },
             on: (event: string, cb: any) => mainEmitter.on(event, cb),
             // 供 Native 调用
-            emit: mainEmitter.emit
+            emit: mainEmitter.emit,
         };
 
         // 挂载到 window 供 Native 调用
@@ -153,11 +157,16 @@ export class KSU {
             if (ksu && ksu.spawn) {
                 ksu.spawn(command, JSON.stringify(args), JSON.stringify(options), callbackName);
             } else {
-                console.warn('[KSU] Native spawn not found, falling back to kernelsu package if possible or failing');
+                console.warn(
+                    '[KSU] Native spawn not found, falling back to kernelsu package if possible or failing',
+                );
                 // 如果 window.ksu.spawn 不存在，可能是在非 Manager 环境，此时 fallback 到原版 ksuSpawn?
-                // 但原版 ksuSpawn 也需要 window.ksu... 
+                // 但原版 ksuSpawn 也需要 window.ksu...
                 // 这里我们假设这是在 Manager 环境中
-                setTimeout(() => child.emit('error', new Error('Native ksu.spawn interface missing')), 0);
+                setTimeout(
+                    () => child.emit('error', new Error('Native ksu.spawn interface missing')),
+                    0,
+                );
             }
         } catch (e: any) {
             console.error('[KSU] Spawn invocation failed', e);
@@ -251,8 +260,12 @@ export class KSU {
      * @param args 参数
      * @param timeoutMs 超时时间 (ms)
      */
-    static spawnAsync(command: string, args: string[] = [], timeoutMs: number = 5000): Promise<{ code: number; stdout: string }> {
-        return new Promise((resolve) => {
+    static spawnAsync(
+        command: string,
+        args: string[] = [],
+        timeoutMs: number = 5000,
+    ): Promise<{ code: number; stdout: string }> {
+        return new Promise(resolve => {
             let output = '';
             let resolved = false;
 

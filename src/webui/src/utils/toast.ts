@@ -10,7 +10,6 @@ export function toast(msg: string, closeable: boolean = false): void {
         message: msg,
         closeable: closeable,
         autoCloseDelay: closeable ? 0 : 3000,
-        placement: 'bottom'
+        placement: 'bottom',
     } as any);
 }
-

@@ -83,7 +83,8 @@ const enUS: Record<string, string> = {
     'config.upload': 'Upload',
     'config.clipboard': 'Clipboard',
     'config.delete_confirm': 'Delete node "{name}"?',
-    'config.delete_sub_confirm': 'Delete subscription "{name}"?\nAll nodes in this subscription will be deleted.',
+    'config.delete_sub_confirm':
+        'Delete subscription "{name}"?\nAll nodes in this subscription will be deleted.',
     'config.switch_success': 'Switched to: {name}',
 
     // Logs Page
@@ -230,7 +231,8 @@ const enUS: Record<string, string> = {
     'routing.clash_url': 'Rules URL',
     'routing.clash_url_placeholder': 'Enter Clash rules YAML URL',
     'routing.clash_name_placeholder': 'e.g. Ad-Block Rules',
-    'routing.clash_hint': 'Supports Clash domain rules format (payload list), auto-parsed to routing rules',
+    'routing.clash_hint':
+        'Supports Clash domain rules format (payload list), auto-parsed to routing rules',
     'routing.toast_url_required': 'Please enter the rules URL',
     'routing.toast_importing': 'Importing rules...',
     'routing.toast_fetch_failed': 'Failed to fetch rules, check the URL',
@@ -278,7 +280,8 @@ const enUS: Record<string, string> = {
     'config.toast.sorted': 'Sorted',
     'config.toast.need_test': 'Please test first',
     'config.toast.no_invalid': 'No invalid nodes found (Test first)',
-    'config.confirm.clean_invalid': 'Found {count} invalid nodes. Delete them?\n\nThis cannot be undone.',
+    'config.confirm.clean_invalid':
+        'Found {count} invalid nodes. Delete them?\n\nThis cannot be undone.',
     'config.toast.clean_success': 'Cleaned {count} nodes',
     'config.confirm.delete_node': 'Delete node "{name}"?\n\nThis cannot be undone.',
     'config.toast.deleted': 'Config deleted',
@@ -288,7 +291,8 @@ const enUS: Record<string, string> = {
     'config.toast.updating_sub': 'Updating subscription...',
     'config.toast.sub_updated': 'Subscription updated',
     'config.toast.update_failed': 'Update failed: ',
-    'config.confirm.delete_sub': 'Delete subscription "{name}"?\n\nAll nodes in it will be deleted.',
+    'config.confirm.delete_sub':
+        'Delete subscription "{name}"?\n\nAll nodes in it will be deleted.',
     'config.toast.sub_deleted': 'Subscription deleted',
     'config.toast.enter_sub_name': 'Enter subscription name',
     'config.toast.enter_sub_url': 'Enter subscription URL',
@@ -324,7 +328,8 @@ const enUS: Record<string, string> = {
     // Config Dialogs
     'config.import_link_title': 'Import Node Link',
     'config.link_label': 'Node Link',
-    'config.link_placeholder': 'Support: vless://, vmess://, trojan://, ss://, socks://, http://, https://',
+    'config.link_placeholder':
+        'Support: vless://, vmess://, trojan://, ss://, socks://, http://, https://',
     'config.add_sub_title': 'Add Subscription',
     'config.sub_name_label': 'Name',
     'config.sub_name_placeholder': 'e.g. Provider A',

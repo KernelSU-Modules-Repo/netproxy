@@ -115,8 +115,6 @@ export class UI {
                 this.statusPage.toggleEditMode();
             });
         }
-
-
     }
 
     switchPage(pageName: string): void {
@@ -215,7 +213,12 @@ export class UI {
                 this.currentTheme = themes[(currentIndex + 1) % themes.length];
                 localStorage.setItem('theme', this.currentTheme);
                 this.applyTheme(this.currentTheme);
-                const modeName = this.currentTheme === 'auto' ? I18nService.t('settings.theme.mode_auto') : this.currentTheme === 'light' ? I18nService.t('settings.theme.mode_light') : I18nService.t('settings.theme.mode_dark');
+                const modeName =
+                    this.currentTheme === 'auto'
+                        ? I18nService.t('settings.theme.mode_auto')
+                        : this.currentTheme === 'light'
+                          ? I18nService.t('settings.theme.mode_light')
+                          : I18nService.t('settings.theme.mode_dark');
                 toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
             });
         }
@@ -224,7 +227,8 @@ export class UI {
     applyTheme(theme: string): void {
         const html = document.documentElement;
         const savedMonet = localStorage.getItem('monetEnabled');
-        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        const isDark =
+            window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
 
         // 移除所有主题类
         html.classList.remove('mdui-theme-light', 'mdui-theme-dark', 'mdui-theme-auto');
@@ -321,7 +325,10 @@ export class UI {
                                 setTimeout(() => this.statusPage.update(), 1500);
                             }
                         } else {
-                            toast(I18nService.t('common.update_failed') + (result.error || result.message));
+                            toast(
+                                I18nService.t('common.update_failed') +
+                                    (result.error || result.message),
+                            );
                         }
                     } catch (error: any) {
                         toast(I18nService.t('common.check_failed') + error.message);
@@ -349,7 +356,7 @@ export class UI {
     }
 
     async confirm(message: string): Promise<boolean> {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             const dialog = document.getElementById('confirm-dialog') as any;
             const messageEl = document.getElementById('confirm-message');
             const okBtn = document.getElementById('confirm-ok-btn');

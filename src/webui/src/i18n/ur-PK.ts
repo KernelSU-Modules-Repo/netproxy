@@ -69,7 +69,8 @@ const urPK: Record<string, string> = {
     'config.upload': 'اپ لوڈ',
     'config.clipboard': 'کلپ بورڈ',
     'config.delete_confirm': 'کیا آپ واقعی "{name}" کو حذف کرنا چاہتے ہیں؟',
-    'config.delete_sub_confirm': 'کیا آپ "{name}" سبسکرپشن کو حذف کرنا چاہتے ہیں؟\nاس سبسکرپشن کے تمام نوڈز حذف ہو جائیں گے۔',
+    'config.delete_sub_confirm':
+        'کیا آپ "{name}" سبسکرپشن کو حذف کرنا چاہتے ہیں؟\nاس سبسکرپشن کے تمام نوڈز حذف ہو جائیں گے۔',
     'config.switch_success': 'تبدیل کر دیا گیا: {name}',
 
     // Logs Page
@@ -251,9 +252,11 @@ const urPK: Record<string, string> = {
     'config.toast.sorted': 'ترتیب دیا گیا',
     'config.toast.need_test': 'براہ کرم پہلے ٹیسٹ کریں',
     'config.toast.no_invalid': 'کوئی ناکارہ نوڈز نہیں ملے (پہلے ٹیسٹ کریں)',
-    'config.confirm.clean_invalid': '{count} ناکارہ نوڈز ملے۔ انہیں حذف کریں؟\n\nیہ عمل واپس نہیں کیا جا سکتا۔',
+    'config.confirm.clean_invalid':
+        '{count} ناکارہ نوڈز ملے۔ انہیں حذف کریں؟\n\nیہ عمل واپس نہیں کیا جا سکتا۔',
     'config.toast.clean_success': '{count} نوڈز صاف کر دیے گئے',
-    'config.confirm.delete_node': 'کیا آپ "{name}" کو حذف کرنا چاہتے ہیں؟\n\nیہ عمل واپس نہیں کیا جا سکتا۔',
+    'config.confirm.delete_node':
+        'کیا آپ "{name}" کو حذف کرنا چاہتے ہیں؟\n\nیہ عمل واپس نہیں کیا جا سکتا۔',
     'config.toast.deleted': 'کنفیگ حذف ہو گئی',
     'config.toast.delete_failed': 'حذف کرنے میں ناکام: ',
     'config.toast.switch_success': 'تبدیل کر دیا گیا: ',
@@ -261,7 +264,8 @@ const urPK: Record<string, string> = {
     'config.toast.updating_sub': 'سبسکرپشن اپ ڈیٹ ہو رہی ہے...',
     'config.toast.sub_updated': 'سبسکرپشن اپ ڈیٹ ہو گئی',
     'config.toast.update_failed': 'اپ ڈیٹ ناکام: ',
-    'config.confirm.delete_sub': 'کیا آپ "{name}" سبسکرپشن کو حذف کرنا چاہتے ہیں؟\n\nاس کے تمام نوڈز حذف ہو جائیں گے۔',
+    'config.confirm.delete_sub':
+        'کیا آپ "{name}" سبسکرپشن کو حذف کرنا چاہتے ہیں؟\n\nاس کے تمام نوڈز حذف ہو جائیں گے۔',
     'config.toast.sub_deleted': 'سبسکرپشن حذف ہو گئی',
     'config.toast.enter_sub_name': 'سبسکرپشن کا نام درج کریں',
     'config.toast.enter_sub_url': 'سبسکرپشن کا URL درج کریں',
@@ -297,7 +301,8 @@ const urPK: Record<string, string> = {
     // Config Dialogs
     'config.import_link_title': 'نوڈ لنک درآمد کریں',
     'config.link_label': 'نوڈ لنک',
-    'config.link_placeholder': 'سپورٹ: vless://, vmess://, trojan://, ss://, socks://, http://, https://',
+    'config.link_placeholder':
+        'سپورٹ: vless://, vmess://, trojan://, ss://, socks://, http://, https://',
     'config.add_sub_title': 'سبسکرپشن شامل کریں',
     'config.sub_name_label': 'نام',
     'config.sub_name_placeholder': 'مثال: فراہم کنندہ A',

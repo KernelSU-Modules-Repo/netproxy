@@ -4,7 +4,7 @@ import { toast } from '../utils/toast.js';
 import Sortable from 'sortablejs';
 import uPlot from 'uplot';
 import 'uplot/dist/uPlot.min.css';
-import { UI } from './ui-core.js';
+import type { UI } from './ui-core.js';
 
 interface SpeedHistory {
     time: number[];
@@ -27,8 +27,8 @@ const countryCodeToEmoji = (countryCode: string): string => {
     if (code.length !== 2) {
         return countryCode;
     }
-    const firstLetter = code.codePointAt(0)! - 0x41 + 0x1F1E6;
-    const secondLetter = code.codePointAt(1)! - 0x41 + 0x1F1E6;
+    const firstLetter = code.codePointAt(0)! - 0x41 + 0x1f1e6;
+    const secondLetter = code.codePointAt(1)! - 0x41 + 0x1f1e6;
     return String.fromCodePoint(firstLetter) + String.fromCodePoint(secondLetter);
 };
 
@@ -74,7 +74,7 @@ export class StatusPageManager {
         this.speedHistory = {
             time: [],
             download: [],
-            upload: []
+            upload: [],
         };
         this.maxDataPoints = 10;
 
@@ -118,7 +118,7 @@ export class StatusPageManager {
                 filter: '.card-delete-btn', // 过滤器，防止拖拽删除按钮
                 onEnd: () => {
                     this.saveLayout();
-                }
+                },
             });
             // toast(I18nService.t('common.edit_mode_enabled') || '已进入编辑模式');
         } else {
@@ -236,7 +236,9 @@ export class StatusPageManager {
         if (!container || !grid) return;
 
         container.innerHTML = '';
-        const hiddenCards = Array.from(grid.children).filter(el => (el as HTMLElement).style.display === 'none');
+        const hiddenCards = Array.from(grid.children).filter(
+            el => (el as HTMLElement).style.display === 'none',
+        );
 
         if (hiddenCards.length === 0) {
             container.innerHTML = `<div style="color: var(--monet-on-surface-variant); font-size: 14px; padding: 8px;">无可用组件</div>`;
@@ -277,7 +279,12 @@ export class StatusPageManager {
 
                 if (!this.uptimeInterval) {
                     const uptime = await StatusService.getUptime();
-                    if (uptime && uptime !== '--' && uptime !== 'N/A' && !uptime.includes('failed')) {
+                    if (
+                        uptime &&
+                        uptime !== '--' &&
+                        uptime !== 'N/A' &&
+                        !uptime.includes('failed')
+                    ) {
                         this.startUptimeTimer(uptime);
                     }
                 }
@@ -354,7 +361,7 @@ export class StatusPageManager {
                 this.speedChart.setData([
                     this.speedHistory.time,
                     this.speedHistory.download,
-                    this.speedHistory.upload
+                    this.speedHistory.upload,
                 ]);
             }
         } catch (error) {
@@ -380,7 +387,7 @@ export class StatusPageManager {
             if (el) el.textContent = '--';
         }
 
-        // 外网 IP 
+        // 外网 IP
         this.updateExternalIP();
 
         // 流量统计
@@ -397,9 +404,11 @@ export class StatusPageManager {
                 const { value: downloadValue, unit: downloadUnit } = this.formatTraffic(stats.rx);
 
                 uploadEl.textContent = uploadValue;
-                if (uploadEl.nextElementSibling) uploadEl.nextElementSibling.textContent = uploadUnit;
+                if (uploadEl.nextElementSibling)
+                    uploadEl.nextElementSibling.textContent = uploadUnit;
                 downloadEl.textContent = downloadValue;
-                if (downloadEl.nextElementSibling) downloadEl.nextElementSibling.textContent = downloadUnit;
+                if (downloadEl.nextElementSibling)
+                    downloadEl.nextElementSibling.textContent = downloadUnit;
             }
 
             // 更新环形图
@@ -430,22 +439,22 @@ export class StatusPageManager {
     updateExternalIP(): void {
         const ipEl = document.getElementById('external-ip');
         const iconEl = document.getElementById('network-detection-icon');
-        
+
         // 显示加载状态
         if (ipEl) ipEl.innerHTML = '<span class="loading-spinner"></span>';
 
         StatusService.getExternalIPInfo()
             .then(ipInfo => {
                 // 更新图标位置显示国旗
-                 if (iconEl) {
-                     if (ipInfo) {
-                         const flag = countryCodeToEmoji(ipInfo.countryCode);
-                         iconEl.outerHTML = `<span class="flag-icon twemoji">${flag}</span>`;
-                     } else {
-                         iconEl.outerHTML = `<mdui-icon name="network_check" class="card-icon" id="network-detection-icon"></mdui-icon>`;
-                     }
-                 }
-                
+                if (iconEl) {
+                    if (ipInfo) {
+                        const flag = countryCodeToEmoji(ipInfo.countryCode);
+                        iconEl.outerHTML = `<span class="flag-icon twemoji">${flag}</span>`;
+                    } else {
+                        iconEl.outerHTML = `<mdui-icon name="network_check" class="card-icon" id="network-detection-icon"></mdui-icon>`;
+                    }
+                }
+
                 // 更新 IP 显示
                 if (ipEl) {
                     ipEl.textContent = ipInfo?.ip || '--';
@@ -503,18 +512,23 @@ export class StatusPageManager {
             return;
         }
 
-        const isDark = document.documentElement.classList.contains('mdui-theme-dark') ||
+        const isDark =
+            document.documentElement.classList.contains('mdui-theme-dark') ||
             (document.documentElement.classList.contains('mdui-theme-auto') &&
                 window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-        const primaryColor = getComputedStyle(document.documentElement).getPropertyValue('--monet-primary').trim() || '#4CAF50';
-        const secondaryColor = getComputedStyle(document.documentElement).getPropertyValue('--monet-secondary').trim() || '#2196F3';
+        const primaryColor =
+            getComputedStyle(document.documentElement).getPropertyValue('--monet-primary').trim() ||
+            '#4CAF50';
+        const secondaryColor =
+            getComputedStyle(document.documentElement)
+                .getPropertyValue('--monet-secondary')
+                .trim() || '#2196F3';
 
         // 初始化数据: 使用两个点 (0, 1) 但值为 0，形成初始横线铺满宽度
         this.speedHistory.time = [0, 1];
         this.speedHistory.download = [0, 0];
         this.speedHistory.upload = [0, 0];
-
 
         const opts: any = {
             width: container.clientWidth,
@@ -549,12 +563,9 @@ export class StatusPageManager {
                         gradient.addColorStop(1, addColorAlpha(primaryColor, '1A'));
                         return gradient;
                     },
-                }
+                },
             ],
-            axes: [
-                { show: false },
-                { show: false }
-            ],
+            axes: [{ show: false }, { show: false }],
             scales: {
                 x: {
                     time: false,
@@ -566,24 +577,27 @@ export class StatusPageManager {
                         const effectiveMax = Math.max(max, 100);
                         // 底部负值区域作为"悬浮"支撑
                         return [-effectiveMax * 0.45, effectiveMax];
-                    }
-                }
+                    },
+                },
             },
             legend: { show: false },
             cursor: { show: false },
             padding: [0, 0, 0, 0],
         };
 
-        this.speedChart = new (uPlot as any)(opts, [
-            this.speedHistory.time,
-            this.speedHistory.download,
-            this.speedHistory.upload
-        ], container);
+        this.speedChart = new (uPlot as any)(
+            opts,
+            [this.speedHistory.time, this.speedHistory.download, this.speedHistory.upload],
+            container,
+        );
 
         // 监听窗口大小变化
         window.addEventListener('resize', () => {
             if (this.speedChart && container && container.clientWidth > 0) {
-                this.speedChart.setSize({ width: container.clientWidth, height: container.clientHeight || 80 });
+                this.speedChart.setSize({
+                    width: container.clientWidth,
+                    height: container.clientHeight || 80,
+                });
             }
         });
 
@@ -596,14 +610,18 @@ export class StatusPageManager {
 
         let totalSeconds = 0;
         if (parts.length === 4) {
-            totalSeconds = parseInt(parts[0]) * 86400 + parseInt(parts[1]) * 3600 + parseInt(parts[2]) * 60 + parseInt(parts[3]);
+            totalSeconds =
+                parseInt(parts[0]) * 86400 +
+                parseInt(parts[1]) * 3600 +
+                parseInt(parts[2]) * 60 +
+                parseInt(parts[3]);
         } else if (parts.length === 3) {
             totalSeconds = parseInt(parts[0]) * 3600 + parseInt(parts[1]) * 60 + parseInt(parts[2]);
         } else if (parts.length === 2) {
             totalSeconds = parseInt(parts[0]) * 60 + parseInt(parts[1]);
         }
 
-        this.uptimeStartTime = Date.now() - (totalSeconds * 1000);
+        this.uptimeStartTime = Date.now() - totalSeconds * 1000;
 
         if (this.uptimeInterval) {
             clearInterval(this.uptimeInterval);
@@ -687,7 +705,9 @@ export class StatusPageManager {
                 }
 
                 // 记录当前激活的按钮用于回滚
-                const previousActive = document.querySelector('.mode-option.active') as HTMLElement | null;
+                const previousActive = document.querySelector(
+                    '.mode-option.active',
+                ) as HTMLElement | null;
 
                 // 立即更新按钮状态
                 modeOptions.forEach(opt => opt.classList.remove('active'));
@@ -701,7 +721,8 @@ export class StatusPageManager {
                         modeOptions.forEach(opt => opt.classList.remove('active'));
                         if (previousActive) previousActive.classList.add('active');
                         if (navConfig) {
-                            navConfig.style.display = previousActive?.dataset.mode === 'direct' ? 'none' : '';
+                            navConfig.style.display =
+                                previousActive?.dataset.mode === 'direct' ? 'none' : '';
                         }
                         toast(I18nService.t('status.mode_switch_failed') || '模式切换失败');
                     }
@@ -744,7 +765,6 @@ export class StatusPageManager {
                     else latencyEl.style.color = 'var(--mdui-color-error)';
                 }
             }
-
         } catch (e) {
             const latencyEl = document.getElementById('latency-value');
             if (latencyEl) latencyEl.textContent = 'Error';
