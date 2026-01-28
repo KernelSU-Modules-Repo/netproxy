@@ -278,7 +278,8 @@ const zhCN: Record<string, string> = {
     'config.toast.sorted': '已重新排序',
     'config.toast.need_test': '请先进行测试',
     'config.toast.no_invalid': '没有发现无效节点 (需先测试)',
-    'config.confirm.clean_invalid': '发现 {count} 个无效节点，确定要删除吗？\n\n这属于破坏性操作，无法恢复。',
+    'config.confirm.clean_invalid':
+        '发现 {count} 个无效节点，确定要删除吗？\n\n这属于破坏性操作，无法恢复。',
     'config.toast.clean_success': '已清理 {count} 个节点',
     'config.confirm.delete_node': '确定要删除节点 "{name}" 吗？\n\n此操作不可恢复。',
     'config.toast.deleted': '配置已删除',
@@ -324,7 +325,8 @@ const zhCN: Record<string, string> = {
     // Config Dialogs
     'config.import_link_title': '节点链接导入',
     'config.link_label': '节点链接',
-    'config.link_placeholder': '支持: vless://, vmess://, trojan://, ss://, socks://, http://, https://',
+    'config.link_placeholder':
+        '支持: vless://, vmess://, trojan://, ss://, socks://, http://, https://',
     'config.add_sub_title': '添加订阅',
     'config.sub_name_label': '订阅名称',
     'config.sub_name_placeholder': '例如: 机场A',

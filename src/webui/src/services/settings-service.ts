@@ -92,7 +92,7 @@ export class SettingsService {
         } catch (error) {
             return {
                 auto_start: true,
-                oneplus_a16_fix: true
+                oneplus_a16_fix: true,
             };
         }
     }
@@ -101,7 +101,9 @@ export class SettingsService {
     static async setModuleSetting(key: string, value: boolean): Promise<OperationResult> {
         const upperKey = key.toUpperCase();
         const numValue = value ? '1' : '0';
-        await KSU.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/module.conf`);
+        await KSU.exec(
+            `sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/module.conf`,
+        );
         return { success: true };
     }
 
@@ -123,7 +125,15 @@ export class SettingsService {
         try {
             const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
             const settings = {};
-            const keys = ['PROXY_MOBILE', 'PROXY_WIFI', 'PROXY_HOTSPOT', 'PROXY_USB', 'PROXY_TCP', 'PROXY_UDP', 'PROXY_IPV6'];
+            const keys = [
+                'PROXY_MOBILE',
+                'PROXY_WIFI',
+                'PROXY_HOTSPOT',
+                'PROXY_USB',
+                'PROXY_TCP',
+                'PROXY_UDP',
+                'PROXY_IPV6',
+            ];
 
             for (const key of keys) {
                 const match = content.match(new RegExp(`${key}=(\\d+)`));
@@ -138,7 +148,7 @@ export class SettingsService {
                 proxy_usb: false,
                 proxy_tcp: true,
                 proxy_udp: true,
-                proxy_ipv6: false
+                proxy_ipv6: false,
             };
         }
     }
@@ -147,7 +157,9 @@ export class SettingsService {
     static async setProxySetting(key, value) {
         const upperKey = key.toUpperCase();
         const numValue = value ? '1' : '0';
-        await KSU.exec(`sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(
+            `sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        );
         return { success: true };
     }
 
@@ -164,7 +176,9 @@ export class SettingsService {
 
     // 设置代理模式
     static async setProxyMode(value) {
-        await KSU.exec(`sed -i 's/^PROXY_MODE=.*/PROXY_MODE=${value}/' ${KSU.MODULE_PATH}/config/tproxy.conf`);
+        await KSU.exec(
+            `sed -i 's/^PROXY_MODE=.*/PROXY_MODE=${value}/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        );
         return { success: true };
     }
 
@@ -186,7 +200,9 @@ export class SettingsService {
         try {
             const json = JSON.stringify(config, null, 4);
             const base64 = btoa(unescape(encodeURIComponent(json)));
-            await KSU.exec(`echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/02_dns.json`);
+            await KSU.exec(
+                `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/02_dns.json`,
+            );
             return { success: true };
         } catch (error: any) {
             console.error('保存 DNS 配置失败:', error);
@@ -213,7 +229,9 @@ export class SettingsService {
             const json = JSON.stringify(rules, null, 4);
             // 使用 base64 编码避免特殊字符问题
             const base64 = btoa(unescape(encodeURIComponent(json)));
-            await KSU.exec(`echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/routing_rules.json`);
+            await KSU.exec(
+                `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/routing_rules.json`,
+            );
             return { success: true };
         } catch (error: any) {
             console.error('保存路由规则失败:', error);
@@ -230,13 +248,21 @@ export class SettingsService {
             for (const rule of rules) {
                 if (rule.enabled === false) continue;
 
-                const xrayRule: XrayRule = { type: 'field', outboundTag: rule.outboundTag || 'proxy' };
+                const xrayRule: XrayRule = {
+                    type: 'field',
+                    outboundTag: rule.outboundTag || 'proxy',
+                };
 
                 // 处理 domain
                 if (rule.domain) {
                     xrayRule.domain = rule.domain.split(',').map(d => {
                         d = d.trim();
-                        if (d.startsWith('geosite:') || d.startsWith('domain:') || d.startsWith('full:') || d.startsWith('regexp:')) {
+                        if (
+                            d.startsWith('geosite:') ||
+                            d.startsWith('domain:') ||
+                            d.startsWith('full:') ||
+                            d.startsWith('regexp:')
+                        ) {
                             return d;
                         }
                         return `domain:${d}`;
@@ -270,26 +296,28 @@ export class SettingsService {
             xrayRules.push({
                 type: 'field',
                 inboundTag: ['domestic-dns'],
-                outboundTag: 'direct'
+                outboundTag: 'direct',
             });
             xrayRules.push({
                 type: 'field',
                 inboundTag: ['dns-module'],
-                outboundTag: 'proxy'
+                outboundTag: 'proxy',
             });
 
             // 构建完整的路由配置
             const routingConfig = {
                 routing: {
                     domainStrategy: 'AsIs',
-                    rules: xrayRules
-                }
+                    rules: xrayRules,
+                },
             };
 
             // 使用 base64 编码写入文件
             const json = JSON.stringify(routingConfig, null, 4);
             const base64 = btoa(unescape(encodeURIComponent(json)));
-            await KSU.exec(`echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/03_routing.json`);
+            await KSU.exec(
+                `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/03_routing.json`,
+            );
 
             return { success: true };
         } catch (error: any) {
@@ -303,7 +331,11 @@ export class SettingsService {
     // 导出日志到 Download 目录
     static async exportLogs() {
         try {
-            const timestamp = new Date().toISOString().replace(/[:-]/g, '').replace('T', '_').slice(0, 15);
+            const timestamp = new Date()
+                .toISOString()
+                .replace(/[:-]/g, '')
+                .replace('T', '_')
+                .slice(0, 15);
             const filename = `netproxy_logs_${timestamp}.tar.gz`;
             const downloadPath = '/storage/emulated/0/Download';
             const outputPath = `${downloadPath}/${filename}`;
@@ -324,7 +356,11 @@ export class SettingsService {
     // 导出日志与配置到 Download 目录
     static async exportAll() {
         try {
-            const timestamp = new Date().toISOString().replace(/[:-]/g, '').replace('T', '_').slice(0, 15);
+            const timestamp = new Date()
+                .toISOString()
+                .replace(/[:-]/g, '')
+                .replace('T', '_')
+                .slice(0, 15);
             const filename = `netproxy_backup_${timestamp}.tar.gz`;
             const downloadPath = '/storage/emulated/0/Download';
             const outputPath = `${downloadPath}/${filename}`;
@@ -355,51 +391,89 @@ export class SettingsService {
 
     // 检查并更新 Xray 内核
     static updateXray() {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             let output = '';
             let resolved = false;
             const timeout = setTimeout(() => {
                 if (!resolved) {
                     resolved = true;
-                    resolve({ success: false, isLatest: false, message: '更新超时', error: '操作超时' });
+                    resolve({
+                        success: false,
+                        isLatest: false,
+                        message: '更新超时',
+                        error: '操作超时',
+                    });
                 }
             }, 60000);
 
             try {
                 const sh = KSU.spawn('sh', [`${KSU.MODULE_PATH}/scripts/utils/update-xray.sh`]);
 
-                sh.stdout.on('data', (data) => output += data);
-                sh.stderr.on('data', (data) => output += data);
+                sh.stdout.on('data', data => (output += data));
+                sh.stderr.on('data', data => (output += data));
 
-                sh.on('exit', (code) => {
+                sh.on('exit', code => {
                     if (resolved) return;
                     resolved = true;
                     clearTimeout(timeout);
 
                     if (code === 0) {
                         if (output.includes('已是最新版本') || output.includes('无需更新')) {
-                            resolve({ success: true, isLatest: true, message: '已是最新版本，无需更新', output });
-                        } else if (output.includes('更新成功') || output.includes('========== 更新成功')) {
-                            resolve({ success: true, isLatest: false, message: '更新成功', output });
+                            resolve({
+                                success: true,
+                                isLatest: true,
+                                message: '已是最新版本，无需更新',
+                                output,
+                            });
+                        } else if (
+                            output.includes('更新成功') ||
+                            output.includes('========== 更新成功')
+                        ) {
+                            resolve({
+                                success: true,
+                                isLatest: false,
+                                message: '更新成功',
+                                output,
+                            });
                         } else {
-                            resolve({ success: true, isLatest: false, message: '操作完成', output });
+                            resolve({
+                                success: true,
+                                isLatest: false,
+                                message: '操作完成',
+                                output,
+                            });
                         }
                     } else {
-                        resolve({ success: false, isLatest: false, message: '更新失败', error: output });
+                        resolve({
+                            success: false,
+                            isLatest: false,
+                            message: '更新失败',
+                            error: output,
+                        });
                     }
                 });
 
-                sh.on('error', (err) => {
+                sh.on('error', err => {
                     if (resolved) return;
                     resolved = true;
                     clearTimeout(timeout);
-                    resolve({ success: false, isLatest: false, message: '更新失败', error: err.message });
+                    resolve({
+                        success: false,
+                        isLatest: false,
+                        message: '更新失败',
+                        error: err.message,
+                    });
                 });
             } catch (error: any) {
                 if (!resolved) {
                     resolved = true;
                     clearTimeout(timeout);
-                    resolve({ success: false, isLatest: false, message: '更新失败', error: error.message });
+                    resolve({
+                        success: false,
+                        isLatest: false,
+                        message: '更新失败',
+                        error: error.message,
+                    });
                 }
             }
         });

@@ -27,7 +27,7 @@ export class I18nService {
     static resources: LanguageResources = {
         'zh-CN': zhCN as LanguageDictionary,
         'en-US': enUS as LanguageDictionary,
-        'ur-PK': urPK as LanguageDictionary
+        'ur-PK': urPK as LanguageDictionary,
     };
 
     // Initialize
@@ -92,7 +92,7 @@ export class I18nService {
             '[data-i18n-label]',
             '[data-i18n-headline]',
             '[data-i18n-helper]',
-            '[data-i18n-description]'
+            '[data-i18n-description]',
         ];
         const elements = document.querySelectorAll(selectors.join(','));
 
@@ -110,6 +110,8 @@ export class I18nService {
         });
 
         // Dispatch event for components to update themselves
-        window.dispatchEvent(new CustomEvent('language-changed', { detail: { lang: this.currentLang } }));
+        window.dispatchEvent(
+            new CustomEvent('language-changed', { detail: { lang: this.currentLang } }),
+        );
     }
 }

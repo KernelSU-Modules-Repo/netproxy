@@ -3,7 +3,7 @@ import { SettingsService } from '../services/settings-service.js';
 import { I18nService } from '../i18n/i18n-service.js';
 import { setColorScheme } from 'mdui/functions/setColorScheme.js';
 import { setTheme } from 'mdui/functions/setTheme.js';
-import { UI } from './ui-core.js';
+import type { UI } from './ui-core.js';
 import Sortable from 'sortablejs';
 
 const logoUrl = '/logo.png';
@@ -68,8 +68,13 @@ export class SettingsPageManager {
         this._logsAutoRefreshMs = 3000;
 
         this.proxyKeys = [
-            'proxy_mobile', 'proxy_wifi', 'proxy_hotspot', 'proxy_usb',
-            'proxy_tcp', 'proxy_udp', 'proxy_ipv6'
+            'proxy_mobile',
+            'proxy_wifi',
+            'proxy_hotspot',
+            'proxy_usb',
+            'proxy_tcp',
+            'proxy_udp',
+            'proxy_ipv6',
         ];
         this.setupEventListeners();
         this.setupRoutingRulesPage();
@@ -145,11 +150,16 @@ export class SettingsPageManager {
         // 模块设置开关
         const autoStartSwitch = document.getElementById('module-auto-start');
         if (autoStartSwitch) {
-            autoStartSwitch.addEventListener('change', async (e) => {
+            autoStartSwitch.addEventListener('change', async e => {
                 const target = e.target as HTMLInputElement;
                 try {
                     await SettingsService.setModuleSetting('AUTO_START', target.checked);
-                    toast(I18nService.t('settings.module.toast_autostart') + (target.checked ? I18nService.t('common.enabled') : I18nService.t('common.disabled')));
+                    toast(
+                        I18nService.t('settings.module.toast_autostart') +
+                            (target.checked
+                                ? I18nService.t('common.enabled')
+                                : I18nService.t('common.disabled')),
+                    );
                 } catch (error: any) {
                     toast(I18nService.t('common.set_failed') + error.message, true);
                     target.checked = !target.checked;
@@ -159,7 +169,7 @@ export class SettingsPageManager {
 
         const oneplusFixSwitch = document.getElementById('module-oneplus-fix');
         if (oneplusFixSwitch) {
-            oneplusFixSwitch.addEventListener('change', async (e) => {
+            oneplusFixSwitch.addEventListener('change', async e => {
                 const target = e.target as HTMLInputElement;
                 try {
                     await SettingsService.setModuleSetting('ONEPLUS_A16_FIX', target.checked);
@@ -282,12 +292,12 @@ export class SettingsPageManager {
                 forceFallback: true,
                 fallbackClass: 'sortable-drag',
                 fallbackOnBody: true,
-                onEnd: (evt) => {
+                onEnd: evt => {
                     const { oldIndex, newIndex } = evt;
                     if (oldIndex !== undefined && newIndex !== undefined && oldIndex !== newIndex) {
                         this.moveRule(oldIndex, newIndex);
                     }
-                }
+                },
             });
         }
     }
@@ -322,24 +332,39 @@ export class SettingsPageManager {
             item.setAttribute('data-index', String(index));
 
             const parts = [];
-            if (rule.domain) parts.push(`${I18nService.t('settings.routing.domain')}: ${rule.domain}`);
+            if (rule.domain)
+                parts.push(`${I18nService.t('settings.routing.domain')}: ${rule.domain}`);
             if (rule.ip) parts.push(`${I18nService.t('settings.routing.ip')}: ${rule.ip}`);
             if (rule.port) parts.push(`${I18nService.t('settings.routing.port')}: ${rule.port}`);
-            if (rule.network) parts.push(`${I18nService.t('settings.routing.network')}: ${rule.network}`);
-            if (rule.protocol) parts.push(`${I18nService.t('settings.routing.protocol')}: ${rule.protocol}`);
+            if (rule.network)
+                parts.push(`${I18nService.t('settings.routing.network')}: ${rule.network}`);
+            if (rule.protocol)
+                parts.push(`${I18nService.t('settings.routing.protocol')}: ${rule.protocol}`);
 
-            const description = parts.length > 0 ? parts.join(' | ') : I18nService.t('settings.routing.unconditional');
-            const outboundLabel = { proxy: I18nService.t('settings.routing.outbound_proxy'), direct: I18nService.t('settings.routing.outbound_direct'), block: I18nService.t('settings.routing.outbound_block') }[rule.outboundTag] || rule.outboundTag;
+            const description =
+                parts.length > 0
+                    ? parts.join(' | ')
+                    : I18nService.t('settings.routing.unconditional');
+            const outboundLabel =
+                {
+                    proxy: I18nService.t('settings.routing.outbound_proxy'),
+                    direct: I18nService.t('settings.routing.outbound_direct'),
+                    block: I18nService.t('settings.routing.outbound_block'),
+                }[rule.outboundTag] || rule.outboundTag;
 
             // 拖拽手柄
             const dragHandle = document.createElement('mdui-icon');
             dragHandle.setAttribute('slot', 'icon');
             dragHandle.setAttribute('name', 'drag_indicator');
             dragHandle.classList.add('drag-handle'); // 添加标识类
-            dragHandle.style.cssText = 'cursor: grab; color: var(--mdui-color-on-surface-variant); touch-action: none;'; // touch-action: none 对 Sortable 很重要
+            dragHandle.style.cssText =
+                'cursor: grab; color: var(--mdui-color-on-surface-variant); touch-action: none;'; // touch-action: none 对 Sortable 很重要
             item.appendChild(dragHandle);
 
-            item.setAttribute('headline', rule.name || `${I18nService.t('settings.routing.rule_prefix')}${index + 1}`);
+            item.setAttribute(
+                'headline',
+                rule.name || `${I18nService.t('settings.routing.rule_prefix')}${index + 1}`,
+            );
 
             // 使用 description slot 显示详情和出站
             const descDiv = document.createElement('div');
@@ -348,11 +373,13 @@ export class SettingsPageManager {
 
             const descSpan = document.createElement('span');
             descSpan.textContent = description;
-            descSpan.style.cssText = 'overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;';
+            descSpan.style.cssText =
+                'overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1;';
 
             const outboundSpan = document.createElement('span');
             outboundSpan.textContent = outboundLabel;
-            outboundSpan.style.cssText = 'margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-size: 11px; background: var(--mdui-color-secondary-container); color: var(--mdui-color-on-secondary-container);';
+            outboundSpan.style.cssText =
+                'margin-left: 8px; padding: 2px 6px; border-radius: 4px; font-size: 11px; background: var(--mdui-color-secondary-container); color: var(--mdui-color-on-secondary-container);';
 
             descDiv.appendChild(descSpan);
             descDiv.appendChild(outboundSpan);
@@ -380,7 +407,7 @@ export class SettingsPageManager {
             const menuBtn = document.createElement('mdui-button-icon');
             menuBtn.setAttribute('slot', 'trigger');
             menuBtn.setAttribute('icon', 'more_vert');
-            menuBtn.addEventListener('click', (e) => e.stopPropagation());
+            menuBtn.addEventListener('click', e => e.stopPropagation());
             dropdown.appendChild(menuBtn);
 
             const menu = document.createElement('mdui-menu');
@@ -388,7 +415,7 @@ export class SettingsPageManager {
             // 编辑
             const editItem = document.createElement('mdui-menu-item');
             editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('common.edit')}`;
-            editItem.addEventListener('click', (e) => {
+            editItem.addEventListener('click', e => {
                 e.stopPropagation();
                 (dropdown as any).open = false;
                 this.showRuleDialog(rule, index);
@@ -399,10 +426,18 @@ export class SettingsPageManager {
             const deleteItem = document.createElement('mdui-menu-item');
             deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('common.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
-            deleteItem.addEventListener('click', async (e) => {
+            deleteItem.addEventListener('click', async e => {
                 e.stopPropagation();
                 (dropdown as any).open = false;
-                if (await this.ui.confirm(I18nService.t('settings.routing.confirm_delete', { name: rule.name || `${I18nService.t('settings.routing.rule_prefix')}${index + 1}` }))) {
+                if (
+                    await this.ui.confirm(
+                        I18nService.t('settings.routing.confirm_delete', {
+                            name:
+                                rule.name ||
+                                `${I18nService.t('settings.routing.rule_prefix')}${index + 1}`,
+                        }),
+                    )
+                ) {
                     this.routingRules.splice(index, 1);
                     await this.saveRulesToBackend();
                     this.renderRoutingRules();
@@ -427,13 +462,14 @@ export class SettingsPageManager {
         toast(I18nService.t('routing.toast_reordered'));
     }
 
-
     showRuleDialog(rule: RoutingRule | null = null, index = -1): void {
         this.editingRuleIndex = index;
         const dialog = document.getElementById('routing-rule-dialog') as any;
 
         // 设置标题
-        dialog.headline = rule ? I18nService.t('settings.routing.dialog_edit') : I18nService.t('settings.routing.dialog_add');
+        dialog.headline = rule
+            ? I18nService.t('settings.routing.dialog_edit')
+            : I18nService.t('settings.routing.dialog_add');
 
         // 填充表单
         (document.getElementById('rule-name') as HTMLInputElement).value = rule?.name || '';
@@ -442,7 +478,8 @@ export class SettingsPageManager {
         (document.getElementById('rule-port') as HTMLInputElement).value = rule?.port || '';
         (document.getElementById('rule-protocol') as HTMLInputElement).value = rule?.protocol || '';
         (document.getElementById('rule-network') as HTMLInputElement).value = rule?.network || '';
-        (document.getElementById('rule-outbound') as HTMLInputElement).value = rule?.outboundTag || 'proxy';
+        (document.getElementById('rule-outbound') as HTMLInputElement).value =
+            rule?.outboundTag || 'proxy';
 
         dialog.open = true;
     }
@@ -452,7 +489,9 @@ export class SettingsPageManager {
         const domain = (document.getElementById('rule-domain') as HTMLInputElement).value.trim();
         const ip = (document.getElementById('rule-ip') as HTMLInputElement).value.trim();
         const port = (document.getElementById('rule-port') as HTMLInputElement).value.trim();
-        const protocol = (document.getElementById('rule-protocol') as HTMLInputElement).value.trim();
+        const protocol = (
+            document.getElementById('rule-protocol') as HTMLInputElement
+        ).value.trim();
         const network = (document.getElementById('rule-network') as HTMLInputElement).value.trim();
         const outboundTag = (document.getElementById('rule-outbound') as HTMLInputElement).value;
 
@@ -463,7 +502,11 @@ export class SettingsPageManager {
         }
 
         const rule: RoutingRule = {
-            name: name || (this.editingRuleIndex >= 0 ? `${I18nService.t('settings.routing.rule_prefix')}${this.editingRuleIndex + 1}` : `${I18nService.t('settings.routing.rule_prefix')}${this.routingRules.length + 1}`),
+            name:
+                name ||
+                (this.editingRuleIndex >= 0
+                    ? `${I18nService.t('settings.routing.rule_prefix')}${this.editingRuleIndex + 1}`
+                    : `${I18nService.t('settings.routing.rule_prefix')}${this.routingRules.length + 1}`),
             type: 'field',
             domain,
             ip,
@@ -471,7 +514,7 @@ export class SettingsPageManager {
             protocol,
             network,
             outboundTag,
-            enabled: true
+            enabled: true,
         };
 
         if (this.editingRuleIndex >= 0) {
@@ -485,7 +528,11 @@ export class SettingsPageManager {
         await this.saveRulesToBackend();
         this.renderRoutingRules();
         (document.getElementById('routing-rule-dialog') as any).open = false;
-        toast(this.editingRuleIndex >= 0 ? I18nService.t('settings.routing.toast_updated') : I18nService.t('settings.routing.toast_added'));
+        toast(
+            this.editingRuleIndex >= 0
+                ? I18nService.t('settings.routing.toast_updated')
+                : I18nService.t('settings.routing.toast_added'),
+        );
     }
 
     async saveRulesToBackend() {
@@ -511,7 +558,8 @@ export class SettingsPageManager {
     async importClashRules(): Promise<void> {
         const name = (document.getElementById('clash-rule-name') as HTMLInputElement).value.trim();
         const url = (document.getElementById('clash-rule-url') as HTMLInputElement).value.trim();
-        const outboundTag = (document.getElementById('clash-rule-outbound') as HTMLInputElement).value;
+        const outboundTag = (document.getElementById('clash-rule-outbound') as HTMLInputElement)
+            .value;
 
         if (!url) {
             toast(I18nService.t('routing.toast_url_required'));
@@ -539,7 +587,7 @@ export class SettingsPageManager {
                 protocol: '',
                 network: '',
                 outboundTag: outboundTag,
-                enabled: true
+                enabled: true,
             };
 
             this.routingRules.push(rule);
@@ -644,13 +692,16 @@ export class SettingsPageManager {
             const item = document.createElement('mdui-list-item');
             const isSimple = typeof server === 'string';
             const address = isSimple ? server : server.address;
-            const domains = isSimple ? [] : (server.domains || []);
-            const tag = isSimple ? '' : (server.tag || '');
+            const domains = isSimple ? [] : server.domains || [];
+            const tag = isSimple ? '' : server.tag || '';
 
             item.setAttribute('headline', address);
 
             const descParts = [];
-            if (domains.length > 0) descParts.push(`${I18nService.t('settings.routing.domain')}: ${domains.slice(0, 2).join(', ')}${domains.length > 2 ? '...' : ''}`);
+            if (domains.length > 0)
+                descParts.push(
+                    `${I18nService.t('settings.routing.domain')}: ${domains.slice(0, 2).join(', ')}${domains.length > 2 ? '...' : ''}`,
+                );
             if (tag) descParts.push(`${I18nService.t('settings.dns.label_tag')}: ${tag}`);
 
             if (descParts.length > 0) {
@@ -671,14 +722,14 @@ export class SettingsPageManager {
             const menuBtn = document.createElement('mdui-button-icon');
             menuBtn.setAttribute('slot', 'trigger');
             menuBtn.setAttribute('icon', 'more_vert');
-            menuBtn.addEventListener('click', (e) => e.stopPropagation());
+            menuBtn.addEventListener('click', e => e.stopPropagation());
             dropdown.appendChild(menuBtn);
 
             const menu = document.createElement('mdui-menu');
 
             const editItem = document.createElement('mdui-menu-item');
             editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('common.edit')}`;
-            editItem.addEventListener('click', (e) => {
+            editItem.addEventListener('click', e => {
                 e.stopPropagation();
                 dropdown.open = false;
                 this.showServerDialog(server, index);
@@ -688,10 +739,14 @@ export class SettingsPageManager {
             const deleteItem = document.createElement('mdui-menu-item');
             deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('common.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
-            deleteItem.addEventListener('click', async (e) => {
+            deleteItem.addEventListener('click', async e => {
                 e.stopPropagation();
                 dropdown.open = false;
-                if (await this.ui.confirm(I18nService.t('settings.dns.confirm_delete_server', { address: address }))) {
+                if (
+                    await this.ui.confirm(
+                        I18nService.t('settings.dns.confirm_delete_server', { address: address }),
+                    )
+                ) {
                     this.dnsConfig.dns.servers.splice(index, 1);
                     await this.saveDnsToBackend();
                     this.renderDnsServers();
@@ -724,7 +779,7 @@ export class SettingsPageManager {
             return;
         }
 
-        hostKeys.forEach((domain) => {
+        hostKeys.forEach(domain => {
             const item = document.createElement('mdui-list-item');
             const value = hosts[domain];
             const ips = Array.isArray(value) ? value : [value];
@@ -747,14 +802,14 @@ export class SettingsPageManager {
             const menuBtn = document.createElement('mdui-button-icon');
             menuBtn.setAttribute('slot', 'trigger');
             menuBtn.setAttribute('icon', 'more_vert');
-            menuBtn.addEventListener('click', (e) => e.stopPropagation());
+            menuBtn.addEventListener('click', e => e.stopPropagation());
             dropdown.appendChild(menuBtn);
 
             const menu = document.createElement('mdui-menu');
 
             const editItem = document.createElement('mdui-menu-item');
             editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('common.edit')}`;
-            editItem.addEventListener('click', (e) => {
+            editItem.addEventListener('click', e => {
                 e.stopPropagation();
                 dropdown.open = false;
                 this.showHostDialog(domain, value);
@@ -764,10 +819,14 @@ export class SettingsPageManager {
             const deleteItem = document.createElement('mdui-menu-item');
             deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('common.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
-            deleteItem.addEventListener('click', async (e) => {
+            deleteItem.addEventListener('click', async e => {
                 e.stopPropagation();
                 dropdown.open = false;
-                if (await this.ui.confirm(I18nService.t('settings.dns.confirm_delete_host', { domain: domain }))) {
+                if (
+                    await this.ui.confirm(
+                        I18nService.t('settings.dns.confirm_delete_host', { domain: domain }),
+                    )
+                ) {
                     delete this.dnsConfig.dns.hosts[domain];
                     await this.saveDnsToBackend();
                     this.renderDnsHosts();
@@ -786,19 +845,23 @@ export class SettingsPageManager {
     showServerDialog(server: string | DnsServer | null = null, index = -1): void {
         this.editingServerIndex = index;
         const dialog = document.getElementById('dns-server-dialog') as any;
-        dialog.headline = server ? I18nService.t('settings.dns.server_dialog_edit') : I18nService.t('settings.dns.server_dialog_add');
+        dialog.headline = server
+            ? I18nService.t('settings.dns.server_dialog_edit')
+            : I18nService.t('settings.dns.server_dialog_add');
 
         const isSimple = typeof server === 'string';
         const address = server ? (isSimple ? server : (server as DnsServer).address) : '';
         const domains = server && !isSimple ? ((server as DnsServer).domains || []).join(', ') : '';
-        const expectIPs = server && !isSimple ? ((server as DnsServer).expectIPs || []).join(', ') : '';
+        const expectIPs =
+            server && !isSimple ? ((server as DnsServer).expectIPs || []).join(', ') : '';
         const skipFallback = server && !isSimple ? !!(server as DnsServer).skipFallback : false;
-        const tag = server && !isSimple ? ((server as DnsServer).tag || '') : '';
+        const tag = server && !isSimple ? (server as DnsServer).tag || '' : '';
 
         (document.getElementById('dns-server-address') as HTMLInputElement).value = address;
         (document.getElementById('dns-server-domains') as HTMLInputElement).value = domains;
         (document.getElementById('dns-server-expect-ips') as HTMLInputElement).value = expectIPs;
-        (document.getElementById('dns-server-skip-fallback') as HTMLInputElement).checked = skipFallback;
+        (document.getElementById('dns-server-skip-fallback') as HTMLInputElement).checked =
+            skipFallback;
         (document.getElementById('dns-server-tag') as HTMLInputElement).value = tag;
 
         dialog.open = true;
@@ -807,7 +870,9 @@ export class SettingsPageManager {
     showHostDialog(domain: string | null = null, value: string | string[] | null = null): void {
         this.editingHostKey = domain;
         const dialog = document.getElementById('dns-host-dialog') as any;
-        dialog.headline = domain ? I18nService.t('settings.dns.host_dialog_edit') : I18nService.t('settings.dns.host_dialog_add');
+        dialog.headline = domain
+            ? I18nService.t('settings.dns.host_dialog_edit')
+            : I18nService.t('settings.dns.host_dialog_add');
 
         const ips = value ? (Array.isArray(value) ? value.join(', ') : value) : '';
 
@@ -818,10 +883,18 @@ export class SettingsPageManager {
     }
 
     async saveServer(): Promise<void> {
-        const address = (document.getElementById('dns-server-address') as HTMLInputElement).value.trim();
-        const domainsStr = (document.getElementById('dns-server-domains') as HTMLInputElement).value.trim();
-        const expectIPsStr = (document.getElementById('dns-server-expect-ips') as HTMLInputElement).value.trim();
-        const skipFallback = (document.getElementById('dns-server-skip-fallback') as HTMLInputElement).checked;
+        const address = (
+            document.getElementById('dns-server-address') as HTMLInputElement
+        ).value.trim();
+        const domainsStr = (
+            document.getElementById('dns-server-domains') as HTMLInputElement
+        ).value.trim();
+        const expectIPsStr = (
+            document.getElementById('dns-server-expect-ips') as HTMLInputElement
+        ).value.trim();
+        const skipFallback = (
+            document.getElementById('dns-server-skip-fallback') as HTMLInputElement
+        ).checked;
         const tag = (document.getElementById('dns-server-tag') as HTMLInputElement).value.trim();
 
         if (!address) {
@@ -829,8 +902,18 @@ export class SettingsPageManager {
             return;
         }
 
-        const domains = domainsStr ? domainsStr.split(',').map(d => d.trim()).filter(d => d) : [];
-        const expectIPs = expectIPsStr ? expectIPsStr.split(',').map(i => i.trim()).filter(i => i) : [];
+        const domains = domainsStr
+            ? domainsStr
+                  .split(',')
+                  .map(d => d.trim())
+                  .filter(d => d)
+            : [];
+        const expectIPs = expectIPsStr
+            ? expectIPsStr
+                  .split(',')
+                  .map(i => i.trim())
+                  .filter(i => i)
+            : [];
 
         let server: string | DnsServer;
         if (!domains.length && !expectIPs.length && !skipFallback && !tag) {
@@ -855,11 +938,17 @@ export class SettingsPageManager {
         await this.saveDnsToBackend();
         this.renderDnsServers();
         (document.getElementById('dns-server-dialog') as any).open = false;
-        toast(this.editingServerIndex >= 0 ? I18nService.t('settings.dns.toast_server_updated') : I18nService.t('settings.dns.toast_server_added'));
+        toast(
+            this.editingServerIndex >= 0
+                ? I18nService.t('settings.dns.toast_server_updated')
+                : I18nService.t('settings.dns.toast_server_added'),
+        );
     }
 
     async saveHost(): Promise<void> {
-        const domain = (document.getElementById('dns-host-domain') as HTMLInputElement).value.trim();
+        const domain = (
+            document.getElementById('dns-host-domain') as HTMLInputElement
+        ).value.trim();
         const ipStr = (document.getElementById('dns-host-ip') as HTMLInputElement).value.trim();
 
         if (!domain) {
@@ -871,7 +960,10 @@ export class SettingsPageManager {
             return;
         }
 
-        const ips = ipStr.split(',').map(i => i.trim()).filter(i => i);
+        const ips = ipStr
+            .split(',')
+            .map(i => i.trim())
+            .filter(i => i);
         const value = ips.length === 1 ? ips[0] : ips;
 
         if (!this.dnsConfig.dns) this.dnsConfig.dns = { hosts: {}, servers: [] };
@@ -887,7 +979,11 @@ export class SettingsPageManager {
         await this.saveDnsToBackend();
         this.renderDnsHosts();
         (document.getElementById('dns-host-dialog') as any).open = false;
-        toast(this.editingHostKey ? I18nService.t('settings.dns.toast_host_updated') : I18nService.t('settings.dns.toast_host_added'));
+        toast(
+            this.editingHostKey
+                ? I18nService.t('settings.dns.toast_host_updated')
+                : I18nService.t('settings.dns.toast_host_added'),
+        );
     }
 
     async saveDnsToBackend() {
@@ -916,7 +1012,7 @@ export class SettingsPageManager {
             const htmlId = key.replace('_', '-');
             const switchEl = document.getElementById(htmlId) as HTMLInputElement | null;
             if (switchEl) {
-                switchEl.addEventListener('change', async (e) => {
+                switchEl.addEventListener('change', async e => {
                     const value = (e.target as HTMLInputElement).checked;
                     await this.setProxySetting(key, value);
                 });
@@ -978,7 +1074,11 @@ export class SettingsPageManager {
         try {
             await SettingsService.setProxyMode(value);
             this.updateProxyModeDesc(value);
-            const modeNames: Record<string, string> = { '0': I18nService.t('settings.proxy.mode_auto'), '1': I18nService.t('settings.proxy.mode_tproxy'), '2': I18nService.t('settings.proxy.mode_redirect') };
+            const modeNames: Record<string, string> = {
+                '0': I18nService.t('settings.proxy.mode_auto'),
+                '1': I18nService.t('settings.proxy.mode_tproxy'),
+                '2': I18nService.t('settings.proxy.mode_redirect'),
+            };
             toast(I18nService.t('settings.proxy.toast_mode_set') + (modeNames[value] || value));
         } catch (error: any) {
             toast(I18nService.t('common.set_failed') + error.message);
@@ -991,7 +1091,7 @@ export class SettingsPageManager {
         const descs = {
             '0': I18nService.t('settings.proxy.desc_auto'),
             '1': I18nService.t('settings.proxy.desc_tproxy'),
-            '2': I18nService.t('settings.proxy.desc_redirect')
+            '2': I18nService.t('settings.proxy.desc_redirect'),
         };
         desc.textContent = descs[String(mode)] || descs['0'];
     }
@@ -1020,7 +1120,9 @@ export class SettingsPageManager {
         const colorPalette = document.getElementById('color-palette');
         if (colorPalette) {
             colorPalette.addEventListener('click', (e: Event) => {
-                const colorItem = (e.target as HTMLElement).closest('.color-item') as HTMLElement | null;
+                const colorItem = (e.target as HTMLElement).closest(
+                    '.color-item',
+                ) as HTMLElement | null;
                 if (colorItem) {
                     const color = colorItem.dataset.color;
                     if (color) {
@@ -1098,7 +1200,12 @@ export class SettingsPageManager {
         }
 
         this.updateMonetToggleState();
-        const modeName = mode === 'auto' ? I18nService.t('settings.theme.mode_auto') : mode === 'light' ? I18nService.t('settings.theme.mode_light') : I18nService.t('settings.theme.mode_dark');
+        const modeName =
+            mode === 'auto'
+                ? I18nService.t('settings.theme.mode_auto')
+                : mode === 'light'
+                  ? I18nService.t('settings.theme.mode_light')
+                  : I18nService.t('settings.theme.mode_dark');
         toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
 
         this.ui.statusPage.updateSpeedChartColors();
@@ -1141,13 +1248,15 @@ export class SettingsPageManager {
         setColorScheme(primaryColor);
 
         // 解析主题色为 RGB
-        const hexToRgb = (hex) => {
+        const hexToRgb = hex => {
             const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-            return result ? {
-                r: parseInt(result[1], 16),
-                g: parseInt(result[2], 16),
-                b: parseInt(result[3], 16)
-            } : { r: 103, g: 80, b: 164 }; // 默认紫色
+            return result
+                ? {
+                      r: parseInt(result[1], 16),
+                      g: parseInt(result[2], 16),
+                      b: parseInt(result[3], 16),
+                  }
+                : { r: 103, g: 80, b: 164 }; // 默认紫色
         };
 
         // 混合两个颜色
@@ -1155,12 +1264,12 @@ export class SettingsPageManager {
             return {
                 r: Math.round(color1.r * weight + color2.r * (1 - weight)),
                 g: Math.round(color1.g * weight + color2.g * (1 - weight)),
-                b: Math.round(color1.b * weight + color2.b * (1 - weight))
+                b: Math.round(color1.b * weight + color2.b * (1 - weight)),
             };
         };
 
         // RGB 转 Hex
-        const rgbToHex = (rgb) => {
+        const rgbToHex = rgb => {
             return '#' + [rgb.r, rgb.g, rgb.b].map(x => x.toString(16).padStart(2, '0')).join('');
         };
 
@@ -1177,10 +1286,10 @@ export class SettingsPageManager {
         // 根据主题色生成 surface 颜色（Material 3 风格）
         if (isDark) {
             // 深色模式：使用深灰色基底，轻微混入主题色
-            const darkBase = { r: 20, g: 18, b: 24 };      // #141218
-            const darkMid = { r: 33, g: 31, b: 38 };       // #211f26
-            const darkHigh = { r: 43, g: 41, b: 48 };      // #2b2930
-            const darkHighest = { r: 54, g: 52, b: 59 };   // #36343b
+            const darkBase = { r: 20, g: 18, b: 24 }; // #141218
+            const darkMid = { r: 33, g: 31, b: 38 }; // #211f26
+            const darkHigh = { r: 43, g: 41, b: 48 }; // #2b2930
+            const darkHighest = { r: 54, g: 52, b: 59 }; // #36343b
 
             // 混入约 5% 的主题色，使 surface 带有主题色调
             const surface = mixColors(primary, darkBase, 0.05);
@@ -1195,8 +1304,14 @@ export class SettingsPageManager {
             html.style.setProperty('--monet-on-surface-variant', '#cac4d0');
             html.style.setProperty('--monet-surface-container', rgbToHex(surfaceContainer));
             html.style.setProperty('--monet-surface-container-low', rgbToHex(surfaceContainerLow));
-            html.style.setProperty('--monet-surface-container-high', rgbToHex(surfaceContainerHigh));
-            html.style.setProperty('--monet-surface-container-highest', rgbToHex(surfaceContainerHighest));
+            html.style.setProperty(
+                '--monet-surface-container-high',
+                rgbToHex(surfaceContainerHigh),
+            );
+            html.style.setProperty(
+                '--monet-surface-container-highest',
+                rgbToHex(surfaceContainerHighest),
+            );
             html.style.setProperty('--monet-background', rgbToHex(surface));
             html.style.setProperty('--monet-on-background', '#e6e0e9');
             html.style.setProperty('--monet-outline', '#938f99');
@@ -1206,7 +1321,7 @@ export class SettingsPageManager {
         } else {
             // 浅色模式：使用白色基底，轻微混入主题色
             const white = { r: 255, g: 255, b: 255 };
-            const lightBase = { r: 254, g: 247, b: 255 };  // 非常浅的基底
+            const lightBase = { r: 254, g: 247, b: 255 }; // 非常浅的基底
 
             // 混入约 3-8% 的主题色，使 surface 带有主题色调
             const surface = mixColors(primary, white, 0.03);
@@ -1214,21 +1329,36 @@ export class SettingsPageManager {
             const surfaceContainerLow = mixColors(primary, white, 0.04);
             const surfaceContainer = mixColors(primary, white, 0.06);
             const surfaceContainerHigh = mixColors(primary, white, 0.08);
-            const surfaceContainerHighest = mixColors(primary, white, 0.10);
+            const surfaceContainerHighest = mixColors(primary, white, 0.1);
 
             html.style.setProperty('--monet-surface', rgbToHex(surface));
             html.style.setProperty('--monet-on-surface', '#1d1b20');
-            html.style.setProperty('--monet-surface-variant', rgbToHex(mixColors(primary, { r: 231, g: 224, b: 236 }, 0.15)));
+            html.style.setProperty(
+                '--monet-surface-variant',
+                rgbToHex(mixColors(primary, { r: 231, g: 224, b: 236 }, 0.15)),
+            );
             html.style.setProperty('--monet-on-surface-variant', '#49454f');
             html.style.setProperty('--monet-surface-container', rgbToHex(surfaceContainer));
             html.style.setProperty('--monet-surface-container-low', rgbToHex(surfaceContainerLow));
-            html.style.setProperty('--monet-surface-container-high', rgbToHex(surfaceContainerHigh));
-            html.style.setProperty('--monet-surface-container-highest', rgbToHex(surfaceContainerHighest));
+            html.style.setProperty(
+                '--monet-surface-container-high',
+                rgbToHex(surfaceContainerHigh),
+            );
+            html.style.setProperty(
+                '--monet-surface-container-highest',
+                rgbToHex(surfaceContainerHighest),
+            );
             html.style.setProperty('--monet-background', rgbToHex(surface));
             html.style.setProperty('--monet-on-background', '#1d1b20');
             html.style.setProperty('--monet-outline', '#79747e');
-            html.style.setProperty('--monet-outline-variant', rgbToHex(mixColors(primary, { r: 202, g: 196, b: 208 }, 0.10)));
-            html.style.setProperty('--monet-secondary', rgbToHex(mixColors(primary, { r: 98, g: 91, b: 113 }, 0.20)));
+            html.style.setProperty(
+                '--monet-outline-variant',
+                rgbToHex(mixColors(primary, { r: 202, g: 196, b: 208 }, 0.1)),
+            );
+            html.style.setProperty(
+                '--monet-secondary',
+                rgbToHex(mixColors(primary, { r: 98, g: 91, b: 113 }, 0.2)),
+            );
             html.style.setProperty('--monet-on-secondary', '#ffffff');
         }
     }
@@ -1295,11 +1425,14 @@ export class SettingsPageManager {
         const monetToggle = document.getElementById('monet-toggle') as HTMLInputElement | null;
         if (!monetToggle) return;
 
-        monetToggle.addEventListener('change', (e) => {
+        monetToggle.addEventListener('change', e => {
             const enabled = (e.target as HTMLInputElement).checked;
             localStorage.setItem('monetEnabled', String(enabled));
             this.applyMonetSetting(enabled);
-            toast(I18nService.t('settings.monet.toast_toggled') + (enabled ? I18nService.t('common.enabled') : I18nService.t('common.disabled')));
+            toast(
+                I18nService.t('settings.monet.toast_toggled') +
+                    (enabled ? I18nService.t('common.enabled') : I18nService.t('common.disabled')),
+            );
         });
     }
 
@@ -1410,12 +1543,16 @@ export class SettingsPageManager {
         try {
             const settings = await SettingsService.getModuleSettings();
 
-            const autoStartSwitch = document.getElementById('module-auto-start') as HTMLInputElement | null;
+            const autoStartSwitch = document.getElementById(
+                'module-auto-start',
+            ) as HTMLInputElement | null;
             if (autoStartSwitch) {
                 autoStartSwitch.checked = settings.auto_start;
             }
 
-            const oneplusFixSwitch = document.getElementById('module-oneplus-fix') as HTMLInputElement | null;
+            const oneplusFixSwitch = document.getElementById(
+                'module-oneplus-fix',
+            ) as HTMLInputElement | null;
             if (oneplusFixSwitch) {
                 oneplusFixSwitch.checked = settings.oneplus_a16_fix;
             }
@@ -1472,7 +1609,8 @@ export class SettingsPageManager {
             if (shadowRoot) {
                 const container = shadowRoot.querySelector('[part="container"]') as HTMLElement;
                 if (container) {
-                    container.style.cssText = 'display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;';
+                    container.style.cssText =
+                        'display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;';
                 }
 
                 // 让每个 tab 保持自然宽度不收缩
@@ -1481,7 +1619,8 @@ export class SettingsPageManager {
                     const assignedElements = slot.assignedElements();
                     assignedElements.forEach(el => {
                         if (el.tagName === 'MDUI-TAB') {
-                            (el as HTMLElement).style.cssText = 'flex-shrink: 0; white-space: nowrap;';
+                            (el as HTMLElement).style.cssText =
+                                'flex-shrink: 0; white-space: nowrap;';
                         }
                     });
                 });
@@ -1516,8 +1655,12 @@ export class SettingsPageManager {
     }
 
     setupLogsActions(): void {
-        document.getElementById('export-logs-btn')?.addEventListener('click', () => this.exportLogs());
-        document.getElementById('export-all-btn')?.addEventListener('click', () => this.exportAll());
+        document
+            .getElementById('export-logs-btn')
+            ?.addEventListener('click', () => this.exportLogs());
+        document
+            .getElementById('export-all-btn')
+            ?.addEventListener('click', () => this.exportAll());
         // document.getElementById('clear-logs-btn')?.addEventListener('click', () => this.clearDebugLogs());
     }
 
@@ -1592,7 +1735,8 @@ export class SettingsPageManager {
 
     renderLog(container: HTMLElement, log: string): void {
         if (!log || log.trim() === '') {
-            container.innerHTML = '<span style="color: var(--mdui-color-on-surface-variant); font-style: italic;">No logs available</span>';
+            container.innerHTML =
+                '<span style="color: var(--mdui-color-on-surface-variant); font-style: italic;">No logs available</span>';
             return;
         }
 

@@ -43,12 +43,16 @@ export class StatusService {
     static async getStatus(): Promise<ServiceStatus> {
         try {
             // 使用 pidof 检测 xray 进程是否运行
-            const pidOutput = await KSU.exec(`pidof -s /data/adb/modules/netproxy/bin/xray 2>/dev/null || echo`);
+            const pidOutput = await KSU.exec(
+                `pidof -s /data/adb/modules/netproxy/bin/xray 2>/dev/null || echo`,
+            );
             const isRunning = pidOutput.trim() !== '';
             const status = isRunning ? 'running' : 'stopped';
 
             // config 从 module.conf 读取
-            const configOutput = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/module.conf 2>/dev/null || echo`);
+            const configOutput = await KSU.exec(
+                `cat ${KSU.MODULE_PATH}/config/module.conf 2>/dev/null || echo`,
+            );
             const config = configOutput.match(/CURRENT_CONFIG="([^"]*)"/)?.[1] || '';
 
             return { status, config: config.split('/').pop() || '' };
@@ -122,7 +126,9 @@ export class StatusService {
     // 获取实时网速（无阻塞）
     static async getNetworkSpeed(): Promise<NetworkSpeed> {
         try {
-            const result = await KSU.exec(`awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`);
+            const result = await KSU.exec(
+                `awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`,
+            );
             const [rx, tx] = result.split(/\s+/).map(Number);
             const now = Date.now();
 
@@ -155,11 +161,13 @@ export class StatusService {
     static async getTrafficStats(): Promise<TrafficStats> {
         try {
             // 获取所有接口的总流量
-            const result = await KSU.exec(`awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`);
+            const result = await KSU.exec(
+                `awk '/:/ {rx+=$2; tx+=$10} END {print rx, tx}' /proc/net/dev`,
+            );
             const parts = result.split(/\s+/);
             return {
                 rx: parseInt(parts[0]) || 0,
-                tx: parseInt(parts[1]) || 0
+                tx: parseInt(parts[1]) || 0,
             };
         } catch (error) {
             return { rx: 0, tx: 0 };
@@ -174,7 +182,10 @@ export class StatusService {
 
     // 获取系统状态 (CPU/内存)
     // 获取 Xray 进程状态 (CPU/内存)
-    static async getSystemStatus(): Promise<{ cpu: number; mem: { total: number; used: number; percentage: number } }> {
+    static async getSystemStatus(): Promise<{
+        cpu: number;
+        mem: { total: number; used: number; percentage: number };
+    }> {
         try {
             // 1. 获取 PID
             const pidArg = `/data/adb/modules/netproxy/bin/xray`;
@@ -226,9 +237,15 @@ export class StatusService {
                     const stime = parseInt(procParts[14]);
                     const processTime = utime + stime;
 
-                    const sysTotalTime = sysParts.slice(1).reduce((acc, val) => acc + (parseInt(val) || 0), 0);
+                    const sysTotalTime = sysParts
+                        .slice(1)
+                        .reduce((acc, val) => acc + (parseInt(val) || 0), 0);
 
-                    if (this._lastProcessId === pid && this._lastSystemCpuTime !== null && this._lastProcessCpuTime !== null) {
+                    if (
+                        this._lastProcessId === pid &&
+                        this._lastSystemCpuTime !== null &&
+                        this._lastProcessCpuTime !== null
+                    ) {
                         const procDelta = processTime - this._lastProcessCpuTime;
                         const sysDelta = sysTotalTime - this._lastSystemCpuTime;
 
@@ -250,10 +267,9 @@ export class StatusService {
                 mem: {
                     total: memTotal,
                     used: memUsed,
-                    percentage: memPercentage
-                }
+                    percentage: memPercentage,
+                },
             };
-
         } catch (error) {
             console.error('Failed to get Xray status:', error);
             return { cpu: 0, mem: { total: 0, used: 0, percentage: 0 } };
@@ -265,12 +281,18 @@ export class StatusService {
     // 获取内网IP
     static async getInternalIP(): Promise<InternalIP[]> {
         try {
-            const result = await KSU.exec(`ip -4 addr show 2>/dev/null | awk '/inet / && !/127\\.0\\.0\\.1/ {gsub(/\\/.*/, "", $2); print $2, $NF}' | head -3`);
+            const result = await KSU.exec(
+                `ip -4 addr show 2>/dev/null | awk '/inet / && !/127\\.0\\.0\\.1/ {gsub(/\\/.*/, "", $2); print $2, $NF}' | head -3`,
+            );
             // 解析格式: "192.168.1.100 wlan0"
-            return result.split('\n').filter(l => l.trim()).map(line => {
-                const parts = line.trim().split(/\s+/);
-                return { ip: parts[0], iface: parts[1] || 'unknown' };
-            }).filter(item => item.ip);
+            return result
+                .split('\n')
+                .filter(l => l.trim())
+                .map(line => {
+                    const parts = line.trim().split(/\s+/);
+                    return { ip: parts[0], iface: parts[1] || 'unknown' };
+                })
+                .filter(item => item.ip);
         } catch (error) {
             return [];
         }
@@ -286,7 +308,7 @@ export class StatusService {
             { url: 'http://ip-api.com/json', ipField: 'query', countryField: 'countryCode' },
         ];
 
-        const fetchPromises = ipApis.map((api) => {
+        const fetchPromises = ipApis.map(api => {
             return new Promise<ExternalIPInfo>((resolve, reject) => {
                 let output = '';
                 let resolved = false;
@@ -299,7 +321,14 @@ export class StatusService {
                 }, 5000);
 
                 try {
-                    const curl = KSU.spawn('curl', ['-s', '--connect-timeout', '3', '--max-time', '5', api.url]);
+                    const curl = KSU.spawn('curl', [
+                        '-s',
+                        '--connect-timeout',
+                        '3',
+                        '--max-time',
+                        '5',
+                        api.url,
+                    ]);
 
                     curl.stdout.on('data', (data: string) => {
                         output += data;
@@ -319,7 +348,11 @@ export class StatusService {
                                 // 验证 IP 格式
                                 if (ip && typeof ip === 'string' && /^[\d.:a-fA-F]+$/.test(ip)) {
                                     // 验证国家代码（2位大写字母）
-                                    if (countryCode && typeof countryCode === 'string' && /^[A-Z]{2}$/.test(countryCode)) {
+                                    if (
+                                        countryCode &&
+                                        typeof countryCode === 'string' &&
+                                        /^[A-Z]{2}$/.test(countryCode)
+                                    ) {
                                         resolve({ ip, countryCode });
                                         return;
                                     }
@@ -352,7 +385,7 @@ export class StatusService {
 
     // Ping 延迟测试 (使用 spawn 非阻塞)
     static getPingLatency(host: string): Promise<string> {
-        return new Promise((resolve) => {
+        return new Promise(resolve => {
             let output = '';
             let resolved = false;
 
@@ -406,7 +439,9 @@ export class StatusService {
     // 获取当前出站模式
     static async getOutboundMode(): Promise<string> {
         try {
-            const output = await KSU.exec(`grep '^OUTBOUND_MODE=' ${KSU.MODULE_PATH}/config/module.conf 2>/dev/null | cut -d'=' -f2`);
+            const output = await KSU.exec(
+                `grep '^OUTBOUND_MODE=' ${KSU.MODULE_PATH}/config/module.conf 2>/dev/null | cut -d'=' -f2`,
+            );
             return output.trim() || 'rule';
         } catch (error) {
             return 'rule';
@@ -421,19 +456,25 @@ export class StatusService {
             if (mode === 'global') {
                 const rulesJson = await this.generateGlobalRules();
                 rulesFile = `${KSU.MODULE_PATH}/logs/.mode_rules.json`;
-                const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))));
+                const base64 = btoa(
+                    unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))),
+                );
                 await KSU.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
             } else if (mode === 'direct') {
                 const rulesJson = await this.generateDirectRules();
                 rulesFile = `${KSU.MODULE_PATH}/logs/.mode_rules.json`;
-                const base64 = btoa(unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))));
+                const base64 = btoa(
+                    unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))),
+                );
                 await KSU.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
             }
 
-            const result = await KSU.exec(`sh ${KSU.MODULE_PATH}/scripts/core/switch-mode.sh ${mode} ${rulesFile}`);
+            const result = await KSU.exec(
+                `sh ${KSU.MODULE_PATH}/scripts/core/switch-mode.sh ${mode} ${rulesFile}`,
+            );
 
             if (rulesFile) {
-                await KSU.exec(`rm -f ${rulesFile}`).catch(() => { });
+                await KSU.exec(`rm -f ${rulesFile}`).catch(() => {});
             }
 
             return result.includes('success');
@@ -443,31 +484,45 @@ export class StatusService {
         }
     }
 
-    static async generateGlobalRules(): Promise<{ routing: { domainStrategy: string; rules: XrayRule[] } }> {
+    static async generateGlobalRules(): Promise<{
+        routing: { domainStrategy: string; rules: XrayRule[] };
+    }> {
         return {
             routing: {
                 domainStrategy: 'AsIs',
                 rules: [
-                    { type: 'field', inboundTag: ['tproxy-in'], port: '53', outboundTag: 'dns-out' },
+                    {
+                        type: 'field',
+                        inboundTag: ['tproxy-in'],
+                        port: '53',
+                        outboundTag: 'dns-out',
+                    },
                     { type: 'field', port: '0-65535', outboundTag: 'proxy' },
                     { type: 'field', inboundTag: ['domestic-dns'], outboundTag: 'direct' },
-                    { type: 'field', inboundTag: ['dns-module'], outboundTag: 'proxy' }
-                ]
-            }
+                    { type: 'field', inboundTag: ['dns-module'], outboundTag: 'proxy' },
+                ],
+            },
         };
     }
 
-    static async generateDirectRules(): Promise<{ routing: { domainStrategy: string; rules: XrayRule[] } }> {
+    static async generateDirectRules(): Promise<{
+        routing: { domainStrategy: string; rules: XrayRule[] };
+    }> {
         return {
             routing: {
                 domainStrategy: 'AsIs',
                 rules: [
-                    { type: 'field', inboundTag: ['tproxy-in'], port: '53', outboundTag: 'dns-out' },
+                    {
+                        type: 'field',
+                        inboundTag: ['tproxy-in'],
+                        port: '53',
+                        outboundTag: 'dns-out',
+                    },
                     { type: 'field', port: '0-65535', outboundTag: 'direct' },
                     { type: 'field', inboundTag: ['domestic-dns'], outboundTag: 'direct' },
-                    { type: 'field', inboundTag: ['dns-module'], outboundTag: 'direct' }
-                ]
-            }
+                    { type: 'field', inboundTag: ['dns-module'], outboundTag: 'direct' },
+                ],
+            },
         };
     }
 }

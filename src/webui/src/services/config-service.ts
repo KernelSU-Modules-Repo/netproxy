@@ -42,32 +42,36 @@ export class ConfigService {
         const outboundsDir = `${KSU.MODULE_PATH}/config/xray/outbounds`;
 
         try {
-            const defaultFiles = await KSU.exec(`find ${outboundsDir} -maxdepth 1 -name '*.json' -exec basename {} \\;`);
+            const defaultFiles = await KSU.exec(
+                `find ${outboundsDir} -maxdepth 1 -name '*.json' -exec basename {} \\;`,
+            );
             const defaultConfigs = defaultFiles.split('\n').filter(f => f);
             if (defaultConfigs.length > 0) {
                 groups.push({
                     type: 'default',
                     name: '默认分组',
                     dirName: '',
-                    configs: defaultConfigs
+                    configs: defaultConfigs,
                 });
             }
-        } catch (e) { }
+        } catch (e) {}
 
         // 获取订阅分组
         const subscriptions = await this.getSubscriptions();
         for (const sub of subscriptions) {
             try {
-                const files = await KSU.exec(`find ${outboundsDir}/${sub.dirName} -name '*.json' ! -name '_meta.json' -exec basename {} \\;`);
+                const files = await KSU.exec(
+                    `find ${outboundsDir}/${sub.dirName} -name '*.json' ! -name '_meta.json' -exec basename {} \\;`,
+                );
                 groups.push({
                     type: 'subscription',
                     name: sub.name,
                     dirName: sub.dirName,
                     url: sub.url,
                     updated: sub.updated,
-                    configs: files.split('\n').filter(f => f)
+                    configs: files.split('\n').filter(f => f),
                 });
-            } catch (e) { }
+            } catch (e) {}
         }
 
         return groups;
@@ -105,7 +109,9 @@ EOF
             const filename = lines[0].replace('===', '').trim();
             const content = lines.slice(1).join('\n');
 
-            let protocol = 'unknown', address = '', port = '';
+            let protocol = 'unknown',
+                address = '',
+                port = '';
             const protocolMatch = content.match(/"protocol"\s*:\s*"([^"]+)"/);
             if (protocolMatch) protocol = protocolMatch[1];
             const addressMatch = content.match(/"address"\s*:\s*"([^"]+)"/);
@@ -122,7 +128,9 @@ EOF
     // 保存配置文件
     static async saveConfig(filename: string, content: string): Promise<void> {
         const escaped = content.replace(/'/g, "'\\''");
-        await KSU.exec(`echo '${escaped}' > '${KSU.MODULE_PATH}/config/xray/outbounds/${filename}'`);
+        await KSU.exec(
+            `echo '${escaped}' > '${KSU.MODULE_PATH}/config/xray/outbounds/${filename}'`,
+        );
     }
 
     static async deleteConfig(filename: string): Promise<OperationResult> {
@@ -141,20 +149,26 @@ EOF
         // 需要检查服务状态来决定是热切换还是直接修改配置
         // 为了避免循环依赖，这里重复一下 pidof 检查，或者简单地都尝试调用 switch-config.sh
         // switch-config.sh 内部建议增加判断逻辑，目前 KSUService 逻辑是先检查状态
-        const pidOutput = await KSU.exec(`pidof -s /data/adb/modules/netproxy/bin/xray 2>/dev/null || echo`);
+        const pidOutput = await KSU.exec(
+            `pidof -s /data/adb/modules/netproxy/bin/xray 2>/dev/null || echo`,
+        );
         const isRunning = pidOutput.trim() !== '';
 
         if (isRunning) {
             await KSU.exec(`sh ${KSU.MODULE_PATH}/scripts/core/switch-config.sh '${configPath}'`);
         } else {
-            await KSU.exec(`sed -i 's|^CURRENT_CONFIG=.*|CURRENT_CONFIG="${configPath}"|' ${KSU.MODULE_PATH}/config/module.conf`);
+            await KSU.exec(
+                `sed -i 's|^CURRENT_CONFIG=.*|CURRENT_CONFIG="${configPath}"|' ${KSU.MODULE_PATH}/config/module.conf`,
+            );
         }
     }
 
     static async importFromNodeLink(nodeLink: string): Promise<OperationResult> {
         try {
             const escapedLink = nodeLink.replace(/'/g, "'\\''");
-            const result = await KSU.exec(`cd '${KSU.MODULE_PATH}/config/xray/outbounds' && chmod +x '${KSU.MODULE_PATH}/bin/proxylink' && '${KSU.MODULE_PATH}/bin/proxylink' -parse '${escapedLink}' -insecure -format xray -auto`);
+            const result = await KSU.exec(
+                `cd '${KSU.MODULE_PATH}/config/xray/outbounds' && chmod +x '${KSU.MODULE_PATH}/bin/proxylink' && '${KSU.MODULE_PATH}/bin/proxylink' -parse '${escapedLink}' -insecure -format xray -auto`,
+            );
             return { success: true, output: result };
         } catch (error: any) {
             console.error('Import from node link error:', error);
@@ -166,23 +180,29 @@ EOF
 
     static async getSubscriptions(): Promise<Subscription[]> {
         try {
-            const result = await KSU.exec(`find ${KSU.MODULE_PATH}/config/xray/outbounds -mindepth 1 -maxdepth 1 -type d -name 'sub_*' -exec basename {} \\;`);
+            const result = await KSU.exec(
+                `find ${KSU.MODULE_PATH}/config/xray/outbounds -mindepth 1 -maxdepth 1 -type d -name 'sub_*' -exec basename {} \\;`,
+            );
             const subscriptions: Subscription[] = [];
 
             for (const dir of result.split('\n').filter(d => d)) {
                 const name = dir.replace(/^sub_/, '');
                 try {
-                    const metaContent = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/xray/outbounds/${dir}/_meta.json`);
+                    const metaContent = await KSU.exec(
+                        `cat ${KSU.MODULE_PATH}/config/xray/outbounds/${dir}/_meta.json`,
+                    );
                     const meta = JSON.parse(metaContent);
-                    const nodeCount = await KSU.exec(`find ${KSU.MODULE_PATH}/config/xray/outbounds/${dir} -name '*.json' ! -name '_meta.json' | wc -l`);
+                    const nodeCount = await KSU.exec(
+                        `find ${KSU.MODULE_PATH}/config/xray/outbounds/${dir} -name '*.json' ! -name '_meta.json' | wc -l`,
+                    );
                     subscriptions.push({
                         name: meta.name || name,
                         dirName: dir,
                         url: meta.url,
                         updated: meta.updated,
-                        nodeCount: parseInt(nodeCount.trim()) || 0
+                        nodeCount: parseInt(nodeCount.trim()) || 0,
                     });
-                } catch (e) { }
+                } catch (e) {}
             }
             return subscriptions;
         } catch (error) {
@@ -192,7 +212,9 @@ EOF
 
     static async addSubscription(name: string, url: string): Promise<OperationResult> {
         try {
-            await KSU.exec(`sh ${KSU.MODULE_PATH}/scripts/config/subscription.sh add "${name}" "${url}"`);
+            await KSU.exec(
+                `sh ${KSU.MODULE_PATH}/scripts/config/subscription.sh add "${name}" "${url}"`,
+            );
             return { success: true };
         } catch (error: any) {
             return { success: false, error: error.message };
@@ -203,7 +225,10 @@ EOF
         const statusFile = `${KSU.MODULE_PATH}/config/.sub_status`;
         await KSU.exec(`rm -f ${statusFile}`);
         // Fire-and-forget: spawn background script
-        KSU.spawn('sh', ['-c', `sh ${KSU.MODULE_PATH}/scripts/config/subscription.sh update "${name}" && echo success > ${statusFile} || echo fail > ${statusFile}`]);
+        KSU.spawn('sh', [
+            '-c',
+            `sh ${KSU.MODULE_PATH}/scripts/config/subscription.sh update "${name}" && echo success > ${statusFile} || echo fail > ${statusFile}`,
+        ]);
         return await this.waitForSubscriptionComplete(statusFile, 60000);
     }
 
@@ -216,7 +241,10 @@ EOF
         }
     }
 
-    static async waitForSubscriptionComplete(statusFile: string, timeout: number): Promise<OperationResult> {
+    static async waitForSubscriptionComplete(
+        statusFile: string,
+        timeout: number,
+    ): Promise<OperationResult> {
         const startTime = Date.now();
         const pollInterval = 500;
 

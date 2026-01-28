@@ -1,7 +1,7 @@
 import { AppService } from '../services/app-service.js';
 import { toast } from '../utils/toast.js';
 import { I18nService } from '../i18n/i18n-service.js';
-import { UI } from './ui-core.js';
+import type { UI } from './ui-core.js';
 
 interface UserInfo {
     id: string;
@@ -49,7 +49,7 @@ export class AppPageManager {
         this.currentUserId = '0';
         this.showSystemApps = false; // 默认不显示系统应用 (-3 only)
         this.appProxyEnabled = true; // 分应用代理总开关
-        this.isUpdatingUI = false;   // 防止程序更新 UI 触发事件
+        this.isUpdatingUI = false; // 防止程序更新 UI 触发事件
     }
 
     async init(): Promise<void> {
@@ -66,7 +66,9 @@ export class AppPageManager {
         // 初始化用户列表（在打开 Dialog 时刷新，这里先不加载）
 
         // 绑定 Dialog 内的过滤器事件
-        const filterInput = document.getElementById('app-selector-search') as HTMLInputElement | null;
+        const filterInput = document.getElementById(
+            'app-selector-search',
+        ) as HTMLInputElement | null;
         if (filterInput) {
             filterInput.addEventListener('input', () => this.filterApps(filterInput.value));
         }
@@ -79,7 +81,9 @@ export class AppPageManager {
             });
         }
 
-        const systemSwitch = document.getElementById('app-selector-show-system') as HTMLInputElement | null;
+        const systemSwitch = document.getElementById(
+            'app-selector-show-system',
+        ) as HTMLInputElement | null;
         if (systemSwitch) {
             systemSwitch.addEventListener('change', () => {
                 this.showSystemApps = systemSwitch.checked;
@@ -109,7 +113,7 @@ export class AppPageManager {
             // 获取代理模式和开关状态
             const [mode, enabled] = await Promise.all([
                 AppService.getAppProxyMode(),
-                AppService.getAppProxyEnabled()
+                AppService.getAppProxyEnabled(),
             ]);
             this.proxyMode = mode;
             this.appProxyEnabled = enabled;
@@ -143,16 +147,20 @@ export class AppPageManager {
 
             // 更新列表标题
             if (listTitle && currentModeValue !== 'off') {
-                listTitle.textContent = this.proxyMode === 'blacklist' ? I18nService.t('uid.title_blacklist') : I18nService.t('uid.title_whitelist');
+                listTitle.textContent =
+                    this.proxyMode === 'blacklist'
+                        ? I18nService.t('uid.title_blacklist')
+                        : I18nService.t('uid.title_whitelist');
             }
 
             // 获取代理应用列表 Array<{userId, packageName}>
             this.proxyApps = await AppService.getProxyApps();
 
             if (this.proxyApps.length === 0) {
-                const emptyText = this.proxyMode === 'blacklist'
-                    ? I18nService.t('uid.empty_blacklist')
-                    : I18nService.t('uid.empty_whitelist');
+                const emptyText =
+                    this.proxyMode === 'blacklist'
+                        ? I18nService.t('uid.empty_blacklist')
+                        : I18nService.t('uid.empty_whitelist');
                 listEl.innerHTML = `<mdui-list-item><div slot="headline">${emptyText}</div></mdui-list-item>`;
                 return;
             }
@@ -163,40 +171,49 @@ export class AppPageManager {
             // 列表显示时，如果有 cache 则显示 Label，否则显示 PackageName。
 
             // 图标懒加载观察器
-            const observer = new IntersectionObserver((entries) => {
-                entries.forEach(entry => {
-                    if (entry.isIntersecting) {
-                        const item = entry.target;
-                        const img = item.querySelector('img.app-icon') as HTMLImageElement | null;
-                        if (img && !img.src) {
-                            const iconUrl = img.dataset.iconUrl;
-                            const packageName = img.dataset.packageName;
-                            const userId = img.dataset.userId || '0';
+            const observer = new IntersectionObserver(
+                entries => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const item = entry.target;
+                            const img = item.querySelector(
+                                'img.app-icon',
+                            ) as HTMLImageElement | null;
+                            if (img && !img.src) {
+                                const iconUrl = img.dataset.iconUrl;
+                                const packageName = img.dataset.packageName;
+                                const userId = img.dataset.userId || '0';
 
-                            if (iconUrl) {
-                                img.src = iconUrl;
-                                img.onload = () => {
-                                    img.style.display = 'block';
-                                    const placeholder = item.querySelector('mdui-icon[slot="icon"]') as HTMLElement | null;
-                                    if (placeholder) placeholder.style.display = 'none';
-                                };
-                            } else if (packageName) {
-                                // 使用 KSU API 图标 URL
-                                img.src = `ksu://icon/${packageName}`;
-                                img.onload = () => {
-                                    img.style.display = 'block';
-                                    const placeholder = item.querySelector('mdui-icon[slot="icon"]') as HTMLElement | null;
-                                    if (placeholder) placeholder.style.display = 'none';
-                                };
+                                if (iconUrl) {
+                                    img.src = iconUrl;
+                                    img.onload = () => {
+                                        img.style.display = 'block';
+                                        const placeholder = item.querySelector(
+                                            'mdui-icon[slot="icon"]',
+                                        ) as HTMLElement | null;
+                                        if (placeholder) placeholder.style.display = 'none';
+                                    };
+                                } else if (packageName) {
+                                    // 使用 KSU API 图标 URL
+                                    img.src = `ksu://icon/${packageName}`;
+                                    img.onload = () => {
+                                        img.style.display = 'block';
+                                        const placeholder = item.querySelector(
+                                            'mdui-icon[slot="icon"]',
+                                        ) as HTMLElement | null;
+                                        if (placeholder) placeholder.style.display = 'none';
+                                    };
+                                }
                             }
+                            observer.unobserve(item);
                         }
-                        observer.unobserve(item);
-                    }
-                });
-            }, {
-                rootMargin: '100px',
-                threshold: 0.1
-            });
+                    });
+                },
+                {
+                    rootMargin: '100px',
+                    threshold: 0.1,
+                },
+            );
 
             listEl.innerHTML = '';
             // this.proxyApps is Array<{userId, packageName}>
@@ -206,9 +223,10 @@ export class AppPageManager {
                 const label = proxyApp.appLabel || proxyApp.packageName;
 
                 // 标题：应用名 + 用户ID（如果非主用户）
-                const headline = proxyApp.userId !== '0'
-                    ? `${label} [${I18nService.t('uid.user_label')} ${proxyApp.userId}]`
-                    : label;
+                const headline =
+                    proxyApp.userId !== '0'
+                        ? `${label} [${I18nService.t('uid.user_label')} ${proxyApp.userId}]`
+                        : label;
                 item.setAttribute('headline', headline);
 
                 // Description 只显示包名（如果和标签不同）
@@ -242,7 +260,9 @@ export class AppPageManager {
 
                 iconEl.onerror = function (this: HTMLImageElement) {
                     this.style.display = 'none';
-                    const placeholder = this.parentElement?.querySelector('mdui-icon[slot="icon"]') as HTMLElement | null;
+                    const placeholder = this.parentElement?.querySelector(
+                        'mdui-icon[slot="icon"]',
+                    ) as HTMLElement | null;
                     if (placeholder) placeholder.style.display = '';
                 };
 
@@ -254,7 +274,7 @@ export class AppPageManager {
                 deleteBtn.slot = 'end-icon';
                 deleteBtn.setAttribute('icon', 'delete');
                 deleteBtn.style.color = 'var(--mdui-color-error)';
-                deleteBtn.addEventListener('click', async (e) => {
+                deleteBtn.addEventListener('click', async e => {
                     e.stopPropagation();
                     // 传递 appLabel (如果已获取) 或 default to packageName
                     await this.removeApp(proxyApp.packageName, proxyApp.userId, label);
@@ -281,7 +301,12 @@ export class AppPageManager {
                 await AppService.setAppProxyMode(modeValue);
                 this.appProxyEnabled = true;
                 this.proxyMode = modeValue;
-                toast(I18nService.t('uid.toast_mode_switched') + (modeValue === 'blacklist' ? I18nService.t('uid.mode_blacklist') : I18nService.t('uid.mode_whitelist')));
+                toast(
+                    I18nService.t('uid.toast_mode_switched') +
+                        (modeValue === 'blacklist'
+                            ? I18nService.t('uid.mode_blacklist')
+                            : I18nService.t('uid.mode_whitelist')),
+                );
             }
             this.update(true);
         } catch (error: any) {
@@ -289,11 +314,21 @@ export class AppPageManager {
         }
     }
 
-    async removeApp(packageName: string, userId: string = '0', appLabel: string | null = null): Promise<void> {
+    async removeApp(
+        packageName: string,
+        userId: string = '0',
+        appLabel: string | null = null,
+    ): Promise<void> {
         const userIdStr = userId.toString();
         const displayUser = userIdStr !== '0' ? `(用户 ${userIdStr})` : '';
         const displayName = appLabel || packageName;
-        if (await this.ui.confirm(I18nService.t('uid.confirm_remove', { name: displayName + (displayUser ? ' ' + displayUser : '') }))) {
+        if (
+            await this.ui.confirm(
+                I18nService.t('uid.confirm_remove', {
+                    name: displayName + (displayUser ? ' ' + displayUser : ''),
+                }),
+            )
+        ) {
             try {
                 await AppService.removeProxyApp(packageName, userIdStr);
                 toast(I18nService.t('uid.toast_removed'));
@@ -313,7 +348,10 @@ export class AppPageManager {
         this.ui.showSkeleton(listEl, 5);
         try {
             // 重新获取 (带缓存或者重新 exec)
-            this.allApps = await AppService.getInstalledApps(this.currentUserId, this.showSystemApps);
+            this.allApps = await AppService.getInstalledApps(
+                this.currentUserId,
+                this.showSystemApps,
+            );
             // 获取应用详情（Label, Icon）
             this.allApps = await AppService.fetchAppDetails(this.allApps);
             this.renderAppList(this.allApps);
@@ -329,7 +367,9 @@ export class AppPageManager {
         const addSelectedBtn = document.getElementById('app-selector-add-selected');
 
         // 清空搜索输入框并重置筛选状态
-        const filterInput = document.getElementById('app-selector-search') as HTMLInputElement | null;
+        const filterInput = document.getElementById(
+            'app-selector-search',
+        ) as HTMLInputElement | null;
         if (filterInput) {
             filterInput.value = '';
         }
@@ -360,7 +400,7 @@ export class AppPageManager {
                 packageName: proxyApp.packageName,
                 userId: proxyApp.userId,
                 appLabel: proxyApp.appLabel,
-                icon: proxyApp.icon
+                icon: proxyApp.icon,
             };
             this.selectedApps.set(key, appInfo);
             this.originalProxyApps.set(key, appInfo);
@@ -383,8 +423,7 @@ export class AppPageManager {
         if (btn) {
             const count = this.selectedApps.size;
             btn.textContent = I18nService.t('uid.btn_add_selected', { count: String(count) });
-            const hasChanges = count > 0 ||
-                this.originalProxyApps.size !== this.selectedApps.size;
+            const hasChanges = count > 0 || this.originalProxyApps.size !== this.selectedApps.size;
             btn.disabled = !hasChanges;
         }
     }
@@ -460,8 +499,6 @@ export class AppPageManager {
     }
 
     renderAppList(apps: AppInfo[]): void {
-
-
         const listEl = document.getElementById('app-selector-list');
         if (!listEl) return;
         // 获取滚动容器作为 IntersectionObserver 的 root
@@ -474,45 +511,52 @@ export class AppPageManager {
 
         listEl.innerHTML = '';
 
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const item = entry.target;
-                    const img = item.querySelector('img.app-icon') as HTMLImageElement | null;
-                    if (img && !img.src) {
-                        const iconUrl = img.dataset.iconUrl;
-                        const packageName = img.dataset.packageName;
+        const observer = new IntersectionObserver(
+            entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const item = entry.target;
+                        const img = item.querySelector('img.app-icon') as HTMLImageElement | null;
+                        if (img && !img.src) {
+                            const iconUrl = img.dataset.iconUrl;
+                            const packageName = img.dataset.packageName;
 
-                        if (iconUrl) {
-                            // 使用 ksu://icon/ URL
-                            img.src = iconUrl;
-                            img.onload = () => {
-                                img.style.display = 'block';
-                                const placeholder = item.querySelector('mdui-icon[slot="icon"]') as HTMLElement | null;
-                                if (placeholder) {
-                                    placeholder.style.display = 'none';
-                                }
-                            };
-                        } else if (packageName) {
-                            // 使用 KSU API 图标 URL
-                            img.src = `ksu://icon/${packageName}`;
-                            img.onload = () => {
-                                img.style.display = 'block';
-                                const placeholder = item.querySelector('mdui-icon[slot="icon"]') as HTMLElement | null;
-                                if (placeholder) {
-                                    placeholder.style.display = 'none';
-                                }
-                            };
+                            if (iconUrl) {
+                                // 使用 ksu://icon/ URL
+                                img.src = iconUrl;
+                                img.onload = () => {
+                                    img.style.display = 'block';
+                                    const placeholder = item.querySelector(
+                                        'mdui-icon[slot="icon"]',
+                                    ) as HTMLElement | null;
+                                    if (placeholder) {
+                                        placeholder.style.display = 'none';
+                                    }
+                                };
+                            } else if (packageName) {
+                                // 使用 KSU API 图标 URL
+                                img.src = `ksu://icon/${packageName}`;
+                                img.onload = () => {
+                                    img.style.display = 'block';
+                                    const placeholder = item.querySelector(
+                                        'mdui-icon[slot="icon"]',
+                                    ) as HTMLElement | null;
+                                    if (placeholder) {
+                                        placeholder.style.display = 'none';
+                                    }
+                                };
+                            }
                         }
+                        observer.unobserve(item);
                     }
-                    observer.unobserve(item);
-                }
-            });
-        }, {
-            root: scrollContainer,
-            rootMargin: '50px',
-            threshold: 0.1
-        });
+                });
+            },
+            {
+                root: scrollContainer,
+                rootMargin: '50px',
+                threshold: 0.1,
+            },
+        );
 
         apps.forEach(app => {
             const item = document.createElement('mdui-list-item');
@@ -540,7 +584,9 @@ export class AppPageManager {
 
             iconEl.onerror = function (this: HTMLImageElement) {
                 this.style.display = 'none';
-                const placeholder = this.parentElement?.querySelector('mdui-icon[slot="icon"]') as HTMLElement | null;
+                const placeholder = this.parentElement?.querySelector(
+                    'mdui-icon[slot="icon"]',
+                ) as HTMLElement | null;
                 if (placeholder) {
                     placeholder.style.display = '';
                 }
@@ -548,7 +594,6 @@ export class AppPageManager {
 
             item.appendChild(iconEl);
             observer.observe(item);
-
 
             // 添加复选框
             const checkbox = document.createElement('mdui-checkbox') as any;
@@ -564,7 +609,7 @@ export class AppPageManager {
             });
 
             // 点击整行切换选中状态（排除复选框区域）
-            item.addEventListener('click', (e) => {
+            item.addEventListener('click', e => {
                 // 如果点击的是复选框本身，不处理（让 change 事件处理）
                 if (e.target === checkbox || checkbox.contains(e.target as Node)) {
                     return;
@@ -577,13 +622,13 @@ export class AppPageManager {
         });
     }
 
-
     filterApps(query: string): void {
         if (!this.allApps) return;
 
-        const filtered = this.allApps.filter(app =>
-            (app.appLabel || '').toLowerCase().includes(query.toLowerCase()) ||
-            app.packageName.toLowerCase().includes(query.toLowerCase())
+        const filtered = this.allApps.filter(
+            app =>
+                (app.appLabel || '').toLowerCase().includes(query.toLowerCase()) ||
+                app.packageName.toLowerCase().includes(query.toLowerCase()),
         );
 
         this.renderAppList(filtered);

@@ -2,7 +2,7 @@ import { ConfigService } from '../services/config-service.js';
 import { StatusService } from '../services/status-service.js';
 import { toast } from '../utils/toast.js';
 import { I18nService } from '../i18n/i18n-service.js';
-import { UI } from './ui-core.js';
+import type { UI } from './ui-core.js';
 
 interface ConfigGroup {
     name: string;
@@ -51,20 +51,23 @@ export class ConfigPageManager {
         this._tabChangeHandler = null;
 
         // 懒加载观察器
-        this.observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const item = entry.target as HTMLElement;
-                    const groupName = item.dataset.groupName;
-                    const filename = item.dataset.filename;
+        this.observer = new IntersectionObserver(
+            entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const item = entry.target as HTMLElement;
+                        const groupName = item.dataset.groupName;
+                        const filename = item.dataset.filename;
 
-                    if (groupName && filename) {
-                        this.loadConfigForItem(item, groupName, filename);
+                        if (groupName && filename) {
+                            this.loadConfigForItem(item, groupName, filename);
+                        }
+                        this.observer.unobserve(item);
                     }
-                    this.observer.unobserve(item);
-                }
-            });
-        }, { rootMargin: '200px' });
+                });
+            },
+            { rootMargin: '200px' },
+        );
     }
 
     /**
@@ -124,8 +127,7 @@ export class ConfigPageManager {
             await this.render();
 
             // 4. 不再主动加载所有详情，依靠 IntersectionObserver 懒加载
-        } catch (error) {
-        }
+        } catch (error) {}
     }
 
     // 加载单个节点详情（实际会加载周围的一批）
@@ -173,10 +175,12 @@ export class ConfigPageManager {
         if (pendingFiles.length === 0) return;
 
         // 标记为正在加载，避免重复请求
-        pendingFiles.forEach(f => groupInfos.set(f, { protocol: 'loading...', address: '', port: '' }));
+        pendingFiles.forEach(f =>
+            groupInfos.set(f, { protocol: 'loading...', address: '', port: '' }),
+        );
 
         // 构建完整路径
-        const filePaths = pendingFiles.map(f => group.dirName ? `${group.dirName}/${f}` : f);
+        const filePaths = pendingFiles.map(f => (group.dirName ? `${group.dirName}/${f}` : f));
 
         // 批量读取
         const newInfos = await ConfigService.batchReadConfigInfos(filePaths);
@@ -184,7 +188,9 @@ export class ConfigPageManager {
         // 更新缓存并刷新 UI
         for (const [fname, info] of newInfos) {
             groupInfos.set(fname, info);
-            const targetItem = document.querySelector(`.config-item[data-group-name="${groupName}"][data-filename="${fname}"]`);
+            const targetItem = document.querySelector(
+                `.config-item[data-group-name="${groupName}"][data-filename="${fname}"]`,
+            );
             if (targetItem) {
                 this.updateItemUI(targetItem, info);
             }
@@ -197,11 +203,15 @@ export class ConfigPageManager {
     updateItemUI(item, info) {
         // 更新协议
         const protocolLine = item.querySelector('.protocol-line');
-        if (protocolLine) protocolLine.textContent = (info.protocol || I18nService.t('config.parser.unknown')).toUpperCase();
+        if (protocolLine)
+            protocolLine.textContent = (
+                info.protocol || I18nService.t('config.parser.unknown')
+            ).toUpperCase();
 
         // 更新地址
         const addressSpan = item.querySelector('.address-span');
-        if (addressSpan) addressSpan.textContent = info.port ? `${info.address}:${info.port}` : info.address;
+        if (addressSpan)
+            addressSpan.textContent = info.port ? `${info.address}:${info.port}` : info.address;
     }
 
     setLatencyDisplay(latencyLabel, latencyCache) {
@@ -242,14 +252,18 @@ export class ConfigPageManager {
 
         if (pendingFiles.length === 0) return;
 
-        pendingFiles.forEach(f => groupInfos.set(f, { protocol: 'loading...', address: '', port: '' }));
+        pendingFiles.forEach(f =>
+            groupInfos.set(f, { protocol: 'loading...', address: '', port: '' }),
+        );
 
-        const filePaths = pendingFiles.map(f => group.dirName ? `${group.dirName}/${f}` : f);
+        const filePaths = pendingFiles.map(f => (group.dirName ? `${group.dirName}/${f}` : f));
         const newInfos = await ConfigService.batchReadConfigInfos(filePaths);
 
         for (const [fname, info] of newInfos) {
             groupInfos.set(fname, info);
-            const targetItem = document.querySelector(`.config-item[data-group-name="${groupName}"][data-filename="${fname}"]`);
+            const targetItem = document.querySelector(
+                `.config-item[data-group-name="${groupName}"][data-filename="${fname}"]`,
+            );
             if (targetItem) {
                 this.updateItemUI(targetItem, info);
             }
@@ -262,7 +276,8 @@ export class ConfigPageManager {
         if (!tabsEl) return;
 
         if (!this._cachedGroups || this._cachedGroups.length === 0) {
-            tabsEl.innerHTML = '<mdui-tab value="empty">暂无节点</mdui-tab><mdui-tab-panel slot="panel" value="empty"><p style="padding: 16px; text-align: center;">暂无节点</p></mdui-tab-panel>';
+            tabsEl.innerHTML =
+                '<mdui-tab value="empty">暂无节点</mdui-tab><mdui-tab-panel slot="panel" value="empty"><p style="padding: 16px; text-align: center;">暂无节点</p></mdui-tab-panel>';
             return;
         }
 
@@ -273,12 +288,15 @@ export class ConfigPageManager {
         const existingTabs = tabsEl.querySelectorAll('mdui-tab');
         const existingNames = Array.from(existingTabs).map(t => (t as any).value);
         const cachedNames = this._cachedGroups.map(g => g.name);
-        const tabsMatch = existingNames.length === cachedNames.length &&
+        const tabsMatch =
+            existingNames.length === cachedNames.length &&
             existingNames.every((name, i) => name === cachedNames[i]);
 
         if (tabsMatch && existingNames.length > 0 && existingNames[0] !== 'loading') {
             // Tabs 结构匹配，只刷新当前 tab 的内容
-            const validTab = this._cachedGroups.find(g => g.name === currentTab) ? currentTab : this._cachedGroups[0]?.name;
+            const validTab = this._cachedGroups.find(g => g.name === currentTab)
+                ? currentTab
+                : this._cachedGroups[0]?.name;
             this._selectedTab = validTab;
             await this.renderActiveTab(validTab);
             return;
@@ -301,7 +319,8 @@ export class ConfigPageManager {
             if (shadowRoot) {
                 const container = shadowRoot.querySelector('[part="container"]');
                 if (container) {
-                    (container as HTMLElement).style.cssText = 'display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;';
+                    (container as HTMLElement).style.cssText =
+                        'display: flex; flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;';
                 }
 
                 // 让每个 tab 保持自然宽度不收缩
@@ -310,7 +329,8 @@ export class ConfigPageManager {
                     const assignedElements = slot.assignedElements();
                     assignedElements.forEach(el => {
                         if (el.tagName === 'MDUI-TAB') {
-                            (el as HTMLElement).style.cssText = 'flex-shrink: 0; white-space: nowrap;';
+                            (el as HTMLElement).style.cssText =
+                                'flex-shrink: 0; white-space: nowrap;';
                         }
                     });
                 });
@@ -332,13 +352,15 @@ export class ConfigPageManager {
 
             // 操作栏 (Toolbar)
             const actions = document.createElement('div');
-            actions.style.cssText = 'display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px 16px;';
+            actions.style.cssText =
+                'display: flex; justify-content: space-between; align-items: center; padding: 12px 16px 4px 16px;';
 
             // 左侧标题
             const title = document.createElement('span');
             title.textContent = I18nService.t('config.node_list');
             title.setAttribute('data-i18n', 'config.node_list');
-            title.style.cssText = 'font-size: 14px; font-weight: 500; color: var(--mdui-color-on-surface-variant);';
+            title.style.cssText =
+                'font-size: 14px; font-weight: 500; color: var(--mdui-color-on-surface-variant);';
             actions.appendChild(title);
 
             // 右侧菜单按钮
@@ -413,7 +435,9 @@ export class ConfigPageManager {
         }
 
         // 3. 恢复选中状态
-        const validTab = this._cachedGroups.find(g => g.name === currentTab) ? currentTab : this._cachedGroups[0]?.name;
+        const validTab = this._cachedGroups.find(g => g.name === currentTab)
+            ? currentTab
+            : this._cachedGroups[0]?.name;
         this._selectedTab = validTab; // 保存到实例变量
 
         // 延迟激活 tab - 使用点击方式更可靠
@@ -467,7 +491,8 @@ export class ConfigPageManager {
         for (const filename of group.configs) {
             const info = configInfos.get(filename);
             const fullPath = group.dirName ? `${group.dirName}/${filename}` : filename;
-            const isCurrent = this._cachedCurrentConfig && this._cachedCurrentConfig.endsWith(filename);
+            const isCurrent =
+                this._cachedCurrentConfig && this._cachedCurrentConfig.endsWith(filename);
 
             this.renderConfigItem(fragment, filename, fullPath, info, isCurrent, group);
         }
@@ -478,9 +503,7 @@ export class ConfigPageManager {
 
     async loadConfigInfos(group) {
         // 构建完整路径列表
-        const filePaths = group.configs.map(f =>
-            group.dirName ? `${group.dirName}/${f}` : f
-        );
+        const filePaths = group.configs.map(f => (group.dirName ? `${group.dirName}/${f}` : f));
 
         // 批量读取所有配置信息（单次 exec）
         return await ConfigService.batchReadConfigInfos(filePaths);
@@ -499,33 +522,44 @@ export class ConfigPageManager {
 
         const descContainer = document.createElement('div');
         descContainer.slot = 'description';
-        descContainer.style.cssText = 'display: flex; flex-direction: column; gap: 2px; width: 100%;';
+        descContainer.style.cssText =
+            'display: flex; flex-direction: column; gap: 2px; width: 100%;';
 
         // 1. IP地址+端口 (第二行)
         const addressLine = document.createElement('div');
-        addressLine.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+        addressLine.style.cssText =
+            'display: flex; justify-content: space-between; align-items: center;';
 
         const addressSpan = document.createElement('span');
         addressSpan.className = 'address-span';
-        addressSpan.style.cssText = 'color: var(--mdui-color-on-surface-variant); font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 8px;';
-        addressSpan.textContent = info ? (info.port ? `${info.address}:${info.port}` : info.address) : '';
+        addressSpan.style.cssText =
+            'color: var(--mdui-color-on-surface-variant); font-size: 13px; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-right: 8px;';
+        addressSpan.textContent = info
+            ? info.port
+                ? `${info.address}:${info.port}`
+                : info.address
+            : '';
         addressLine.appendChild(addressSpan);
         descContainer.appendChild(addressLine);
 
         // 2. 协议 (第三行) - 包含协议名和当前状态
         const protocolLine = document.createElement('div');
-        protocolLine.style.cssText = 'color: var(--mdui-color-primary); font-size: 12px; font-weight: 500; margin-top: 2px; display: flex; align-items: center; gap: 8px;';
+        protocolLine.style.cssText =
+            'color: var(--mdui-color-primary); font-size: 12px; font-weight: 500; margin-top: 2px; display: flex; align-items: center; gap: 8px;';
 
         const protocolText = document.createElement('span');
         protocolText.className = 'protocol-line';
-        protocolText.textContent = info ? (info.protocol || I18nService.t('config.parser.unknown')).toUpperCase() : 'LOADING...';
+        protocolText.textContent = info
+            ? (info.protocol || I18nService.t('config.parser.unknown')).toUpperCase()
+            : 'LOADING...';
         protocolLine.appendChild(protocolText);
 
         if (isCurrent) {
             const currentTag = document.createElement('span');
             currentTag.textContent = I18nService.t('config.status.current');
             currentTag.className = 'current-tag-text';
-            currentTag.style.cssText = 'font-size: 10px; padding: 1px 4px; border-radius: 4px; background: var(--mdui-color-primary);';
+            currentTag.style.cssText =
+                'font-size: 10px; padding: 1px 4px; border-radius: 4px; background: var(--mdui-color-primary);';
             protocolLine.appendChild(currentTag);
         }
 
@@ -541,7 +575,8 @@ export class ConfigPageManager {
 
         const latencyLabel = document.createElement('span');
         latencyLabel.className = 'latency-label';
-        latencyLabel.style.cssText = 'font-size: 12px; color: var(--mdui-color-on-surface-variant);';
+        latencyLabel.style.cssText =
+            'font-size: 12px; color: var(--mdui-color-on-surface-variant);';
 
         const cachedLatency = this._latencyCache.get(filename);
         if (cachedLatency) {
@@ -550,8 +585,6 @@ export class ConfigPageManager {
         }
 
         statusContainer.appendChild(latencyLabel);
-
-
 
         addressLine.appendChild(statusContainer);
 
@@ -566,7 +599,7 @@ export class ConfigPageManager {
         menuBtn.setAttribute('slot', 'trigger');
         menuBtn.setAttribute('icon', 'more_vert');
         // 阻止所有事件冒泡到父列表项，防止触发 ripple 和选中效果
-        menuBtn.addEventListener('click', (e) => {
+        menuBtn.addEventListener('click', e => {
             e.stopPropagation();
             // 关闭之前打开的下拉菜单
             if (this.currentOpenDropdown && this.currentOpenDropdown !== dropdown) {
@@ -575,9 +608,9 @@ export class ConfigPageManager {
             // 更新当前打开的下拉菜单
             this.currentOpenDropdown = dropdown;
         });
-        menuBtn.addEventListener('mousedown', (e) => e.stopPropagation());
-        menuBtn.addEventListener('pointerdown', (e) => e.stopPropagation());
-        menuBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+        menuBtn.addEventListener('mousedown', e => e.stopPropagation());
+        menuBtn.addEventListener('pointerdown', e => e.stopPropagation());
+        menuBtn.addEventListener('touchstart', e => e.stopPropagation());
         dropdown.appendChild(menuBtn);
 
         // 监听下拉菜单关闭事件
@@ -592,7 +625,7 @@ export class ConfigPageManager {
         // 编辑
         const editItem = document.createElement('mdui-menu-item');
         editItem.innerHTML = `<mdui-icon slot="icon" name="edit"></mdui-icon>${I18nService.t('config.menu.edit')}`;
-        editItem.addEventListener('click', async (e) => {
+        editItem.addEventListener('click', async e => {
             e.stopPropagation();
             dropdown.open = false;
             await this.ui.showConfigDialog(fullPath);
@@ -602,7 +635,7 @@ export class ConfigPageManager {
         // 测试
         const testItem = document.createElement('mdui-menu-item');
         testItem.innerHTML = `<mdui-icon slot="icon" name="speed"></mdui-icon>${I18nService.t('config.menu.test')}`;
-        testItem.addEventListener('click', async (e) => {
+        testItem.addEventListener('click', async e => {
             e.stopPropagation();
             dropdown.open = false;
             await this.testConfig(displayName, info.address, item);
@@ -614,7 +647,7 @@ export class ConfigPageManager {
             const deleteItem = document.createElement('mdui-menu-item');
             deleteItem.innerHTML = `<mdui-icon slot="icon" name="delete"></mdui-icon>${I18nService.t('config.menu.delete')}`;
             deleteItem.style.color = 'var(--mdui-color-error)';
-            deleteItem.addEventListener('click', async (e) => {
+            deleteItem.addEventListener('click', async e => {
                 e.stopPropagation();
                 dropdown.open = false;
                 await this.deleteConfig(fullPath, displayName);
@@ -650,8 +683,12 @@ export class ConfigPageManager {
             const latencyStr = await StatusService.getPingLatency(address);
             let latencyVal = 9999;
 
-            const displayStr = latencyStr === 'timeout' ? I18nService.t('config.status.timeout') :
-                latencyStr === 'failed' ? I18nService.t('config.status.failed') : latencyStr;
+            const displayStr =
+                latencyStr === 'timeout'
+                    ? I18nService.t('config.status.timeout')
+                    : latencyStr === 'failed'
+                      ? I18nService.t('config.status.failed')
+                      : latencyStr;
             const ms = parseInt(latencyStr);
             if (!isNaN(ms)) latencyVal = ms;
 
@@ -664,7 +701,6 @@ export class ConfigPageManager {
             // 缓存测试结果到独立缓存
             const filename = itemElement?.dataset.filename || displayName + '.json';
             this._latencyCache.set(filename, latencyCache);
-
         } catch (error) {
             if (latencyLabel) {
                 latencyLabel.textContent = I18nService.t('config.status.failed');
@@ -688,16 +724,21 @@ export class ConfigPageManager {
             return;
         }
 
-        const toastId = toast(I18nService.t('config.toast.start_test', { count: String(total) }), true); // 持续显示
+        const toastId = toast(
+            I18nService.t('config.toast.start_test', { count: String(total) }),
+            true,
+        ); // 持续显示
 
         // 无限制并发，同时测试所有节点
-        await Promise.all(items.map(async (item) => {
-            const filename = (item as HTMLElement).dataset.filename;
-            const info = this._cachedConfigInfos.get(groupName)?.get(filename);
-            if (info && info.address) {
-                await this.testConfig(filename.replace(/\.json$/i, ''), info.address, item);
-            }
-        }));
+        await Promise.all(
+            items.map(async item => {
+                const filename = (item as HTMLElement).dataset.filename;
+                const info = this._cachedConfigInfos.get(groupName)?.get(filename);
+                if (info && info.address) {
+                    await this.testConfig(filename.replace(/\.json$/i, ''), info.address, item);
+                }
+            }),
+        );
 
         // 关闭 toast (重新显示一个自动消失的)
         // mdui 没提供直接关闭 toast 的 api，只能发个新的覆盖
@@ -734,7 +775,10 @@ export class ConfigPageManager {
         const invalidFiles = [];
         for (const [filename, info] of infos.entries()) {
             const cachedLatency = this._latencyCache.get(filename);
-            if (cachedLatency && (cachedLatency.latencyStr === 'failed' || cachedLatency.latencyStr === 'timeout')) {
+            if (
+                cachedLatency &&
+                (cachedLatency.latencyStr === 'failed' || cachedLatency.latencyStr === 'timeout')
+            ) {
                 invalidFiles.push(filename);
                 this._latencyCache.delete(filename);
             }
@@ -745,7 +789,9 @@ export class ConfigPageManager {
             return;
         }
 
-        const confirmed = await this.ui.confirm(I18nService.t('config.confirm.clean_invalid', { count: invalidFiles.length }));
+        const confirmed = await this.ui.confirm(
+            I18nService.t('config.confirm.clean_invalid', { count: invalidFiles.length }),
+        );
         if (!confirmed) return;
 
         const group = this._cachedGroups.find(g => g.name === groupName);
@@ -767,7 +813,9 @@ export class ConfigPageManager {
 
     async deleteConfig(fullPath, displayName) {
         try {
-            const confirmed = await this.ui.confirm(I18nService.t('config.confirm.delete_node', { name: displayName }));
+            const confirmed = await this.ui.confirm(
+                I18nService.t('config.confirm.delete_node', { name: displayName }),
+            );
             if (!confirmed) return;
 
             const result = await ConfigService.deleteConfig(fullPath);
@@ -778,7 +826,10 @@ export class ConfigPageManager {
                 this._cachedConfigInfos.clear();
                 await this.update(true);
             } else {
-                toast(I18nService.t('config.toast.delete_failed') + (result?.error || I18nService.t('common.unknown')));
+                toast(
+                    I18nService.t('config.toast.delete_failed') +
+                        (result?.error || I18nService.t('common.unknown')),
+                );
             }
         } catch (error) {
             toast(I18nService.t('config.toast.delete_failed') + error.message);
@@ -824,7 +875,9 @@ export class ConfigPageManager {
 
     async deleteSubscription(dirName, displayName) {
         try {
-            const confirmed = await this.ui.confirm(I18nService.t('config.confirm.delete_sub', { name: displayName }));
+            const confirmed = await this.ui.confirm(
+                I18nService.t('config.confirm.delete_sub', { name: displayName }),
+            );
             if (!confirmed) return;
 
             // subscription.sh 期望传入的是订阅名称（不带 sub_ 前缀）
@@ -900,7 +953,9 @@ export class ConfigPageManager {
     async showDialog(filename: string | null = null): Promise<void> {
         const dialog = document.getElementById('config-dialog') as any;
         const filenameInput = document.getElementById('config-filename') as HTMLInputElement | null;
-        const contentInput = document.getElementById('config-content') as HTMLTextAreaElement | null;
+        const contentInput = document.getElementById(
+            'config-content',
+        ) as HTMLTextAreaElement | null;
 
         if (!filenameInput || !contentInput) return;
 
@@ -912,19 +967,23 @@ export class ConfigPageManager {
         } else {
             filenameInput.value = '';
             filenameInput.disabled = false;
-            contentInput.value = JSON.stringify({
-                "outbounds": [
-                    {
-                        "protocol": "vless",
-                        "tag": "proxy",
-                        "settings": {
-                            "vnext": [{ "address": "", "port": 443, "users": [{ "id": "" }] }]
-                        }
-                    },
-                    { "protocol": "freedom", "tag": "direct" },
-                    { "protocol": "blackhole", "tag": "block" }
-                ]
-            }, null, 2);
+            contentInput.value = JSON.stringify(
+                {
+                    outbounds: [
+                        {
+                            protocol: 'vless',
+                            tag: 'proxy',
+                            settings: {
+                                vnext: [{ address: '', port: 443, users: [{ id: '' }] }],
+                            },
+                        },
+                        { protocol: 'freedom', tag: 'direct' },
+                        { protocol: 'blackhole', tag: 'block' },
+                    ],
+                },
+                null,
+                2,
+            );
         }
 
         if (dialog) dialog.open = true;
@@ -932,7 +991,9 @@ export class ConfigPageManager {
 
     async saveConfig(): Promise<void> {
         const filenameInput = document.getElementById('config-filename') as HTMLInputElement | null;
-        const contentInput = document.getElementById('config-content') as HTMLTextAreaElement | null;
+        const contentInput = document.getElementById(
+            'config-content',
+        ) as HTMLTextAreaElement | null;
 
         if (!filenameInput || !contentInput) return;
 
@@ -972,7 +1033,17 @@ export class ConfigPageManager {
             return;
         }
 
-        const supportedProtocols = ['vless://', 'vmess://', 'trojan://', 'ss://', 'socks://', 'http://', 'https://', 'hysteria2://', 'hy2://'];
+        const supportedProtocols = [
+            'vless://',
+            'vmess://',
+            'trojan://',
+            'ss://',
+            'socks://',
+            'http://',
+            'https://',
+            'hysteria2://',
+            'hy2://',
+        ];
         const isValid = supportedProtocols.some(protocol => nodeLink.startsWith(protocol));
 
         if (!isValid) {
@@ -993,7 +1064,10 @@ export class ConfigPageManager {
                 this._cachedConfigInfos.clear();
                 await this.update(true);
             } else {
-                toast(I18nService.t('config.toast.import_failed') + (result.error || I18nService.t('common.unknown')));
+                toast(
+                    I18nService.t('config.toast.import_failed') +
+                        (result.error || I18nService.t('common.unknown')),
+                );
             }
         } catch (error: any) {
             toast(I18nService.t('config.toast.import_failed') + error.message);
