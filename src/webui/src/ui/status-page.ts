@@ -449,7 +449,15 @@ export class StatusPageManager {
                 if (iconEl) {
                     if (ipInfo) {
                         const flag = countryCodeToEmoji(ipInfo.countryCode);
-                        iconEl.outerHTML = `<span class="flag-icon twemoji">${flag}</span>`;
+                        if (
+                            iconEl instanceof HTMLElement &&
+                            iconEl.tagName.toLowerCase() === 'span'
+                        ) {
+                            iconEl.className = 'flag-icon twemoji';
+                            iconEl.textContent = flag;
+                        } else {
+                            iconEl.outerHTML = `<span id="network-detection-icon" class="flag-icon twemoji">${flag}</span>`;
+                        }
                     } else {
                         iconEl.outerHTML = `<mdui-icon name="network_check" class="card-icon" id="network-detection-icon"></mdui-icon>`;
                     }
