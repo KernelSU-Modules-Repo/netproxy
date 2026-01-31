@@ -611,15 +611,26 @@ setup_proxy_chain() {
             for subnet6 in $PROXY_IPv6_LIST; do
                 $cmd -t "$table" -A "PROXY_IP$suffix" -d "$subnet6" -j RETURN
             done
+            log Info "已添加 IPv6 代理 IP 段规则"
         fi
-        log Info "已添加 IPv6 代理 IP 段规则"
     else
         if [ -n "$PROXY_IPv4_LIST" ]; then
             for subnet4 in $PROXY_IPv4_LIST; do
                 $cmd -t "$table" -A "PROXY_IP$suffix" -d "$subnet4" -j RETURN
             done
+            log Info "已添加 IPv4 代理 IP 段规则"
         fi
-        log Info "已添加 IPv4 代理 IP 段规则"
+    fi
+
+    if check_kernel_feature "NETFILTER_XT_MATCH_ADDRTYPE"; then
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL -p udp ! --dport 53 -j ACCEPT
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL ! -p udp -j ACCEPT
+        log Info "已添加本地地址类型绕过"
+    fi
+
+    if check_kernel_feature "NETFILTER_XT_MATCH_CONNTRACK"; then
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m conntrack --ctdir REPLY -j ACCEPT
+        log Info "已添加回复连接方向绕过"
     fi
 
     # 添加私有 IP 段绕过
@@ -651,16 +662,7 @@ setup_proxy_chain() {
         fi
     fi
 
-    if check_kernel_feature "NETFILTER_XT_MATCH_ADDRTYPE"; then
-        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL -p udp ! --dport 53 -j ACCEPT
-        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL ! -p udp -j ACCEPT
-        log Info "已添加本地地址类型绕过"
-    fi
 
-    if check_kernel_feature "NETFILTER_XT_MATCH_CONNTRACK"; then
-        $cmd -t "$table" -A "BYPASS_IP$suffix" -m conntrack --ctdir REPLY -j ACCEPT
-        log Info "已添加回复连接方向绕过"
-    fi
 
     log Info "正在配置接口代理规则"
     $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i lo -j RETURN
