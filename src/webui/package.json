@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@types/sortablejs": "^1.15.9",
-    "kernelsu": "^3.0.0",
+    "kernelsu": "^3.0.2",
     "mdui": "^2.1.4",
     "sortablejs": "^1.15.6",
     "uplot": "^1.6.32"
