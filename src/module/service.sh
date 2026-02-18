@@ -69,11 +69,7 @@ check_device_specific() {
     # 如果启用 OnePlus A16 修复，直接执行
     if [ "$ONEPLUS_A16_FIX" = "1" ]; then
         log "INFO" "OnePlus A16 修复已启用，执行修复脚本"
-        if [ -f "$MODDIR/scripts/utils/oneplus_a16_fix.sh" ]; then
-            sh "$MODDIR/scripts/utils/oneplus_a16_fix.sh"
-        else
-            log "WARN" "修复脚本不存在: oneplus_a16_fix.sh"
-        fi
+        sh "$MODDIR/scripts/utils/oneplus_a16_fix.sh"
     fi
 }
 
