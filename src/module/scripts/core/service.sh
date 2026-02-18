@@ -130,7 +130,7 @@ do_start() {
     fi
     
     # 启用 TProxy 规则
-    "$MODDIR/scripts/network/tproxy.sh" start -d "$MODDIR/config" >> "$LOG_FILE" 2>&1
+    "$MODDIR/scripts/network/tproxy.sh" start --verbose -d "$MODDIR/config" >> "$LOG_FILE" 2>&1
     
     log "INFO" "========== Xray 服务启动完成 =========="
 }
