@@ -8,14 +8,8 @@ readonly STATUS_FILE="$MODDIR/config/status.conf"
 readonly XRAY_BIN="$MODDIR/bin/xray"
 readonly API_SERVER="127.0.0.1:8080"
 
-#######################################
-# 记录日志
-#######################################
-log() {
-    local level="${1:-INFO}"
-    local message="$2"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message" >> "$LOG_FILE"
-}
+# 导入工具库
+. "$MODDIR/scripts/utils/log.sh"
 
 #######################################
 # 热切换配置

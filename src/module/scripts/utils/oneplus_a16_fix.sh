@@ -12,18 +12,8 @@ set -u
 readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 
-#######################################
-# 记录日志
-# Arguments:
-#   $1 - 日志级别 (INFO / WARN / ERROR)
-#   $2 - 日志消息
-#######################################
-log() {
-    local level="${1:-INFO}"
-    local message="$2"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message" >> "$LOG_FILE"
-    echo "[$level] $message" >&2
-}
+# 导入工具库
+. "$MODDIR/scripts/utils/log.sh"
 
 #######################################
 # 清理指定链中的 REJECT 规则

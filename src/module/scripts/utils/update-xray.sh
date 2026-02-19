@@ -8,11 +8,8 @@ readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly REPO="XTLS/Xray-core"
 readonly ARCH="android-arm64-v8a"
 readonly MIRROR="https://ghfast.top/?q="
-
-# 日志函数
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE" >&2
-}
+# 导入工具库
+. "$MODDIR/scripts/utils/log.sh"
 
 # 清理临时文件
 cleanup() {

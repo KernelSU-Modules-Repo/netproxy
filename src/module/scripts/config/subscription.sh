@@ -11,15 +11,8 @@ readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
 readonly LOG_FILE="$MODDIR/logs/subscription.log"
 
-
-#######################################
-# 记录日志
-#######################################
-log() {
-    local level="${1:-INFO}"
-    local message="$2"
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [$level] $message" >> "$LOG_FILE"
-}
+# 导入工具库
+. "$MODDIR/scripts/utils/log.sh"
 
 #######################################
 # 显示帮助

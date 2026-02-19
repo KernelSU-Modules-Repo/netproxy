@@ -24,12 +24,8 @@ readonly DEFAULT_OUTBOUND="$MODDIR/config/xray/outbounds/default.json"
 readonly ROUTING_JSON="$MODDIR/config/xray/confdir/03_routing.json"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 
-#######################################
-# 日志记录
-#######################################
-log() {
-    echo "[$(date '+%Y-%m-%d %H:%M:%S')] [MODE] $1" >> "$LOG_FILE"
-}
+# 导入工具库
+. "$MODDIR/scripts/utils/log.sh"
 
 #######################################
 # 获取当前节点配置路径
@@ -53,16 +49,16 @@ get_current_mode() {
 replace_routing_rules() {
     local rules_file="$1"
     if [ -f "$rules_file" ]; then
-        log "替换路由规则: $rules_file"
+        log "INFO" "替换路由规则: $rules_file"
         if "$XRAY_BIN" api adrules --server="$API_SERVER" "$rules_file" 2>/dev/null; then
-            log "路由规则替换成功"
+            log "INFO" "路由规则替换成功"
             return 0
         else
-            log "路由规则替换失败"
+            log "INFO" "路由规则替换失败"
             return 1
         fi
     else
-        log "规则文件不存在: $rules_file"
+        log "INFO" "规则文件不存在: $rules_file"
         return 1
     fi
 }
@@ -71,15 +67,15 @@ replace_routing_rules() {
 # 切换出站为 freedom (直连)
 #######################################
 switch_to_freedom() {
-    log "切换出站为 freedom..."
+    log "INFO" "切换出站为 freedom..."
     # 删除现有 proxy 出站
     "$XRAY_BIN" api rmo --server="$API_SERVER" "proxy" 2>/dev/null || true
     # 添加 freedom 出站 (default.json)
     if "$XRAY_BIN" api ado --server="$API_SERVER" "$DEFAULT_OUTBOUND" 2>/dev/null; then
-        log "已切换到 freedom 出站"
+        log "INFO" "已切换到 freedom 出站"
         return 0
     else
-        log "切换 freedom 出站失败"
+        log "INFO" "切换 freedom 出站失败"
         return 1
     fi
 }
@@ -92,19 +88,19 @@ restore_proxy_outbound() {
     current_config=$(get_current_config)
     
     if [ -z "$current_config" ] || [ ! -f "$current_config" ]; then
-        log "无法获取当前节点配置，使用默认配置"
+        log "INFO" "无法获取当前节点配置，使用默认配置"
         current_config="$DEFAULT_OUTBOUND"
     fi
     
-    log "恢复节点配置: $current_config"
+    log "INFO" "恢复节点配置: $current_config"
     # 删除 freedom/proxy 出站
     "$XRAY_BIN" api rmo --server="$API_SERVER" "proxy" 2>/dev/null || true
     # 添加节点出站
     if "$XRAY_BIN" api ado --server="$API_SERVER" "$current_config" 2>/dev/null; then
-        log "节点出站已恢复"
+        log "INFO" "节点出站已恢复"
         return 0
     else
-        log "节点出站恢复失败"
+        log "INFO" "节点出站恢复失败"
         return 1
     fi
 }
@@ -119,7 +115,7 @@ update_mode_config() {
     else
         echo "OUTBOUND_MODE=$mode" >> "$MODULE_CONF"
     fi
-    log "已更新 module.conf: OUTBOUND_MODE=$mode"
+    log "INFO" "已更新 module.conf: OUTBOUND_MODE=$mode"
 }
 
 #######################################
@@ -138,20 +134,20 @@ main() {
     local current_mode
     current_mode=$(get_current_mode)
     
-    log "========== 切换出站模式 =========="
-    log "当前模式: $current_mode -> 目标模式: $target_mode"
+    log "INFO" "========== 切换出站模式 =========="
+    log "INFO" "当前模式: $current_mode -> 目标模式: $target_mode"
     
     # ===== 第一步: 处理出站配置 =====
     
     # 从直连模式切换出去: 需要恢复节点出站
     if [ "$current_mode" = "direct" ] && [ "$target_mode" != "direct" ]; then
-        log "从直连模式切换，恢复节点出站..."
+        log "INFO" "从直连模式切换，恢复节点出站..."
         restore_proxy_outbound
     fi
     
     # 切换到直连模式: 需要替换为 freedom 出站
     if [ "$target_mode" = "direct" ] && [ "$current_mode" != "direct" ]; then
-        log "切换到直连模式，替换为 freedom 出站..."  
+        log "INFO" "切换到直连模式，替换为 freedom 出站..."  
         switch_to_freedom
     fi
     
@@ -161,22 +157,22 @@ main() {
     case "$target_mode" in
         rule)
             # 规则模式: 使用 03_routing.json
-            log "规则模式: 应用 03_routing.json"
+            log "INFO" "规则模式: 应用 03_routing.json"
             replace_routing_rules "$ROUTING_JSON"
             ;;
         global|direct)
             # 全局/直连模式: 使用前端生成的路由规则
             if [ -n "$routing_json" ] && [ -f "$routing_json" ]; then
-                log "${target_mode}模式: 应用自定义路由规则"
+                log "INFO" "${target_mode}模式: 应用自定义路由规则"
                 replace_routing_rules "$routing_json"
             else
-                log "错误: 未提供路由规则文件"
+                log "INFO" "错误: 未提供路由规则文件"
                 echo "error: no routing rules file"
                 exit 1
             fi
             ;;
         *)
-            log "未知模式: $target_mode"
+            log "INFO" "未知模式: $target_mode"
             echo "error: unknown mode"
             exit 1
             ;;
@@ -185,7 +181,7 @@ main() {
     # ===== 第三步: 更新配置 =====
     update_mode_config "$target_mode"
     
-    log "========== 模式切换完成 =========="
+    log "INFO" "========== 模式切换完成 =========="
     echo "success"
 }
 

@@ -30,18 +30,8 @@ detect_busybox() {
 
 readonly BUSYBOX="$(detect_busybox)"
 
-#######################################
-# 日志记录
-#######################################
-log() {
-    local level="${1:-INFO}"
-    local message="$2"
-    local timestamp
-    timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
-    echo "[$timestamp] [$level] $message" >> "$LOG_FILE"
-    # 同时输出到 stderr
-    echo "[$timestamp] [$level] $message" >&2
-}
+# 导入工具库
+. "$MODDIR/scripts/utils/log.sh"
 
 #######################################
 # 错误退出
