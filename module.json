@@ -1,6 +1,6 @@
 {
-  "metamodule": false,
-  "summary": "基于 Xray 内核的透明代理模块",
+  "metamodule": false，
+  "summary": "基于 Xray 内核的透明代理模块\nA transparent proxy module based on Xray core.",
   "sourceUrl": "https://github.com/Fanju6/NetProxy-Magisk",
   "additionalAuthors": [
     {
