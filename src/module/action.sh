@@ -16,11 +16,27 @@ is_xray_running() {
     pidof -s "$XRAY_BIN" >/dev/null 2>&1
 }
 
+# 捕获所有输出到  Manager
+exec 2>&1
+
+echo "==================================="
+echo "       NetProxy Action Script      "
+echo "==================================="
+
 # 主流程
 if is_xray_running; then
-    log "检测到 Xray 正在运行，执行停止操作"
+    log "INFO" "检测到 Xray 正在运行，准备执行停止操作..."
     sh "$SERVICE_SCRIPT" stop
+    echo "==================================="
+    echo " 操作结果: NetProxy 服务已停止"
+    echo "==================================="
 else
-    log "检测到 Xray 未运行，执行启动操作"
+    log "INFO" "检测到 Xray 未运行，准备执行启动操作..."
     sh "$SERVICE_SCRIPT" start
+    echo "==================================="
+    echo " 操作结果: NetProxy 服务已启动"
+    echo "==================================="
 fi
+
+# 短暂休眠以确保日志显示完整再退出
+sleep 1
