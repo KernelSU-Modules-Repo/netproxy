@@ -77,18 +77,6 @@ export class UI {
             }
         }, 9000);
 
-        setTimeout(() => {
-            const latencyBtn = document.getElementById('refresh-latency-btn') as any;
-            if (latencyBtn) {
-                latencyBtn.addEventListener('click', () => {
-                    latencyBtn.disabled = true;
-                    latencyBtn.loading = true;
-                    setTimeout(() => {
-                        this.statusPage.refreshLatency();
-                    }, 50);
-                });
-            }
-        }, 100);
     }
 
     initializeMDUI(): void {
@@ -217,8 +205,8 @@ export class UI {
                     this.currentTheme === 'auto'
                         ? I18nService.t('settings.theme.mode_auto')
                         : this.currentTheme === 'light'
-                          ? I18nService.t('settings.theme.mode_light')
-                          : I18nService.t('settings.theme.mode_dark');
+                            ? I18nService.t('settings.theme.mode_light')
+                            : I18nService.t('settings.theme.mode_dark');
                 toast(I18nService.t('settings.theme.toast_mode_switched') + modeName);
             });
         }
@@ -327,7 +315,7 @@ export class UI {
                         } else {
                             toast(
                                 I18nService.t('common.update_failed') +
-                                    (result.error || result.message),
+                                (result.error || result.message),
                             );
                         }
                     } catch (error: any) {

@@ -609,8 +609,6 @@ export class StatusPageManager {
             }
         });
 
-        // 刷新延迟
-        this.refreshLatency();
     }
 
     startUptimeTimer(uptimeString: string): void {
@@ -744,46 +742,6 @@ export class StatusPageManager {
         });
     }
 
-    async refreshLatency(): Promise<void> {
-        try {
-            const latencyBtn = document.getElementById('refresh-latency-btn') as any;
-            if (latencyBtn) {
-                latencyBtn.loading = true;
-                latencyBtn.disabled = true;
-            }
-
-            const latencyEl = document.getElementById('latency-value');
-            if (latencyEl) latencyEl.textContent = '...';
-
-            await new Promise(resolve => setTimeout(resolve, 500)); // 模拟一点延迟感
-
-            // 这里应该调用 StatusService 获取真实延迟 (Google CP)
-            // 暂时用 Google
-            const latency = await StatusService.getPingLatency('google.com');
-
-            if (latencyEl) {
-                if (latency === 'timeout' || latency === 'failed') {
-                    latencyEl.textContent = 'N/A';
-                    latencyEl.style.color = 'var(--mdui-color-error)';
-                } else {
-                    latencyEl.textContent = latency;
-                    const ms = parseInt(latency);
-                    if (ms < 100) latencyEl.style.color = 'var(--mdui-color-success)';
-                    else if (ms < 200) latencyEl.style.color = 'var(--mdui-color-warning)';
-                    else latencyEl.style.color = 'var(--mdui-color-error)';
-                }
-            }
-        } catch (e) {
-            const latencyEl = document.getElementById('latency-value');
-            if (latencyEl) latencyEl.textContent = 'Error';
-        } finally {
-            const latencyBtn = document.getElementById('refresh-latency-btn') as any;
-            if (latencyBtn) {
-                latencyBtn.loading = false;
-                latencyBtn.disabled = false;
-            }
-        }
-    }
 
     /**
      * 更新网速图表颜色
