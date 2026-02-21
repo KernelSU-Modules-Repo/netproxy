@@ -50,6 +50,11 @@ readonly DEFAULT_PROXY_HOTSPOT=0
 readonly DEFAULT_PROXY_USB=0
 readonly DEFAULT_PROXY_TCP=1
 readonly DEFAULT_PROXY_UDP=1
+
+# IPv6 proxy control:
+#  0 = disable proxy (but IPv6 stack remains active)
+#  1 = enable proxy (normal IPv6 proxy)
+# -1 = force disable IPv6 stack entirely (disable_ipv6=1 on all interfaces)
 readonly DEFAULT_PROXY_IPV6=0
 
 # The use of 100.0.0.0/8 instead of 100.64.0.0/10 is purely due to a mistake by China Telecom's service provider, and you can change it back
@@ -669,7 +674,6 @@ download_file() {
             $wget_cmd -q -T 10 -t 3 -O "$output" "$url" || return 1
         fi
     fi
-    return 0
 }
 
 download_cn_ip_list() {
@@ -1506,6 +1510,9 @@ start_proxy() {
     log Info "Proxy setup completed"
     block_loopback_traffic enable
     [ "$BLOCK_QUIC" -eq 1 ] && block_quic enable
+    if [ "$PROXY_IPV6" -eq -1 ]; then
+        manage_ipv6 disable || log Warn "Failed to disable IPv6 stack"
+    fi
     save_runtime_config
 }
 
@@ -1535,6 +1542,9 @@ stop_proxy() {
     log Info "Proxy stopped"
     block_loopback_traffic disable
     block_quic disable
+    if [ "$PROXY_IPV6" -eq -1 ]; then
+        manage_ipv6 restore || log Warn "Failed to restore IPv6 settings"
+    fi
     [ "$DRY_RUN" -eq 1 ] || rm -f "$CONFIG_DIR/runtime_tproxy.conf" 2> /dev/null
 }
 
@@ -1593,6 +1603,102 @@ block_quic() {
             log Info "QUIC traffic blocking disabled"
             ;;
     esac
+}
+
+manage_ipv6() {
+    local action="$1"
+    local ipv6_backup_file="$CONFIG_DIR/ipv6_backup.conf"
+
+    case "$action" in
+        backup | disable | restore) ;;
+        *)
+            log Error "Invalid action for manage_ipv6: $action (must be backup, disable, or restore)"
+            return 1
+            ;;
+    esac
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log Debug "Would $action IPv6 settings"
+        return 0
+    fi
+
+    if [ "$action" = "backup" ] || [ "$action" = "disable" ]; then
+        log Info "Backing up current IPv6 settings to $ipv6_backup_file"
+
+        {
+            echo "# IPv6 settings backup (generated at $(date))"
+            echo "accept_ra=$(cat /proc/sys/net/ipv6/conf/all/accept_ra 2> /dev/null || echo unknown)"
+            echo "autoconf=$(cat /proc/sys/net/ipv6/conf/all/autoconf 2> /dev/null || echo unknown)"
+            echo "forwarding=$(cat /proc/sys/net/ipv6/conf/all/forwarding 2> /dev/null || echo unknown)"
+
+            for iface in /proc/sys/net/ipv6/conf/*; do
+                if [ -f "$iface/disable_ipv6" ]; then
+                    iface_name=$(basename "$iface")
+                    current=$(cat "$iface/disable_ipv6" 2> /dev/null || echo unknown)
+                    echo "$iface_name=$current"
+                fi
+            done
+        } > "$ipv6_backup_file" || {
+            log Warn "Failed to backup IPv6 settings"
+            return 1
+        }
+
+        log Debug "IPv6 backup completed"
+    fi
+
+    if [ "$action" = "disable" ]; then
+        log Info "Force disabling IPv6 stack (disable_ipv6=1)"
+
+        echo 0 > /proc/sys/net/ipv6/conf/all/accept_ra 2> /dev/null || true
+        echo 0 > /proc/sys/net/ipv6/conf/all/autoconf 2> /dev/null || true
+        echo 0 > /proc/sys/net/ipv6/conf/all/forwarding 2> /dev/null || true
+
+        for iface in /proc/sys/net/ipv6/conf/*; do
+            if [ -f "$iface/disable_ipv6" ]; then
+                echo 1 > "$iface/disable_ipv6" 2> /dev/null || true
+            fi
+        done
+
+        log Info "IPv6 stack fully disabled"
+    fi
+
+    if [ "$action" = "restore" ]; then
+        if [ ! -f "$ipv6_backup_file" ]; then
+            log Warn "No IPv6 backup file found: $ipv6_backup_file, skip restore"
+            return 0
+        fi
+
+        log Info "Restoring IPv6 settings from $ipv6_backup_file"
+
+        while IFS='=' read -r key value; do
+            # Skip comments and empty lines
+            case "$key" in
+                \#* | "") continue ;;
+            esac
+
+            case "$key" in
+                accept_ra)
+                    echo "$value" > /proc/sys/net/ipv6/conf/all/accept_ra 2> /dev/null || true
+                    ;;
+                autoconf)
+                    echo "$value" > /proc/sys/net/ipv6/conf/all/autoconf 2> /dev/null || true
+                    ;;
+                forwarding)
+                    echo "$value" > /proc/sys/net/ipv6/conf/all/forwarding 2> /dev/null || true
+                    ;;
+                *)
+                    if [ -f "/proc/sys/net/ipv6/conf/$key/disable_ipv6" ]; then
+                        echo "$value" > "/proc/sys/net/ipv6/conf/$key/disable_ipv6" 2> /dev/null || true
+                    fi
+                    ;;
+            esac
+        done < "$ipv6_backup_file"
+
+        rm -f "$ipv6_backup_file" 2> /dev/null
+        log Info "IPv6 settings restored"
+    fi
+
+    return 0
 }
 
 is_func() {

@@ -1190,7 +1190,7 @@ export class SettingsPageManager {
         proxy_usb: getVal("proxy-usb", "bool"),
         proxy_tcp: getVal("proxy-tcp", "bool"),
         proxy_udp: getVal("proxy-udp", "bool"),
-        proxy_ipv6: getVal("proxy-ipv6", "bool"),
+        proxy_ipv6: getVal("proxy-ipv6", "number"),
         force_mark_bypass: getVal("proxy-force-mark-bypass", "bool"),
         block_quic: getVal("proxy-block-quic", "bool"),
         compatibility_mode: getVal("proxy-performance-mode", "bool"),

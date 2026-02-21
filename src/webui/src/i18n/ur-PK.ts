@@ -329,7 +329,9 @@ const urPK: Record<string, string> = {
   "settings.proxy.udp": "UDP",
   "settings.proxy.udp_desc": "UDP ٹریفک پراکسی کریں",
   "settings.proxy.ipv6": "IPv6",
-  "settings.proxy.ipv6_desc": "IPv6 پراکسی کو فعال کریں",
+  "settings.proxy.ipv6.disable": "غیر فعال کریں",
+  "settings.proxy.ipv6.enable": "فعال کریں",
+  "settings.proxy.ipv6.force_disable": "IPv6 پروٹوکول اسٹیک کو غیر فعال کریں",
 
   // Dialog Titles & Inputs
   "config.dialog_title": "کنفیگ میں ترمیم کریں",

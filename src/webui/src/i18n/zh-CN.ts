@@ -395,7 +395,9 @@ const zhCN: Record<string, string> = {
   "settings.proxy.udp": "UDP",
   "settings.proxy.udp_desc": "代理 UDP 流量",
   "settings.proxy.ipv6": "IPv6",
-  "settings.proxy.ipv6_desc": "启用 IPv6 代理",
+  "settings.proxy.ipv6.disable": "禁用",
+  "settings.proxy.ipv6.enable": "启用",
+  "settings.proxy.ipv6.force_disable": "禁用 IPv6 协议栈",
 
   // Dialog Titles & Inputs
   "config.dialog_title": "编辑配置",

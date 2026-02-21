@@ -981,7 +981,7 @@
                 id="proxy-save-btn"
                 icon="save"
                 data-i18n="common.save"
-                >保存设置 (Save)</mdui-button
+                >保存设置</mdui-button
               >
             </div>
 
@@ -1022,14 +1022,14 @@
 
                   <div style="display: flex; gap: 16px; margin-top: 8px">
                     <mdui-text-field
-                      label="TCP Port"
+                      label="TCP 端口"
                       id="proxy-tcp-port"
                       type="number"
                       style="flex: 1"
                       data-i18n-label="settings.proxy.proxy_tcp_port"
                     ></mdui-text-field>
                     <mdui-text-field
-                      label="UDP Port"
+                      label="UDP 端口"
                       id="proxy-udp-port"
                       type="number"
                       style="flex: 1"
@@ -1039,14 +1039,14 @@
 
                   <div style="display: flex; gap: 16px; margin-top: 8px">
                     <mdui-text-field
-                      label="Table ID"
+                      label="路由表 ID"
                       id="proxy-table-id"
                       type="number"
                       style="flex: 1"
                       data-i18n-label="settings.proxy.table_id"
                     ></mdui-text-field>
                     <mdui-text-field
-                      label="Routing Mark"
+                      label="路由 Mark"
                       id="proxy-routing-mark"
                       style="flex: 1"
                       data-i18n-label="settings.proxy.routing_mark"
@@ -1055,14 +1055,14 @@
 
                   <div style="display: flex; gap: 16px; margin-top: 8px">
                     <mdui-text-field
-                      label="Mark Value"
+                      label="Mark 值"
                       id="proxy-mark-value"
                       type="number"
                       style="flex: 1"
                       data-i18n-label="settings.proxy.mark_value"
                     ></mdui-text-field>
                     <mdui-text-field
-                      label="Mark6 Value"
+                      label="Mark6 值"
                       id="proxy-mark-value6"
                       type="number"
                       style="flex: 1"
@@ -1116,7 +1116,28 @@
                   </mdui-list-item>
                   <mdui-list-item>
                     <span data-i18n="settings.proxy.ipv6">IPv6</span>
-                    <mdui-switch slot="end-icon" id="proxy-ipv6"></mdui-switch>
+                    <mdui-select
+                      slot="end-icon"
+                      id="proxy-ipv6"
+                      value="0"
+                      style="width: 140px"
+                    >
+                      <mdui-menu-item
+                        value="0"
+                        data-i18n="settings.proxy.ipv6.disable"
+                        >禁用</mdui-menu-item
+                      >
+                      <mdui-menu-item
+                        value="1"
+                        data-i18n="settings.proxy.ipv6.enable"
+                        >启用</mdui-menu-item
+                      >
+                      <mdui-menu-item
+                        value="-1"
+                        data-i18n="settings.proxy.ipv6.force_disable"
+                        >禁用 IPv6 协议栈</mdui-menu-item
+                      >
+                    </mdui-select>
                   </mdui-list-item>
                   <mdui-divider></mdui-divider>
                   <mdui-list-item>
@@ -1172,35 +1193,35 @@
                   "
                 >
                   <mdui-text-field
-                    label="Mobile Int"
+                    label="移动数据接口"
                     id="proxy-mobile-int"
                     data-i18n-label="settings.proxy.mobile_int"
                   ></mdui-text-field>
                   <mdui-text-field
-                    label="WiFi Int"
+                    label="WiFi 接口"
                     id="proxy-wifi-int"
                     data-i18n-label="settings.proxy.wifi_int"
                   ></mdui-text-field>
                   <mdui-text-field
-                    label="Hotspot Int"
+                    label="热点接口"
                     id="proxy-hotspot-int"
                     data-i18n-label="settings.proxy.hotspot_int"
                   ></mdui-text-field>
                   <mdui-text-field
-                    label="USB Int"
+                    label="USB 接口"
                     id="proxy-usb-int"
                     data-i18n-label="settings.proxy.usb_int"
                   ></mdui-text-field>
                 </div>
                 <div style="margin-top: 16px">
                   <mdui-text-field
-                    label="Other Proxy Int"
+                    label="其他代理接口"
                     id="proxy-other-proxy-int"
                     style="width: 100%; margin-bottom: 12px"
                     data-i18n-label="settings.proxy.other_proxy_int"
                   ></mdui-text-field>
                   <mdui-text-field
-                    label="Other Bypass Int"
+                    label="其他绕过接口"
                     id="proxy-other-bypass-int"
                     style="width: 100%"
                     data-i18n-label="settings.proxy.other_bypass_int"
@@ -1228,7 +1249,7 @@
                   </mdui-list-item>
                 </mdui-list>
                 <mdui-text-field
-                  label="DNS Port"
+                  label="DNS 端口"
                   id="proxy-dns-port"
                   type="number"
                   style="width: 100%; margin-top: 8px"
@@ -1267,25 +1288,25 @@
                   "
                 >
                   <mdui-text-field
-                    label="CN IPv4 File"
+                    label="中国 IPv4 文件"
                     id="proxy-cn-ip-file"
                     data-i18n-label="settings.proxy.cn_ip_file"
                   ></mdui-text-field>
                   <mdui-text-field
-                    label="CN IPv6 File"
+                    label="中国 IPv6 文件"
                     id="proxy-cn-ipv6-file"
                     data-i18n-label="settings.proxy.cn_ipv6_file"
                   ></mdui-text-field>
                 </div>
                 <div style="margin-top: 12px">
                   <mdui-text-field
-                    label="CN IPv4 URL"
+                    label="中国 IPv4 URL"
                     id="proxy-cn-ip-url"
                     style="width: 100%; margin-bottom: 12px"
                     data-i18n-label="settings.proxy.cn_ip_url"
                   ></mdui-text-field>
                   <mdui-text-field
-                    label="CN IPv6 URL"
+                    label="中国 IPv6 URL"
                     id="proxy-cn-ipv6-url"
                     style="width: 100%"
                     data-i18n-label="settings.proxy.cn_ipv6_url"
@@ -1304,28 +1325,28 @@
                   IP 列表配置
                 </h4>
                 <mdui-text-field
-                  label="IPv4 Bypass List"
+                  label="IPv4 绕过列表"
                   id="proxy-bypass-v4"
                   rows="3"
                   style="width: 100%"
                   data-i18n-label="settings.proxy.bypass_v4"
                 ></mdui-text-field>
                 <mdui-text-field
-                  label="IPv6 Bypass List"
+                  label="IPv6 绕过列表"
                   id="proxy-bypass-v6"
                   rows="3"
                   style="width: 100%; margin-top: 12px"
                   data-i18n-label="settings.proxy.bypass_v6"
                 ></mdui-text-field>
                 <mdui-text-field
-                  label="IPv4 Proxy List"
+                  label="IPv4 代理列表"
                   id="proxy-proxy-v4"
                   rows="3"
                   style="width: 100%; margin-top: 12px"
                   data-i18n-label="settings.proxy.proxy_v4"
                 ></mdui-text-field>
                 <mdui-text-field
-                  label="IPv6 Proxy List"
+                  label="IPv6 代理列表"
                   id="proxy-proxy-v6"
                   rows="3"
                   style="width: 100%; margin-top: 12px"
@@ -1380,14 +1401,14 @@
                   </mdui-list-item>
                 </mdui-list>
                 <mdui-text-field
-                  label="Proxy MACs"
+                  label="代理 MAC 列表"
                   id="proxy-proxy-macs"
                   rows="2"
                   style="width: 100%; margin-top: 12px"
                   data-i18n-label="settings.proxy.proxy_macs"
                 ></mdui-text-field>
                 <mdui-text-field
-                  label="Bypass MACs"
+                  label="绕过 MAC 列表"
                   id="proxy-bypass-macs"
                   rows="2"
                   style="width: 100%; margin-top: 12px"

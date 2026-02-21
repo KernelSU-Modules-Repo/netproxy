@@ -32,7 +32,7 @@ export interface ProxySettings {
   proxy_usb: boolean;
   proxy_tcp: boolean;
   proxy_udp: boolean;
-  proxy_ipv6: boolean;
+  proxy_ipv6: number;
   force_mark_bypass: boolean;
   block_quic: boolean;
   compatibility_mode: boolean;
@@ -222,7 +222,7 @@ export class SettingsService {
       settings.proxy_usb = parseLine("PROXY_USB", "bool");
       settings.proxy_tcp = parseLine("PROXY_TCP", "bool");
       settings.proxy_udp = parseLine("PROXY_UDP", "bool");
-      settings.proxy_ipv6 = parseLine("PROXY_IPV6", "bool");
+      settings.proxy_ipv6 = parseLine("PROXY_IPV6", "number");
       settings.force_mark_bypass = parseLine("FORCE_MARK_BYPASS", "bool");
       settings.block_quic = parseLine("BLOCK_QUIC", "bool");
       // 兼容模式 = 禁用性能模式

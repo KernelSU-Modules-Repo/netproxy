@@ -399,7 +399,9 @@ const enUS: Record<string, string> = {
   "settings.proxy.udp": "UDP",
   "settings.proxy.udp_desc": "Proxy UDP traffic",
   "settings.proxy.ipv6": "IPv6",
-  "settings.proxy.ipv6_desc": "Enable IPv6 proxy",
+  "settings.proxy.ipv6.disable": "Disable",
+  "settings.proxy.ipv6.enable": "Enable",
+  "settings.proxy.ipv6.force_disable": "Force Disable IPv6 Stack",
 
   // Dialog Titles & Inputs
   "config.dialog_title": "Edit Config",
