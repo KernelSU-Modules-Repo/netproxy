@@ -63,6 +63,11 @@ readonly DEFAULT_BYPASS_IPv6_LIST="::/128 ::1/128 ::ffff:0:0/96 100::/64 64:ff9b
 readonly DEFAULT_PROXY_IPv4_LIST=""
 readonly DEFAULT_PROXY_IPv6_LIST=""
 
+# Hotspot subnet when WiFi and hotspot share the same interface (common on older devices)
+# Only used when HOTSPOT_INTERFACE == WIFI_INTERFACE
+readonly DEFAULT_HOTSPOT_SUBNET_IPV4="192.168.43.0/24"
+readonly DEFAULT_HOTSPOT_SUBNET_IPV6="fe80::/10"
+
 # Mark values
 readonly DEFAULT_MARK_VALUE=20
 readonly DEFAULT_MARK_VALUE6=25
@@ -198,6 +203,8 @@ load_config() {
     PROXY_IPv6_LIST="${PROXY_IPv6_LIST:-$DEFAULT_PROXY_IPv6_LIST}"
     BYPASS_IPv4_LIST="${BYPASS_IPv4_LIST:-$DEFAULT_BYPASS_IPv4_LIST}"
     BYPASS_IPv6_LIST="${BYPASS_IPv6_LIST:-$DEFAULT_BYPASS_IPv6_LIST}"
+    HOTSPOT_SUBNET_IPV4="${HOTSPOT_SUBNET_IPV4:-$DEFAULT_HOTSPOT_SUBNET_IPV4}"
+    HOTSPOT_SUBNET_IPV6="${HOTSPOT_SUBNET_IPV6:-$DEFAULT_HOTSPOT_SUBNET_IPV6}"
     APP_PROXY_ENABLE="${APP_PROXY_ENABLE:-$DEFAULT_APP_PROXY_ENABLE}"
     PROXY_APPS_LIST="${PROXY_APPS_LIST:-$DEFAULT_PROXY_APPS_LIST}"
     BYPASS_APPS_LIST="${BYPASS_APPS_LIST:-$DEFAULT_BYPASS_APPS_LIST}"
@@ -244,6 +251,8 @@ load_config() {
         log Debug "PROXY_IPv6_LIST: $PROXY_IPv6_LIST"
         log Debug "BYPASS_IPv4_LIST: $BYPASS_IPv4_LIST"
         log Debug "BYPASS_IPv6_LIST: $BYPASS_IPv6_LIST"
+        log Debug "HOTSPOT_SUBNET_IPV4: $HOTSPOT_SUBNET_IPV4"
+        log Debug "HOTSPOT_SUBNET_IPV6: $HOTSPOT_SUBNET_IPV6"
         log Debug "APP_PROXY_ENABLE: $APP_PROXY_ENABLE"
         log Debug "PROXY_APPS_LIST: $PROXY_APPS_LIST"
         log Debug "BYPASS_APPS_LIST: $BYPASS_APPS_LIST"
@@ -1018,32 +1027,51 @@ setup_proxy_chain() {
         $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$MOBILE_INTERFACE" -j ACCEPT
         log Info "Mobile interface $MOBILE_INTERFACE will bypass proxy"
     fi
-    if [ "$PROXY_WIFI" -eq 1 ]; then
-        $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j RETURN
-        log Info "WiFi interface $WIFI_INTERFACE will be proxied"
+
+    local subnet
+    if [ "$family" = "6" ]; then
+        subnet="$HOTSPOT_SUBNET_IPV6"
     else
-        $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j ACCEPT
-        $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$WIFI_INTERFACE" -j ACCEPT
-        log Info "WiFi interface $WIFI_INTERFACE will bypass proxy"
+        subnet="$HOTSPOT_SUBNET_IPV4"
     fi
-    if [ "$PROXY_HOTSPOT" -eq 1 ]; then
-        if [ "$HOTSPOT_INTERFACE" = "$WIFI_INTERFACE" ]; then
-            local subnet=""
-            if [ "$family" = "6" ]; then
-                subnet="fe80::/10"
-            else
-                subnet="192.168.43.0/24"
-            fi
-            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" ! -s "$subnet" -j RETURN
-            log Info "Hotspot interface $WIFI_INTERFACE will be proxied"
-        else
-            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -j RETURN
+
+    if [ "$HOTSPOT_INTERFACE" = "$WIFI_INTERFACE" ]; then
+        if [ "$PROXY_HOTSPOT" -eq 1 ]; then
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -s "$subnet" -j RETURN
             log Info "Hotspot interface $HOTSPOT_INTERFACE will be proxied"
+        else
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -s "$subnet" -j ACCEPT
+            log Info "Hotspot interface $HOTSPOT_INTERFACE will bypass proxy"
+        fi
+
+        if [ "$PROXY_WIFI" -eq 1 ]; then
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" ! -s "$subnet" -j RETURN
+            log Info "WiFi interface $WIFI_INTERFACE will be proxied"
+        else
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" ! -s "$subnet" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$WIFI_INTERFACE" -j ACCEPT
+            log Info "WiFi interface $WIFI_INTERFACE will bypass proxy"
         fi
     else
-        $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$HOTSPOT_INTERFACE" -j ACCEPT
-        log Info "Hotspot interface $HOTSPOT_INTERFACE will bypass proxy"
+        if [ "$PROXY_WIFI" -eq 1 ]; then
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j RETURN
+            log Info "WiFi interface $WIFI_INTERFACE will be proxied"
+        else
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$WIFI_INTERFACE" -j ACCEPT
+            log Info "WiFi interface $WIFI_INTERFACE will bypass proxy"
+        fi
+
+        if [ "$PROXY_HOTSPOT" -eq 1 ]; then
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -j RETURN
+            log Info "Hotspot interface $HOTSPOT_INTERFACE will be proxied"
+        else
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$HOTSPOT_INTERFACE" -j ACCEPT
+            log Info "Hotspot interface $HOTSPOT_INTERFACE will bypass proxy"
+        fi
     fi
+
     if [ "$PROXY_USB" -eq 1 ]; then
         $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$USB_INTERFACE" -j RETURN
         log Info "USB interface $USB_INTERFACE will be proxied"
@@ -1069,7 +1097,6 @@ setup_proxy_chain() {
         log Info "Other interface $OTHER_PROXY_INTERFACES will bypass proxy"
     fi
 
-    $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -j ACCEPT
     log Info "Interface proxy rules configuration completed"
 
     local mac
