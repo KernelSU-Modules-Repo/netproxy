@@ -42,19 +42,20 @@ export class ConfigService {
     const outboundsDir = `${KSU.MODULE_PATH}/config/xray/outbounds`;
 
     try {
+      // 获取默认分组 (存放于 default/ 目录下)
       const defaultFiles = await KSU.exec(
-        `find ${outboundsDir} -maxdepth 1 -name '*.json' -exec basename {} \\;`,
+        `find ${outboundsDir}/default -maxdepth 1 -name '*.json' -exec basename {} \\;`,
       );
       const defaultConfigs = defaultFiles.split("\n").filter((f) => f);
       if (defaultConfigs.length > 0) {
         groups.push({
           type: "default",
           name: "默认分组",
-          dirName: "",
+          dirName: "default",
           configs: defaultConfigs,
         });
       }
-    } catch (e) {}
+    } catch (e) { }
 
     // 获取订阅分组
     const subscriptions = await this.getSubscriptions();
@@ -71,7 +72,7 @@ export class ConfigService {
           updated: sub.updated,
           configs: files.split("\n").filter((f) => f),
         });
-      } catch (e) {}
+      } catch (e) { }
     }
 
     return groups;
@@ -175,7 +176,7 @@ EOF
     try {
       const escapedLink = nodeLink.replace(/'/g, "'\\''");
       const result = await KSU.exec(
-        `cd '${KSU.MODULE_PATH}/config/xray/outbounds' && chmod +x '${KSU.MODULE_PATH}/bin/proxylink' && '${KSU.MODULE_PATH}/bin/proxylink' -parse '${escapedLink}' -insecure -format xray -auto`,
+        `cd '${KSU.MODULE_PATH}/config/xray/outbounds/default' && chmod +x '${KSU.MODULE_PATH}/bin/proxylink' && '${KSU.MODULE_PATH}/bin/proxylink' -parse '${escapedLink}' -insecure -format xray -auto`,
       );
       return { success: true, output: result };
     } catch (error: any) {
@@ -210,7 +211,7 @@ EOF
             updated: meta.updated,
             nodeCount: parseInt(nodeCount.trim()) || 0,
           });
-        } catch (e) {}
+        } catch (e) { }
       }
       return subscriptions;
     } catch (error) {
