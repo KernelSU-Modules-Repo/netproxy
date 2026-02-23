@@ -39,6 +39,13 @@
             },
             {
                 "type": "field",
+                "outboundTag": "proxy",
+                "domain": [
+                    "domain:cloudflare-dns.com"
+                ]
+            },
+            {
+                "type": "field",
                 "outboundTag": "direct",
                 "ip": [
                     "geoip:private"

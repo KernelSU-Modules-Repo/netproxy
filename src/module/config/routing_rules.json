@@ -45,6 +45,17 @@
         "enabled": true
     },
     {
+        "name": "Cloudflare DNS 走代理",
+        "type": "field",
+        "domain": "domain:cloudflare-dns.com",
+        "ip": "",
+        "port": "",
+        "protocol": "",
+        "network": "",
+        "outboundTag": "proxy",
+        "enabled": true
+    },
+    {
         "name": "绕过局域网 IP",
         "type": "field",
         "domain": "",
