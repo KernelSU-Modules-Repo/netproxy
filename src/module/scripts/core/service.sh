@@ -53,13 +53,6 @@ get_config_path() {
 }
 
 #######################################
-# 检查 Xray 是否运行中
-#######################################
-is_running() {
-  pgrep -f "^$XRAY_BIN" > /dev/null 2>&1
-}
-
-#######################################
 # 获取 Xray PID
 #######################################
 get_pid() {
@@ -72,8 +65,9 @@ get_pid() {
 do_start() {
   log "INFO" "========== 开始启动 Xray 服务 =========="
 
-  if is_running; then
-    log "WARN" "Xray 已在运行中 (PID: $(get_pid))"
+  local running_pid=$(get_pid)
+  if [ -n "$running_pid" ]; then
+    log "WARN" "Xray 已在运行中 (PID: $running_pid)"
     return 0
   fi
 
