@@ -25,7 +25,7 @@ export class AppService {
   static async getAppProxyMode(): Promise<string> {
     try {
       const content = await KSU.exec(
-        `cat ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        `cat ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
       );
       const match = content.match(/^APP_PROXY_MODE="?(\w+)"?/m);
       return match ? match[1] : "blacklist";
@@ -37,7 +37,7 @@ export class AppService {
   // 设置分应用代理模式
   static async setAppProxyMode(mode: string): Promise<void> {
     await KSU.exec(
-      `sed -i 's/^APP_PROXY_MODE=.*/APP_PROXY_MODE="${mode}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+      `sed -i 's/^APP_PROXY_MODE=.*/APP_PROXY_MODE="${mode}"/' ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
     );
   }
 
@@ -45,7 +45,7 @@ export class AppService {
   static async getAppProxyEnabled(): Promise<boolean> {
     try {
       const content = await KSU.exec(
-        `cat ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        `cat ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
       );
       // APP_PROXY_ENABLE=1 or 0
       const match = content.match(/^APP_PROXY_ENABLE=(\d+)/m);
@@ -59,7 +59,7 @@ export class AppService {
   static async setAppProxyEnabled(enabled: boolean): Promise<void> {
     const val = enabled ? "1" : "0";
     await KSU.exec(
-      `sed -i 's/^APP_PROXY_ENABLE=.*/APP_PROXY_ENABLE=${val}/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+      `sed -i 's/^APP_PROXY_ENABLE=.*/APP_PROXY_ENABLE=${val}/' ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
     );
   }
 
@@ -184,7 +184,7 @@ export class AppService {
   static async getProxyApps(): Promise<ProxyAppConfig[]> {
     try {
       const content = await KSU.exec(
-        `cat ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        `cat ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
       );
       const mode =
         (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || "blacklist";
@@ -215,7 +215,7 @@ export class AppService {
 
   // 添加代理应用
   static async addProxyApp(packageName: string, userId = "0"): Promise<void> {
-    const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
+    const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`);
     const mode =
       (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || "blacklist";
     const listKey =
@@ -232,7 +232,7 @@ export class AppService {
     const newList =
       currentList.length > 0 ? `${currentListStr} ${newItem}` : newItem;
     await KSU.exec(
-      `sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+      `sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
     );
   }
 
@@ -241,7 +241,7 @@ export class AppService {
     packageName: string,
     userId = "0",
   ): Promise<void> {
-    const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
+    const content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`);
     const mode =
       (content.match(/APP_PROXY_MODE="?(\w+)"?/) || [])[1] || "blacklist";
     const listKey =
@@ -261,7 +261,7 @@ export class AppService {
       .join(" ");
 
     await KSU.exec(
-      `sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+      `sed -i 's/${listKey}="[^"]*"/${listKey}="${newList}"/' ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
     );
   }
 }

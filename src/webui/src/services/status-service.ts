@@ -492,86 +492,13 @@ export class StatusService {
   // 设置出站模式
   static async setOutboundMode(mode: string): Promise<boolean> {
     try {
-      let rulesFile = "";
-
-      if (mode === "global") {
-        const rulesJson = await this.generateGlobalRules();
-        rulesFile = `${KSU.MODULE_PATH}/logs/.mode_rules.json`;
-        const base64 = btoa(
-          unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))),
-        );
-        await KSU.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
-      } else if (mode === "direct") {
-        const rulesJson = await this.generateDirectRules();
-        rulesFile = `${KSU.MODULE_PATH}/logs/.mode_rules.json`;
-        const base64 = btoa(
-          unescape(encodeURIComponent(JSON.stringify(rulesJson, null, 2))),
-        );
-        await KSU.exec(`echo '${base64}' | base64 -d > ${rulesFile}`);
-      }
-
       const result = await KSU.exec(
-        `sh ${KSU.MODULE_PATH}/scripts/core/switch-mode.sh ${mode} ${rulesFile}`,
+        `sh ${KSU.MODULE_PATH}/scripts/core/switch-mode.sh ${mode}`,
       );
-
-      if (rulesFile) {
-        await KSU.exec(`rm -f ${rulesFile}`).catch(() => {});
-      }
-
       return result.includes("success");
     } catch (error) {
       console.error("设置出站模式失败:", error);
       return false;
     }
-  }
-
-  static async generateGlobalRules(): Promise<{
-    routing: { domainStrategy: string; rules: XrayRule[] };
-  }> {
-    return {
-      routing: {
-        domainStrategy: "AsIs",
-        rules: [
-          {
-            type: "field",
-            inboundTag: ["tproxy-in"],
-            port: "53",
-            outboundTag: "dns-out",
-          },
-          { type: "field", port: "0-65535", outboundTag: "proxy" },
-          {
-            type: "field",
-            inboundTag: ["domestic-dns"],
-            outboundTag: "direct",
-          },
-          { type: "field", inboundTag: ["dns-module"], outboundTag: "proxy" },
-        ],
-      },
-    };
-  }
-
-  static async generateDirectRules(): Promise<{
-    routing: { domainStrategy: string; rules: XrayRule[] };
-  }> {
-    return {
-      routing: {
-        domainStrategy: "AsIs",
-        rules: [
-          {
-            type: "field",
-            inboundTag: ["tproxy-in"],
-            port: "53",
-            outboundTag: "dns-out",
-          },
-          { type: "field", port: "0-65535", outboundTag: "direct" },
-          {
-            type: "field",
-            inboundTag: ["domestic-dns"],
-            outboundTag: "direct",
-          },
-          { type: "field", inboundTag: ["dns-module"], outboundTag: "direct" },
-        ],
-      },
-    };
   }
 }

@@ -11,7 +11,6 @@ readonly MODULE_CONF="$MODDIR/config/module.conf"
 readonly XRAY_LOG_FILE="$MODDIR/logs/xray.log"
 readonly CONFDIR="$MODDIR/config/xray/confdir"
 readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
-readonly TPROXY_CONF="$MODDIR/config/tproxy.conf"
 
 readonly KILL_TIMEOUT=5
 
@@ -80,21 +79,28 @@ do_start() {
   outbound_mode="${outbound_mode:-rule}"
   log "INFO" "当前出站模式: $outbound_mode"
 
-  # 直连模式使用 default.json (freedom 协议)
-  if [ "$outbound_mode" = "direct" ]; then
-    outbound_config="$OUTBOUNDS_DIR/default.json"
-    log "INFO" "直连模式: 使用 default.json"
+  # 确定路由配置
+  local routing_config="$CONFDIR/routing/rule.json"
+  if [ "$outbound_mode" = "global" ]; then
+    routing_config="$CONFDIR/routing/global.json"
+    log "INFO" "全局模式: 使用 global.json"
+  elif [ "$outbound_mode" = "direct" ]; then
+    routing_config="$CONFDIR/routing/direct.json"
+    log "INFO" "直连模式: 使用 direct.json"
   fi
 
+  [ -f "$routing_config" ] || die "路由配置文件不存在: $routing_config"
   [ -f "$outbound_config" ] || die "出站配置文件不存在: $outbound_config"
   [ -d "$CONFDIR" ] || die "confdir 目录不存在: $CONFDIR"
 
   log "INFO" "配置目录: $CONFDIR"
+  log "INFO" "路由配置: $routing_config"
   log "INFO" "出站配置: $outbound_config"
 
   # 启动 Xray (root:net_admin)
   nohup "$BUSYBOX" setuidgid root:net_admin "$XRAY_BIN" run \
     -confdir "$CONFDIR" \
+    -config "$routing_config" \
     -config "$outbound_config" \
     > "$XRAY_LOG_FILE" 2>&1 &
 
@@ -109,7 +115,7 @@ do_start() {
   fi
 
   # 启用 TProxy 规则
-  "$MODDIR/scripts/network/tproxy.sh" start -d "$MODDIR/config" >> "$LOG_FILE" 2>&1
+  "$MODDIR/scripts/network/tproxy.sh" start -d "$MODDIR/config/tproxy" >> "$LOG_FILE" 2>&1
 
   log "INFO" "========== Xray 服务启动完成 =========="
 }
@@ -122,7 +128,7 @@ do_stop() {
 
   # 先清理 TProxy 规则（避免断网）
   log "INFO" "清理 TProxy 规则..."
-  "$MODDIR/scripts/network/tproxy.sh" stop -d "$MODDIR/config" >> "$LOG_FILE" 2>&1
+  "$MODDIR/scripts/network/tproxy.sh" stop -d "$MODDIR/config/tproxy" >> "$LOG_FILE" 2>&1
 
   # 终止 Xray 进程
   local pid

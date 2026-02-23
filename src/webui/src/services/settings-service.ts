@@ -177,7 +177,7 @@ export class SettingsService {
   static async getProxySettings(): Promise<ProxySettings> {
     try {
       const content = await KSU.exec(
-        `cat ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        `cat ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
       );
       const settings: any = {};
 
@@ -260,7 +260,7 @@ export class SettingsService {
   ): Promise<OperationResult> {
     try {
       // 读取当前文件内容以保留注释
-      let content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy.conf`);
+      let content = await KSU.exec(`cat ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`);
 
       const updateKey = (key: string, value: any, isString = false) => {
         let valStr = String(value);
@@ -337,7 +337,7 @@ export class SettingsService {
       // 使用 base64 编码以处理特殊字符
       const base64 = btoa(unescape(encodeURIComponent(content)));
       await KSU.exec(
-        `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
       );
 
       return { success: true };
@@ -353,7 +353,7 @@ export class SettingsService {
       const upperKey = key.toUpperCase();
       const numValue = value ? "1" : "0";
       await KSU.exec(
-        `sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/tproxy.conf`,
+        `sed -i 's/${upperKey}=.*/${upperKey}=${numValue}/' ${KSU.MODULE_PATH}/config/tproxy/tproxy.conf`,
       );
       return { success: true };
     } catch (error: any) {
@@ -397,7 +397,7 @@ export class SettingsService {
   static async getRoutingRules() {
     try {
       const output = await KSU.exec(
-        `cat ${KSU.MODULE_PATH}/config/routing_rules.json`,
+        `cat ${KSU.MODULE_PATH}/config/xray/confdir/routing/routing_rules.json`,
       );
       return JSON.parse(output);
     } catch (error) {
@@ -413,7 +413,7 @@ export class SettingsService {
       // 使用 base64 编码避免特殊字符问题
       const base64 = btoa(unescape(encodeURIComponent(json)));
       await KSU.exec(
-        `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/routing_rules.json`,
+        `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/routing/routing_rules.json`,
       );
       return { success: true };
     } catch (error: any) {
@@ -501,7 +501,7 @@ export class SettingsService {
       const json = JSON.stringify(routingConfig, null, 4);
       const base64 = btoa(unescape(encodeURIComponent(json)));
       await KSU.exec(
-        `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/03_routing.json`,
+        `echo '${base64}' | base64 -d > ${KSU.MODULE_PATH}/config/xray/confdir/routing/rule.json`,
       );
 
       return { success: true };

@@ -1,6 +1,6 @@
 #!/system/bin/sh
 # 切换出站模式 (Xray API 热更新)
-# 用法: switch-mode.sh <mode> [routing_json_file]
+# 用法: switch-mode.sh <mode>
 #   mode: rule | global | direct
 #
 # Xray API 说明:
@@ -11,7 +11,7 @@
 # 逻辑:
 # - 直连模式: 替换出站为 freedom + 替换路由
 # - 全局模式: 替换路由 (出站不变)
-# - 规则模式: 替换路由为 03_routing.json (出站不变)
+# - 规则模式: 替换路由为 routing/rule.json (出站不变)
 # - 从直连切换: 先恢复 CURRENT_CONFIG 出站
 
 set -u
@@ -21,7 +21,10 @@ readonly XRAY_BIN="$MODDIR/bin/xray"
 readonly API_SERVER="127.0.0.1:8080"
 readonly MODULE_CONF="$MODDIR/config/module.conf"
 readonly DEFAULT_OUTBOUND="$MODDIR/config/xray/outbounds/default.json"
-readonly ROUTING_JSON="$MODDIR/config/xray/confdir/03_routing.json"
+readonly ROUTING_DIR="$MODDIR/config/xray/confdir/routing"
+readonly ROUTING_JSON="$ROUTING_DIR/rule.json"
+readonly GLOBAL_ROUTING="$ROUTING_DIR/global.json"
+readonly DIRECT_ROUTING="$ROUTING_DIR/direct.json"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 
 # 导入工具库
@@ -123,10 +126,9 @@ update_mode_config() {
 #######################################
 main() {
   local target_mode="${1:-}"
-  local routing_json="${2:-}"
 
   if [ -z "$target_mode" ]; then
-    echo "用法: $0 <mode> [routing_json_file]"
+    echo "用法: $0 <mode>"
     echo "  mode: rule | global | direct"
     exit 1
   fi
@@ -156,20 +158,19 @@ main() {
 
   case "$target_mode" in
     rule)
-      # 规则模式: 使用 03_routing.json
-      log "INFO" "规则模式: 应用 03_routing.json"
+      # 规则模式: 使用 routing/rule.json
+      log "INFO" "规则模式: 应用 rule.json"
       replace_routing_rules "$ROUTING_JSON"
       ;;
-    global | direct)
-      # 全局/直连模式: 使用前端生成的路由规则
-      if [ -n "$routing_json" ] && [ -f "$routing_json" ]; then
-        log "INFO" "${target_mode}模式: 应用自定义路由规则"
-        replace_routing_rules "$routing_json"
-      else
-        log "INFO" "错误: 未提供路由规则文件"
-        echo "error: no routing rules file"
-        exit 1
-      fi
+    global)
+      # 全局模式: 使用 static global.json
+      log "INFO" "全局模式: 应用 global.json"
+      replace_routing_rules "$GLOBAL_ROUTING"
+      ;;
+    direct)
+      # 直连模式: 使用 static direct.json
+      log "INFO" "直连模式: 应用 direct.json"
+      replace_routing_rules "$DIRECT_ROUTING"
       ;;
     *)
       log "INFO" "未知模式: $target_mode"

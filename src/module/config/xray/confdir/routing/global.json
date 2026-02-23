@@ -1,0 +1,34 @@
+{
+    "routing": {
+        "domainStrategy": "AsIs",
+        "rules": [
+            {
+                "type": "field",
+                "inboundTag": [
+                    "tproxy-in"
+                ],
+                "port": "53",
+                "outboundTag": "dns-out"
+            },
+            {
+                "type": "field",
+                "port": "0-65535",
+                "outboundTag": "proxy"
+            },
+            {
+                "type": "field",
+                "inboundTag": [
+                    "domestic-dns"
+                ],
+                "outboundTag": "direct"
+            },
+            {
+                "type": "field",
+                "inboundTag": [
+                    "dns-module"
+                ],
+                "outboundTag": "proxy"
+            }
+        ]
+    }
+}

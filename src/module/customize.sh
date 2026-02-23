@@ -18,11 +18,10 @@ XRAY_WAS_RUNNING=false
 # 需要保留的配置文件/目录 (相对于 config/)
 readonly PRESERVE_CONFIGS="
     module.conf
-    routing_rules.json
-    tproxy.conf
+    tproxy/
     xray/outbounds
     xray/confdir/02_dns.json
-    xray/confdir/03_routing.json
+    xray/confdir/routing
 "
 
 # 需要设置可执行权限的文件
