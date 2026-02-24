@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="../image/logo.png" alt="NetProxy Logo" width="120" />
+  <img src="image/logo.png" alt="NetProxy Logo" width="120" />
 </p>
 
 <h1 align="center">NetProxy</h1>
@@ -25,34 +25,33 @@
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature | Description |
-|---------|-------------|
-| 🖥️ **WebUI Management** | Material Design 3 modern interface with Monet theming support |
-| 🌐 **Transparent Proxy** | Supports TPROXY / REDIRECT modes, full TCP + UDP interception |
-| 📶 **IPv6 Support** | Full support for IPv4 and IPv6 networks |
-| 🎯 **Per-App Proxy** | Blacklist / Whitelist mode for precise proxy control |
-| 🛣️ **Routing Rules** | Custom domain, IP, port and other routing rules |
-| 🔗 **DNS Settings** | Custom DNS servers and static Hosts mapping |
-| 📦 **Subscription** | Add and update subscriptions online, auto-parse nodes |
-| 📡 **Hotspot Sharing** | Proxy WiFi hotspot and USB tethering traffic |
-| ⚡ **Hot Switch** | Switch nodes without restarting the service |
+|------|------|
+| **WebUI Management** | Material Design 3 modern interface with Monet theming support |
+| **Transparent Proxy** | Supports TPROXY / REDIRECT modes, full TCP + UDP interception |
+| **Per-App Proxy** | Blacklist / Whitelist mode for precise proxy control |
+| **Routing Rules** | Custom domain, IP, port and other routing rules |
+| **DNS Settings** | Custom DNS servers and static Hosts mapping |
+| **Subscription** | Add and update subscriptions online, auto-parse nodes |
+| **Hotspot Sharing** | Proxy WiFi hotspot and USB tethering traffic |
+| **Hot Switch** | Switch nodes without restarting the service |
 
 ---
 
-## 🖼️ Screenshots
+## Screenshots
 
 <div align="center">
-  <img src="../image/Screenshot1.jpg" width="24%" alt="Status Page" />
-  <img src="../image/Screenshot2.jpg" width="24%" alt="Node Management" />
-  <img src="../image/Screenshot3.jpg" width="24%" alt="App Control" />
-  <img src="../image/Screenshot4.jpg" width="24%" alt="Settings" />
+  <img src="image/Screenshot1.jpg" width="24%" alt="Status Page" />
+  <img src="image/Screenshot2.jpg" width="24%" alt="Node Management" />
+  <img src="image/Screenshot3.jpg" width="24%" alt="App Control" />
+  <img src="image/Screenshot4.jpg" width="24%" alt="Settings" />
 </div>
 
 ---
 
-## 📥 Installation
+## Installation
 
 1. Download the latest ZIP from [Releases](https://github.com/Fanju6/NetProxy-Magisk/releases)
 2. Flash the module in **Magisk / KernelSU / APatch**
@@ -61,7 +60,7 @@
 
 ---
 
-## 📁 Directory Structure
+## Directory Structure
 
 ```
 /data/adb/modules/netproxy/
@@ -69,15 +68,24 @@
 ├── config/
 │   ├── xray/
 │   │   ├── confdir/          # Xray core configuration
+│   │   │   ├── routing/      # Routing & Shunting configuration
+│   │   │   │   ├── internal/ # Internal system configuration
+│   │   │   │   ├── direct.json
+│   │   │   │   ├── global.json
+│   │   │   │   ├── rule.json
+│   │   │   │   └── routing_rules.json
 │   │   │   ├── 00_log.json
-│   │   │   ├── 01_inbounds.json
+│   │   │   ├── 01_api.json
 │   │   │   ├── 02_dns.json
-│   │   │   ├── 03_routing.json
-│   │   │   └── ...
-│   │   └── outbounds/        # Outbound node configs (with subscription groups)
-│   ├── module.conf           # Module settings (autostart, etc.)
-│   ├── tproxy.conf           # Proxy mode configuration
-│   └── routing_rules.json    # Custom routing rules
+│   │   │   ├── 03_inbounds.json
+│   │   │   ├── 04_outbounds.json
+│   │   │   └── 05_policy.json
+│   │   └── outbounds/        # Outbound node group directories
+│   │       ├── default/      # Default node group
+│   │       └── sub_xxx/      # Subscription group directories
+│   ├── tproxy/
+│   │   └── tproxy.conf       # Transparent proxy configuration
+│   └── module.conf           # Module settings (autostart, etc.)
 ├── logs/                     # Runtime logs
 ├── scripts/                  # Start, stop, subscription scripts
 ├── webroot/                  # WebUI static resources
@@ -86,7 +94,7 @@
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Method 1: Import Node Link (Recommended)
 
@@ -102,7 +110,7 @@ Click **Add → Add Subscription**, enter the subscription name and URL to auto-
 
 ### Method 3: Manual Configuration
 
-Create a JSON config file in the `outbounds` directory:
+Create a JSON config file in the `outbounds/default` directory:
 
 ```json
 {
@@ -118,7 +126,7 @@ Create a JSON config file in the `outbounds` directory:
 
 
 
-## 📢 Community
+## Community
 
 <p align="center">
   <a href="https://t.me/NetProxy_Magisk">
@@ -128,23 +136,23 @@ Create a JSON config file in the `outbounds` directory:
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome!
 
-- 🐛 Submit Issues to report bugs
-- 💡 Suggest new features
-- 🔧 Submit Pull Requests
-- ⭐ Star the project to show support!
+- Submit Issues to report bugs
+- Suggest new features
+- Submit Pull Requests
+- Star the project to show support!
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 This project is built upon the following excellent open-source projects:
 
 | Project | Description |
-|---------|-------------|
+|------|------|
 | [Xray-core](https://github.com/XTLS/Xray-core) | Core proxy engine with VLESS, XTLS, REALITY protocols |
 | [v2rayNG](https://github.com/2dust/v2rayNG) | Node link parsing logic reference |
 | [AndroidTProxyShell](https://github.com/CHIZI-0618/AndroidTProxyShell) | Android TProxy implementation reference |
@@ -153,6 +161,11 @@ This project is built upon the following excellent open-source projects:
 
 ---
 
-## 📜 License
+## License
 
 [GPL-3.0 License](LICENSE)
+
+
+## Star
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Fanju6/NetProxy-Magisk&type=date&legend=top-left)](https://www.star-history.com/#Fanju6/NetProxy-Magisk&type=date&legend=top-left)
