@@ -32,35 +32,34 @@
             },
             {
                 "type": "field",
-                "outboundTag": "proxy",
                 "domain": [
                     "geosite:google"
-                ]
+                ],
+                "outboundTag": "proxy"
             },
             {
                 "type": "field",
-                "outboundTag": "proxy",
                 "domain": [
                     "domain:cloudflare-dns.com"
-                ]
+                ],
+                "outboundTag": "proxy"
             },
             {
                 "type": "field",
-                "outboundTag": "direct",
                 "ip": [
                     "geoip:private"
-                ]
+                ],
+                "outboundTag": "direct"
             },
             {
                 "type": "field",
-                "outboundTag": "direct",
                 "domain": [
                     "geosite:private"
-                ]
+                ],
+                "outboundTag": "direct"
             },
             {
                 "type": "field",
-                "outboundTag": "direct",
                 "ip": [
                     "223.5.5.5",
                     "223.6.6.6",
@@ -97,32 +96,33 @@
                     "2404:c2c0:85d8:901::8",
                     "117.50.60.30",
                     "52.80.60.30"
-                ]
+                ],
+                "outboundTag": "direct"
             },
             {
                 "type": "field",
-                "outboundTag": "direct",
                 "domain": [
                     "domain:alidns.com",
                     "domain:doh.pub",
                     "domain:dot.pub",
                     "domain:360.cn",
                     "domain:onedns.net"
-                ]
+                ],
+                "outboundTag": "direct"
             },
             {
                 "type": "field",
-                "outboundTag": "direct",
                 "ip": [
                     "geoip:cn"
-                ]
+                ],
+                "outboundTag": "direct"
             },
             {
                 "type": "field",
-                "outboundTag": "direct",
                 "domain": [
                     "geosite:cn"
-                ]
+                ],
+                "outboundTag": "direct"
             },
             {
                 "type": "field",
