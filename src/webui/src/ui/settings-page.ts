@@ -18,6 +18,7 @@ interface RoutingRule {
   network?: string;
   outboundTag: string;
   enabled: boolean;
+  visible?: boolean;
 }
 
 interface DnsServer {
@@ -146,9 +147,9 @@ export class SettingsPageManager {
           await SettingsService.setModuleSetting("AUTO_START", target.checked);
           toast(
             I18nService.t("settings.module.toast_autostart") +
-              (target.checked
-                ? I18nService.t("common.enabled")
-                : I18nService.t("common.disabled")),
+            (target.checked
+              ? I18nService.t("common.enabled")
+              : I18nService.t("common.disabled")),
           );
         } catch (error: any) {
           toast(I18nService.t("common.set_failed") + error.message, true);
@@ -325,6 +326,8 @@ export class SettingsPageManager {
     }
 
     this.routingRules.forEach((rule, index) => {
+      if (rule.visible === false) return;
+
       const item = document.createElement("mdui-list-item");
       item.setAttribute("data-index", String(index));
 
@@ -369,7 +372,7 @@ export class SettingsPageManager {
       item.setAttribute(
         "headline",
         rule.name ||
-          `${I18nService.t("settings.routing.rule_prefix")}${index + 1}`,
+        `${I18nService.t("settings.routing.rule_prefix")}${index + 1}`,
       );
 
       // 使用 description slot 显示详情和出站
@@ -462,9 +465,26 @@ export class SettingsPageManager {
   }
 
   // 移动规则
-  async moveRule(fromIndex, toIndex) {
-    const [movedRule] = this.routingRules.splice(fromIndex, 1);
-    this.routingRules.splice(toIndex, 0, movedRule);
+  async moveRule(fromVisibleIndex: number, toVisibleIndex: number) {
+    // 找出所有可见规则及其在原数组中的索引
+    const visibleIndices: number[] = [];
+    this.routingRules.forEach((rule, index) => {
+      if (rule.visible !== false) {
+        visibleIndices.push(index);
+      }
+    });
+
+    if (fromVisibleIndex >= visibleIndices.length || toVisibleIndex >= visibleIndices.length) {
+      return;
+    }
+
+    const fromRealIndex = visibleIndices[fromVisibleIndex];
+    const toRealIndex = visibleIndices[toVisibleIndex];
+
+    // 执行移动操作
+    const [movedRule] = this.routingRules.splice(fromRealIndex, 1);
+    this.routingRules.splice(toRealIndex, 0, movedRule);
+
     await this.saveRulesToBackend();
     this.renderRoutingRules();
     toast(I18nService.t("routing.toast_reordered"));
@@ -541,11 +561,14 @@ export class SettingsPageManager {
       network,
       outboundTag,
       enabled: true,
+      visible: true,
     };
 
     if (this.editingRuleIndex >= 0) {
-      // 保留原有的 enabled 状态
-      rule.enabled = this.routingRules[this.editingRuleIndex].enabled !== false;
+      // 保留原有的 enabled 和 visible 状态
+      const oldRule = this.routingRules[this.editingRuleIndex];
+      rule.enabled = oldRule.enabled !== false;
+      rule.visible = oldRule.visible !== false;
       this.routingRules[this.editingRuleIndex] = rule;
     } else {
       this.routingRules.push(rule);
@@ -969,15 +992,15 @@ export class SettingsPageManager {
 
     const domains = domainsStr
       ? domainsStr
-          .split(",")
-          .map((d) => d.trim())
-          .filter((d) => d)
+        .split(",")
+        .map((d) => d.trim())
+        .filter((d) => d)
       : [];
     const expectIPs = expectIPsStr
       ? expectIPsStr
-          .split(",")
-          .map((i) => i.trim())
-          .filter((i) => i)
+        .split(",")
+        .map((i) => i.trim())
+        .filter((i) => i)
       : [];
 
     let server: string | DnsServer;
@@ -1389,10 +1412,10 @@ export class SettingsPageManager {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       return result
         ? {
-            r: parseInt(result[1], 16),
-            g: parseInt(result[2], 16),
-            b: parseInt(result[3], 16),
-          }
+          r: parseInt(result[1], 16),
+          g: parseInt(result[2], 16),
+          b: parseInt(result[3], 16),
+        }
         : { r: 103, g: 80, b: 164 }; // 默认紫色
     };
 
@@ -1591,9 +1614,9 @@ export class SettingsPageManager {
       this.applyMonetSetting(enabled);
       toast(
         I18nService.t("settings.monet.toast_toggled") +
-          (enabled
-            ? I18nService.t("common.enabled")
-            : I18nService.t("common.disabled")),
+        (enabled
+          ? I18nService.t("common.enabled")
+          : I18nService.t("common.disabled")),
       );
     });
   }

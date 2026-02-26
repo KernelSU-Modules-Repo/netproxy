@@ -90,6 +90,7 @@ export interface RoutingRule {
   inboundTag?: string;
   outboundTag?: string;
   enabled?: boolean;
+  visible?: boolean;
 }
 
 /** Xray 路由规则 */
@@ -472,6 +473,11 @@ export class SettingsService {
         // 处理 network
         if (rule.network) {
           xrayRule.network = rule.network.trim();
+        }
+
+        // 处理 inboundTag
+        if (rule.inboundTag) {
+          xrayRule.inboundTag = rule.inboundTag.split(",").map((i) => i.trim());
         }
 
         xrayRules.push(xrayRule);
