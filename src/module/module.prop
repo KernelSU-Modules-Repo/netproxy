@@ -1,6 +1,6 @@
 id=netproxy
 name=NetProxy
-version=v6.0.0-alpha.2
+version=v6.0.0-alpha.3
 versionCode=441
 author=Fanju
 description=基于Xray内核的代理工具
