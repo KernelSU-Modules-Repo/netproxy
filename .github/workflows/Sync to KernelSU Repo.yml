@@ -16,17 +16,17 @@ jobs:
       - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # 获取所有历史记录和分支
+          fetch-depth: 0 
+          # 关键修复：禁止 checkout 插件接管 Git 凭据
+          persist-credentials: false 
 
       - name: Sync Source Code and Tags
-        # 将代码和标签推送到下游仓库
         env:
-          # 使用带有目标仓库写入权限的 PAT 进行鉴权
-          DEST_REPO: "https://${{ secrets.SYNC_PAT }}@github.com/KernelSU-Modules-Repo/netproxy.git"
+          DEST_REPO: "https://x-access-token:${{ secrets.SYNC_PAT }}@github.com/KernelSU-Modules-Repo/netproxy.git"
         run: |
+          # 后续代码保持不变
           git remote add downstream "$DEST_REPO"
           
-          # 强制推送所有分支和标签
           git push downstream --all --force
           git push downstream --tags --force
           
