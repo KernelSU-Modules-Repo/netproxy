@@ -1,0 +1,65 @@
+name: Sync to KernelSU Repo
+
+# 触发条件
+on:
+  push:
+    branches:
+      - main
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # 获取所有历史记录和分支
+
+      - name: Sync Source Code and Tags
+        # 将代码和标签推送到下游仓库
+        env:
+          # 使用带有目标仓库写入权限的 PAT 进行鉴权
+          DEST_REPO: "https://${{ secrets.SYNC_PAT }}@github.com/KernelSU-Modules-Repo/netproxy.git"
+        run: |
+          git remote add downstream "$DEST_REPO"
+          
+          # 强制推送所有分支和标签
+          git push downstream --all --force
+          git push downstream --tags --force
+          
+          echo "源代码与标签同步完成！"
+
+      - name: Sync Latest Release
+        # 仅在发布新 Release 或手动触发时运行此步骤
+        if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
+        env:
+          GH_TOKEN: ${{ secrets.SYNC_PAT }}
+          UPSTREAM_REPO: ${{ github.repository }} # 当前仓库 (Fanju6/NetProxy-Magisk)
+          DEST_REPO: "KernelSU-Modules-Repo/netproxy" # 目标仓库
+        run: |
+          # 1. 获取主仓库最新 Release 的标签名
+          LATEST_TAG=$(gh release view --repo $UPSTREAM_REPO --json tagName -q .tagName)
+          echo "主仓库最新 Release 标签: $LATEST_TAG"
+          
+          # 2. 检查下游仓库是否已经存在该 Release
+          if gh release view $LATEST_TAG --repo $DEST_REPO &>/dev/null; then
+            echo "下游仓库已存在 Release $LATEST_TAG，无需重复同步。"
+          else
+            echo "下游仓库缺失 Release $LATEST_TAG，开始同步..."
+            
+            # 3. 创建临时目录并下载主仓库的所有附件
+            mkdir -p release_assets
+            gh release download $LATEST_TAG --repo $UPSTREAM_REPO --dir release_assets
+            
+            # 4. 获取主仓库 Release 的标题和更新日志
+            TITLE=$(gh release view $LATEST_TAG --repo $UPSTREAM_REPO --json name -q .name)
+            NOTES=$(gh release view $LATEST_TAG --repo $UPSTREAM_REPO --json body -q .body)
+            
+            # 5. 在下游仓库创建相同的 Release 并上传附件
+            gh release create $LATEST_TAG ./release_assets/* --repo $DEST_REPO --title "$TITLE" --notes "$NOTES"
+            
+            echo "Release $LATEST_TAG 同步成功！"
+          fi
