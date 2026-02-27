@@ -750,7 +750,7 @@ export class ConfigPageManager {
     }
   }
 
-  // 批量测试延迟
+// 批量测试延迟
   async testGroupLatency(groupName) {
     const group = this._cachedGroups.find((g) => g.name === groupName);
     if (!group) return;
@@ -770,6 +770,27 @@ export class ConfigPageManager {
       true,
     ); // 持续显示
 
+    // 先加载所有节点的信息（确保每个节点都有address）
+    if (!this._cachedConfigInfos.has(groupName)) {
+      this._cachedConfigInfos.set(groupName, new Map());
+    }
+    const groupInfos = this._cachedConfigInfos.get(groupName);
+    
+    const pendingFiles = group.configs.filter((f) => {
+      const info = groupInfos.get(f);
+      return !info || info.protocol === "loading...";
+    });
+    
+    if (pendingFiles.length > 0) {
+      const filePaths = pendingFiles.map((f) =>
+        group.dirName ? `${group.dirName}/${f}` : f,
+      );
+      const newInfos = await ConfigService.batchReadConfigInfos(filePaths);
+      for (const [fname, info] of newInfos) {
+        groupInfos.set(fname, info);
+      }
+    }
+
     // 无限制并发，同时测试所有节点
     await Promise.all(
       items.map(async (item) => {
@@ -785,8 +806,8 @@ export class ConfigPageManager {
       }),
     );
 
-    // 关闭 toast (重新显示一个自动消失的)
-    // mdui 没提供直接关闭 toast 的 api，只能发个新的覆盖
+    // 关闭 toast
+    toastId.open = false;
     toast(I18nService.t("config.toast.test_complete"));
   }
 

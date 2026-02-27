@@ -5,11 +5,11 @@ import { snackbar } from "mdui";
  * @param {string} msg - 要显示的消息
  * @param {boolean} closeable - 是否允许手动关闭
  */
-export function toast(msg: string, closeable: boolean = false): void {
-  snackbar({
+export function toast(msg: string, closeable: boolean = false) {
+  return snackbar({
     message: msg,
     closeable: closeable,
     autoCloseDelay: closeable ? 0 : 3000,
     placement: "bottom",
-  } as any);
+  });
 }
