@@ -24,13 +24,13 @@ jobs:
         env:
           DEST_REPO: "https://x-access-token:${{ secrets.SYNC_PAT }}@github.com/KernelSU-Modules-Repo/netproxy.git"
         run: |
-          # 后续代码保持不变
           git remote add downstream "$DEST_REPO"
           
           git push downstream --all --force
-          git push downstream --tags --force
           
-          echo "源代码与标签同步完成！"
+          git push downstream --tags || true
+          
+          echo "源代码推送完成！已跳过受保护的标签。"
 
       - name: Sync Latest Release
         # 仅在发布新 Release 或手动触发时运行此步骤
