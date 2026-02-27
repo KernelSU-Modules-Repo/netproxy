@@ -29,7 +29,7 @@
 
 | 功能 | 描述 |
 |------|------|
-| **WebUI 管理** | Material Design 3 现代化界面，支持莫奈取色 |
+| **APP管理** | Miuix 现代化界面，支持莫奈取色 |
 | **透明代理** | 支持 TPROXY / REDIRECT 两种模式，TCP + UDP 全接管 |
 | **分应用代理** | 黑名单 / 白名单模式，精准控制代理范围 |
 | **路由设置** | 自定义域名、IP、端口等路由规则 |
@@ -43,10 +43,7 @@
 ## 界面预览
 
 <div align="center">
-  <img src="image/Screenshot1.jpg" width="24%" alt="状态页面" />
-  <img src="image/Screenshot2.jpg" width="24%" alt="节点管理" />
-  <img src="image/Screenshot3.jpg" width="24%" alt="应用控制" />
-  <img src="image/Screenshot4.jpg" width="24%" alt="设置页面" />
+  <img src="image/Screenshot.jpg" width="60%" alt="界面预览" />
 </div>
 
 ---
@@ -98,7 +95,7 @@
 
 ### 方式一：节点链接导入（推荐）
 
-在 WebUI 配置页面点击 **添加 → 添加节点**，直接粘贴节点链接：
+在 APP节点页面点击 **从剪切板导入**，直接导入节点链接：
 
 ```
 vless://... 或 vmess://... 或 trojan://... 等
@@ -106,7 +103,7 @@ vless://... 或 vmess://... 或 trojan://... 等
 
 ### 方式二：订阅导入
 
-点击 **添加 → 添加订阅**，输入订阅名称和地址，自动解析全部节点。
+在 APP节点页面点击 **添加订阅**，输入订阅名称和地址，自动解析全部节点。
 
 ### 方式三：手动配置
 
