@@ -274,7 +274,7 @@ ask_install_app() {
 
   if [ "$choice" = "install" ]; then
     print_step "正在打开 Google Play..."
-    am start -a android.intent.action.VIEW -d "https://play.google.com/store/apps/details?id=www.netproxy.web.ui" > /dev/null 2>&1
+    am start -a android.intent.action.VIEW -d "https://play.google.com/store/apps/details?id=com.fanjv.netproxy" > /dev/null 2>&1
     print_ok "已打开 Google Play"
   else
     print_step "已跳过安装"
