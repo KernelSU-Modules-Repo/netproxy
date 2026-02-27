@@ -785,8 +785,8 @@ export class ConfigPageManager {
       }),
     );
 
-    // 关闭 toast (重新显示一个自动消失的)
-    // mdui 没提供直接关闭 toast 的 api，只能发个新的覆盖
+    // 关闭 toast
+    toastId.open = false;
     toast(I18nService.t("config.toast.test_complete"));
   }
 
