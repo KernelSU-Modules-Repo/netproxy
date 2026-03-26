@@ -1,4 +1,0 @@
--repackageclasses
--allowaccessmodification
--overloadaggressively
--renamesourcefileattribute
