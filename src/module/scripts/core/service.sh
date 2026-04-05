@@ -16,15 +16,13 @@ readonly KILL_TIMEOUT=5
 
 # 检测 busybox 路径
 detect_busybox() {
-  if [ -f "/data/adb/ksu/bin/busybox" ]; then
-    echo "/data/adb/ksu/bin/busybox"
-  elif [ -f "/data/adb/ap/bin/busybox" ]; then
-    echo "/data/adb/ap/bin/busybox"
-  elif [ -f "/data/adb/magisk/busybox" ]; then
-    echo "/data/adb/magisk/busybox"
-  else
-    echo "busybox"
-  fi
+  for path in "/data/adb/ksu/bin/busybox" "/data/adb/ap/bin/busybox" "/data/adb/magisk/busybox"; do
+    if [ -f "$path" ]; then
+      echo "$path"
+      return 0
+    fi
+  done
+  echo "busybox"
 }
 
 readonly BUSYBOX="$(detect_busybox)"
@@ -34,22 +32,6 @@ readonly BUSYBOX="$(detect_busybox)"
 
 export PATH="$MODDIR/bin:$PATH"
 
-
-#######################################
-# 获取当前配置路径
-#######################################
-get_config_path() {
-  [ -f "$MODULE_CONF" ] || die "模块配置文件不存在: $MODULE_CONF"
-
-  local config_path
-  config_path="${MODULE_CONF%/*}"
-  config_path=$(grep '^CURRENT_CONFIG=' "$MODULE_CONF" 2> /dev/null)
-  config_path="${config_path#*=}"
-  config_path="${config_path//\"/}"
-
-  [ -n "$config_path" ] || die "无法解析配置路径"
-  echo "$config_path"
-}
 
 #######################################
 # 获取 Xray PID
@@ -70,13 +52,14 @@ do_start() {
     return 0
   fi
 
-  local outbound_config
-  outbound_config=$(get_config_path)
+  [ -f "$MODULE_CONF" ] || die "模块配置文件不存在: $MODULE_CONF"
+  . "$MODULE_CONF"
 
-  # 读取出站模式
-  local outbound_mode
-  outbound_mode=$(grep '^OUTBOUND_MODE=' "$MODULE_CONF" 2> /dev/null | cut -d'=' -f2)
-  outbound_mode="${outbound_mode:-rule}"
+  local outbound_config="${CURRENT_CONFIG:-}"
+  outbound_config="${outbound_config//\"/}"
+  [ -n "$outbound_config" ] || die "无法解析出站配置路径"
+
+  local outbound_mode="${OUTBOUND_MODE:-rule}"
   log "INFO" "当前出站模式: $outbound_mode"
 
   # 确定路由配置
@@ -183,7 +166,7 @@ do_status() {
     if [ -f "/proc/$pid/stat" ]; then
       local uptime_ticks start_time now_ticks
       start_time=$(awk '{print $22}' "/proc/$pid/stat" 2> /dev/null || echo 0)
-      now_ticks=$(awk '{print $1 * 100}' /proc/uptime 2> /dev/null || echo 0)
+      now_ticks=$(awk '{print int($1 * 100)}' /proc/uptime 2> /dev/null || echo 0)
       if [ "$start_time" -gt 0 ] && [ "$now_ticks" -gt 0 ]; then
         uptime_ticks=$((now_ticks - start_time))
         echo "运行时间: $((uptime_ticks / 100)) 秒"
