@@ -1,7 +1,6 @@
 #!/system/bin/sh
 set -e
 
-readonly MAX_WAIT=60
 readonly MODDIR="${0%/*}"
 readonly MODULE_CONF="$MODDIR/config/module.conf"
 readonly LOG_FILE="$MODDIR/logs/service.log"
@@ -26,32 +25,21 @@ load_module_config() {
 
 #######################################
 # 等待系统启动完成
-# Returns:
-#   0 成功, 1 超时
 #######################################
 wait_for_boot() {
-  local count=0
-
   log "INFO" "等待系统启动完成..."
 
   # 等待系统开机完成
   while [ "$(getprop sys.boot_completed)" != "1" ]; do
     sleep 1
-    count=$((count + 1))
-    [ "$count" -ge "$MAX_WAIT" ] && return 1
   done
-  log "INFO" "系统启动完成 (耗时 ${count}s)"
+  log "INFO" "系统启动完成"
 
   # 等待存储挂载完成
-  count=0
   while [ ! -d "/sdcard/Android" ]; do
     sleep 1
-    count=$((count + 1))
-    [ "$count" -ge "$MAX_WAIT" ] && return 1
   done
   log "INFO" "存储挂载完成"
-
-  return 0
 }
 
 #######################################
@@ -114,22 +102,18 @@ log "INFO" "========== NetProxy 服务启动 =========="
 log_env_info
 load_module_config
 
-if wait_for_boot; then
+wait_for_boot
 
-  # 检查是否启用开机自启
-  if [ "$AUTO_START" = "1" ]; then
-    log "INFO" "开始启动服务..."
-    sh "$MODDIR/scripts/core/service.sh" start
-    log "INFO" "服务启动完成"
-  else
-    log "INFO" "开机自启已禁用，跳过启动"
-  fi
-
-  # 执行OnePlus A16修复
-  check_device_specific
-
-  log "INFO" "========== 服务启动流程结束 =========="
+# 检查是否启用开机自启
+if [ "$AUTO_START" = "1" ]; then
+  log "INFO" "开始启动服务..."
+  sh "$MODDIR/scripts/core/service.sh" start
+  log "INFO" "服务启动完成"
 else
-  log "ERROR" "系统启动超时，无法启动 NetProxy"
-  exit 1
+  log "INFO" "开机自启已禁用，跳过启动"
 fi
+
+# 执行OnePlus A16修复
+check_device_specific
+
+log "INFO" "========== 服务启动流程结束 =========="
