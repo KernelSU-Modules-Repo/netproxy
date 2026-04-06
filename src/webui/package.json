@@ -16,7 +16,7 @@
     "uplot": "^1.6.32"
   },
   "devDependencies": {
-    "prettier-plugin-sh": "^0.18.0",
+    "prettier-plugin-sh": "^0.18.1",
     "typescript": "~6.0.2",
     "vite": "^8.0.3"
   }
