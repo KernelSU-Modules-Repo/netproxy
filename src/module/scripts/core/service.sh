@@ -83,6 +83,7 @@ verify_environment() {
   [ -x "$SING_BOX_BIN" ] || die "sing-box 二进制不存在或不可执行: $SING_BOX_BIN"
   [ -f "$MODULE_CONF" ] || die "模块配置文件不存在: $MODULE_CONF"
   [ -f "$TPROXY_CONF_DIR/tproxy.conf" ] || die "透明代理配置文件不存在: $TPROXY_CONF_DIR/tproxy.conf"
+  mkdir -p "$RUNTIME_DIR" || die "无法创建运行时目录: $RUNTIME_DIR"
   
   . "$MODULE_CONF"
   . "$TPROXY_CONF_DIR/tproxy.conf"
