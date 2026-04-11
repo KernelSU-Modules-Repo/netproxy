@@ -1,8 +1,8 @@
 id=netproxy
 name=NetProxy
-version=v6.0.1
+version=v7.0.0-alpha.1
 versionCode=502
 author=Fanju
-description=基于Xray内核的代理工具
+description=基于 sing-box 内核的透明代理工具
 updateJson=https://raw.githubusercontent.com/Fanju6/NetProxy-Magisk/refs/heads/main/update.json
 actionIcon=/data/adb/modules/netproxy/webroot/logo.png

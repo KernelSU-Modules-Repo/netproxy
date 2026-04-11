@@ -2,13 +2,13 @@
 
 #############################################################################
 # 订阅管理脚本
-# 功能: add/update/remove/list 订阅
+# 功能: 添加、更新、删除、列出订阅
 #############################################################################
 
 set -e
 
 readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
-readonly OUTBOUNDS_DIR="$MODDIR/config/xray/outbounds"
+readonly OUTBOUNDS_DIR="$MODDIR/config/singbox/outbounds"
 readonly LOG_FILE="$MODDIR/logs/subscription.log"
 
 # 导入工具库
@@ -22,10 +22,10 @@ show_help() {
 用法: $0 <命令> [参数]
 
 命令:
-    add <name> <url>    添加订阅
-    update <name>       更新指定订阅
+    add <名称> <链接>   添加订阅
+    update <名称>       更新指定订阅
     update-all          更新所有订阅
-    remove <name>       删除订阅
+    remove <名称>       删除订阅
     list                列出所有订阅
 
 示例:
@@ -51,7 +51,7 @@ cmd_add() {
   local url="$2"
 
   if [ -z "$name" ] || [ -z "$url" ]; then
-    echo "错误: 请提供订阅名称和URL"
+    echo "错误: 请提供订阅名称和链接"
     exit 1
   fi
 
@@ -100,7 +100,7 @@ cmd_update() {
     exit 1
   fi
 
-  # 读取 URL
+  # 读取订阅链接
   local url=$(grep -o '"url": *"[^"]*"' "$meta_file" | sed 's/"url": *"\([^"]*\)"/\1/')
 
   # 清空旧节点(保留 _meta.json)
@@ -186,14 +186,11 @@ update_subscription() {
 
   log "INFO" "========== 开始更新订阅 =========="
   log "DEBUG" "订阅名称: $name"
-  log "DEBUG" "URL: $url"
+  log "DEBUG" "订阅链接: $url"
   log "DEBUG" "目标目录: $sub_dir"
 
-  # 使用 proxylink 进行订阅转换
-  # -sub: 订阅链接
-  # -format xray: 输出 xray 格式
-  # -dir: 输出目录 (每个节点单独一个文件)
-  if "$MODDIR/bin/proxylink" -sub "$url" -insecure -dns -format xray -dir "$sub_dir" >> "$LOG_FILE" 2>&1; then
+  # 使用 proxylink 转换订阅，每个节点输出为一个 sing-box 配置文件
+  if "$MODDIR/bin/proxylink" -sub "$url" -insecure -dns -format singbox -dir "$sub_dir" >> "$LOG_FILE" 2>&1; then
     log "INFO" "订阅更新完成"
     echo "已导入节点"
   else

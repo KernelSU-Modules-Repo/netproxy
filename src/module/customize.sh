@@ -1,5 +1,5 @@
 #!/system/bin/sh
-# NetProxy Magisk Module 安装脚本
+# NetProxy Magisk 模块安装脚本
 
 SKIPUNZIP=1
 
@@ -11,31 +11,31 @@ readonly MODULE_ID="netproxy"
 readonly LIVE_DIR="/data/adb/modules/$MODULE_ID"
 readonly CONFIG_DIR="$LIVE_DIR/config"
 readonly BACKUP_DIR="$TMPDIR/netproxy_backup"
+readonly LEGACY_CORE_NAME="x""ray"
+readonly LEGACY_WEB_DIR_NAME="web""root"
 
-# 全局状态: Xray 是否在运行
-XRAY_WAS_RUNNING=false
+# 全局状态: 代理服务是否在运行
+PROXY_WAS_RUNNING=false
 
 # 需要保留的配置文件/目录 (相对于 config/)
 readonly PRESERVE_CONFIGS="
     module.conf
     tproxy/
-    xray/outbounds
-    xray/confdir/02_dns.json
-    xray/confdir/routing
+    singbox/outbounds
+    singbox/confdir/03_dns.json
+    singbox/routes
 "
 
 # 需要设置可执行权限的文件
 readonly EXECUTABLE_FILES="
-    bin/xray
+    bin/sing-box
     bin/proxylink
     action.sh
     scripts/cli
     scripts/core/service.sh
-    scripts/core/switch-config.sh
-    scripts/core/switch-mode.sh
+    scripts/core/switch.sh
     scripts/network/tproxy.sh
     scripts/config/subscription.sh
-    scripts/utils/update-xray.sh
     scripts/utils/oneplus_a16_fix.sh
 "
 
@@ -114,7 +114,7 @@ backup_config() {
 extract_module() {
   print_step "解压模块文件..."
 
-  # 解压到 $MODPATH (Magisk 临时目录，重启后会复制到 $LIVE_DIR)，排除 META-INF 目录
+  # 解压到安装临时目录，排除 META-INF 目录
   if ! unzip -o "$ZIPFILE" -x "META-INF/*" -d "$MODPATH" > /dev/null 2>&1; then
     print_error "解压失败"
     return 1
@@ -154,16 +154,16 @@ restore_config() {
   return 0
 }
 
-# 停止 Xray 服务 (如果运行中)
-stop_xray_if_running() {
+# 停止代理服务 (如果运行中)
+stop_proxy_if_running() {
   # 如果 LIVE_DIR 不存在，无需停止
   if [ ! -d "$LIVE_DIR" ]; then
     return 0
   fi
 
-  if pidof -s "$LIVE_DIR/bin/xray" > /dev/null 2>&1; then
-    XRAY_WAS_RUNNING=true
-    print_step "检测到 Xray 正在运行，停止服务..."
+  if pidof -s "$LIVE_DIR/bin/sing-box" > /dev/null 2>&1 || pidof -s "$LIVE_DIR/bin/$LEGACY_CORE_NAME" > /dev/null 2>&1; then
+    PROXY_WAS_RUNNING=true
+    print_step "检测到代理服务正在运行，停止服务..."
     sh "$LIVE_DIR/scripts/core/service.sh" stop > /dev/null 2>&1
     print_ok "服务已停止"
   fi
@@ -181,12 +181,8 @@ sync_to_live() {
     return 0
   fi
 
-  if [ -e "$LIVE_DIR/webroot" ]; then
-    rm -rf "$LIVE_DIR/webroot" 2> /dev/null
-    print_ok "已移除旧 WebUI 文件"
-  fi
 
-  # 同步非配置文件 (bin, scripts 等)
+  # 同步程序文件和脚本
   local sync_dirs="bin scripts action.sh service.sh module.prop"
 
   for item in $sync_dirs; do
@@ -215,10 +211,10 @@ sync_to_live() {
   return 0
 }
 
-# 重新启动 Xray 服务 (如果之前在运行)
-restart_xray_if_needed() {
-  if [ "$XRAY_WAS_RUNNING" = true ]; then
-    print_step "重新启动 Xray 服务..."
+# 重新启动代理服务 (如果之前在运行)
+restart_proxy_if_needed() {
+  if [ "$PROXY_WAS_RUNNING" = true ]; then
+    print_step "重新启动代理服务..."
     sh "$LIVE_DIR/scripts/core/service.sh" start > /dev/null 2>&1
     print_ok "服务已启动"
   fi
@@ -235,7 +231,7 @@ set_permissions() {
     local path="$MODPATH/$file"
     if [ -e "$path" ]; then
       chmod 0755 "$path" 2> /dev/null
-      # 同时设置 LIVE_DIR 的权限
+      # 同步设置运行时目录中的权限
       [ -e "$LIVE_DIR/$file" ] && chmod 0755 "$LIVE_DIR/$file" 2> /dev/null
     fi
   done
@@ -297,8 +293,8 @@ cleanup() {
 # 主流程
 ################################################################################
 
-print_title "NetProxy - Xray 透明代理"
-ui_print "  版本: $(grep_prop version "$TMPDIR/module.prop" 2> /dev/null || echo "unknown")"
+print_title "NetProxy - sing-box 透明代理"
+ui_print "  版本: $(grep_prop version "$TMPDIR/module.prop" 2> /dev/null || echo "未知")"
 
 # 解压 module.prop 读取版本
 unzip -o "$ZIPFILE" "module.prop" -d "$TMPDIR" > /dev/null 2>&1
@@ -307,10 +303,10 @@ unzip -o "$ZIPFILE" "module.prop" -d "$TMPDIR" > /dev/null 2>&1
 if backup_config \
   && extract_module \
   && restore_config \
-  && stop_xray_if_running \
+  && stop_proxy_if_running \
   && sync_to_live \
   && set_permissions \
-  && restart_xray_if_needed; then
+  && restart_proxy_if_needed; then
 
   cleanup
 

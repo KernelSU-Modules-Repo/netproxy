@@ -1,6 +1,6 @@
 {
     "metamodule": false,
-    "summary": "基于 Xray 内核的 Android 透明代理模块。 / Xray-based transparent proxy module for Android.",
+    "summary": "基于 sing-box 内核的 Android 透明代理模块。 / sing-box based transparent proxy module for Android.",
     "sourceUrl": "https://github.com/Fanju6/NetProxy-Magisk",
     "additionalAuthors": [
         {

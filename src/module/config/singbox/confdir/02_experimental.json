@@ -1,0 +1,15 @@
+{
+  "experimental": {
+    "cache_file": {
+      "enabled": true,
+      "path": "/data/adb/modules/netproxy/config/singbox/cache.db",
+      "store_fakeip": true
+    },
+    "clash_api": {
+      "default_mode": "Rule",
+      "external_controller": "0.0.0.0:9999",
+      "secret": "singbox",
+      "external_ui": "/data/adb/modules/netproxy/bin/zashboard"
+    }
+  }
+}

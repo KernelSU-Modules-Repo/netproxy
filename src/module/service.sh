@@ -11,7 +11,7 @@ readonly LOG_FILE="$MODDIR/logs/service.log"
 # 加载模块配置
 #######################################
 load_module_config() {
-  # 默认值
+  # 设置开机服务默认值
   AUTO_START=1
   ONEPLUS_A16_FIX=1
 
@@ -46,7 +46,7 @@ wait_for_boot() {
 # 执行设备特定修复脚本
 #######################################
 check_device_specific() {
-  # 如果启用 OnePlus A16 修复，直接执行
+  # 启用时执行设备兼容性修复
   if [ "$ONEPLUS_A16_FIX" = "1" ]; then
     log "INFO" "OnePlus A16 修复已启用，执行修复脚本"
     sh "$MODDIR/scripts/utils/oneplus_a16_fix.sh"
@@ -62,36 +62,39 @@ mkdir -p "$MODDIR/logs"
 log_env_info() {
   log "INFO" "========== 环境信息检测 =========="
 
-  # KernelSU
+  # KernelSU 环境
   if [ "$KSU" = "true" ]; then
     log "INFO" "环境: KernelSU"
-    log "INFO" "KSU_VER: ${KSU_VER:-unknown}"
-    log "INFO" "KSU_VER_CODE: ${KSU_VER_CODE:-unknown}"
-    log "INFO" "KSU_KERNEL_VER_CODE: ${KSU_KERNEL_VER_CODE:-unknown}"
+    log "INFO" "KernelSU 版本: ${KSU_VER:-未知}"
+    log "INFO" "KernelSU 版本号: ${KSU_VER_CODE:-未知}"
+    log "INFO" "KernelSU 内核版本号: ${KSU_KERNEL_VER_CODE:-未知}"
   fi
 
-  # APatch
+  # APatch / KernelPatch 环境
   if [ "$APATCH" = "true" ] || [ "$KERNELPATCH" = "true" ]; then
     log "INFO" "环境: APatch / KernelPatch"
-    log "INFO" "APATCH_VER: ${APATCH_VER:-unknown}"
-    log "INFO" "APATCH_VER_CODE: ${APATCH_VER_CODE:-unknown}"
-    log "INFO" "KERNEL_VERSION: ${KERNEL_VERSION:-unknown}"
-    log "INFO" "KERNELPATCH_VERSION: ${KERNELPATCH_VERSION:-unknown}"
+    log "INFO" "APatch 版本: ${APATCH_VER:-未知}"
+    log "INFO" "APatch 版本号: ${APATCH_VER_CODE:-未知}"
+    log "INFO" "内核版本: ${KERNEL_VERSION:-未知}"
+    log "INFO" "KernelPatch 版本: ${KERNELPATCH_VERSION:-未知}"
   fi
 
-  # Magisk
+  # Magisk 环境
   if [ -n "$MAGISK_VER" ]; then
     log "INFO" "环境: Magisk"
-    log "INFO" "MAGISK_VER: $MAGISK_VER"
-    log "INFO" "MAGISK_VER_CODE: $MAGISK_VER_CODE"
+    log "INFO" "Magisk 版本: $MAGISK_VER"
+    log "INFO" "Magisk 版本号: $MAGISK_VER_CODE"
   fi
 
-  # Module Info
+  # 模块版本信息
   if [ -f "$MODDIR/module.prop" ]; then
-    local version=$(grep "^version=" "$MODDIR/module.prop" | cut -d= -f2)
-    local versionCode=$(grep "^versionCode=" "$MODDIR/module.prop" | cut -d= -f2)
-    log "INFO" "VERSION: ${version:-unknown}"
-    log "INFO" "VERSION_CODE: ${versionCode:-unknown}"
+    local version line
+    line=$(grep "^version=" "$MODDIR/module.prop")
+    version="${line#*=}"
+    line=$(grep "^versionCode=" "$MODDIR/module.prop")
+    local versionCode="${line#*=}"
+    log "INFO" "模块版本: ${version:-未知}"
+    log "INFO" "模块版本号: ${versionCode:-未知}"
   fi
 
   log "INFO" "=================================="
@@ -113,7 +116,7 @@ else
   log "INFO" "开机自启已禁用，跳过启动"
 fi
 
-# 执行OnePlus A16修复
+# 执行设备兼容性修复
 check_device_specific
 
 log "INFO" "========== 服务启动流程结束 =========="

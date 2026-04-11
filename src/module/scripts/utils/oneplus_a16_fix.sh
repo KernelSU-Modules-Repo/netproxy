@@ -3,10 +3,10 @@ set -e
 set -u
 
 #############################################################################
-# 多机型兼容性修复脚本（OnePlus ColorOS + REDMAGIC OS / ZTE）
+# 多机型兼容性修复脚本（OnePlus ColorOS + 红魔 / ZTE）
 # 功能:
-#   - OnePlus Android 16 (ColorOS 16): 清理 fw_INPUT / fw_OUTPUT 链中阻止 Google Play / GMS 工作的 REJECT 规则
-#   - REDMAGIC OS (ZTE): 清理 zte_fw_gms 链中阻止 Google Play / GMS 工作的 DROP/REJECT 规则
+#   - OnePlus Android 16: 清理 fw_INPUT / fw_OUTPUT 链中影响 Google Play / GMS 的规则
+#   - 红魔 / ZTE: 清理 zte_fw_gms 链中影响 Google Play / GMS 的规则
 #############################################################################
 
 readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -17,7 +17,7 @@ readonly LOG_FILE="$MODDIR/logs/service.log"
 
 #######################################
 # 清理指定链中的 REJECT/DROP 规则
-# Arguments:
+# 参数:
 #   $1 - iptables 命令 (iptables / ip6tables)
 #   $2 - 链名
 #######################################
@@ -84,16 +84,16 @@ fix_by_device() {
 
   log "INFO" "开始检测并修复..."
 
-  # RedMagic 部分
+  # 红魔 / ZTE 规则清理
   if [ "$is_redmagic" -eq 1 ]; then
-    log "INFO" "检测到 REDMAGIC OS / ZTE 特征，开始清理 zte_fw_gms"
+    log "INFO" "检测到红魔 / ZTE 特征，开始清理 zte_fw_gms"
     for chain in $redmagic_chains; do
       [ "$has_iptables" -eq 1 ] && remove_block_rules_from_chain "iptables" "$chain"
       [ "$has_ip6tables" -eq 1 ] && remove_block_rules_from_chain "ip6tables" "$chain"
     done
   fi
 
-  # OnePlus 部分
+  # OnePlus / ColorOS 规则清理
   if [ "$is_oneplus" -eq 1 ]; then
     log "INFO" "检测到 OnePlus/ColorOS 特征，开始清理 fw_INPUT/fw_OUTPUT"
     for chain in $oneplus_chains; do
@@ -107,7 +107,7 @@ fix_by_device() {
 #######################################
 # 主流程
 #######################################
-log "INFO" "========== 多机型兼容性修复：开始（OnePlus + REDMAGIC） =========="
+log "INFO" "========== 多机型兼容性修复：开始（OnePlus + 红魔） =========="
 
 fix_by_device
 

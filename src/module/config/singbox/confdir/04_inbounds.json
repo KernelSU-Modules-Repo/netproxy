@@ -1,0 +1,16 @@
+{
+  "inbounds": [
+    {
+      "type": "mixed",
+      "tag": "mixed_in",
+      "listen": "::",
+      "listen_port": 7080
+    },
+    {
+      "type": "tproxy",
+      "tag": "tproxy_in",
+      "listen": "::",
+      "listen_port": 1536
+    }
+  ]
+}
