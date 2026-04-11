@@ -6,7 +6,6 @@ on:
     branches: [ main ]
     paths:
       - 'src/module/**'
-      - 'src/webui/**'
   release:
     types: [published]
 
@@ -25,22 +24,6 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: 设置 Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: src/webui/package-lock.json
-      
-      - name: 设置 Python
-        uses: actions/setup-python@v6
-        with:
-          python-version: '3.x'
-
-      - name: 安装 WebUI 依赖
-        working-directory: src/webui
-        run: npm install
-
       - name: 更新 versionCode
         id: get_version
         run: |
@@ -48,9 +31,6 @@ jobs:
           sed -i "s/^versionCode=.*/versionCode=$COMMIT_COUNT/" src/module/module.prop
           echo "versionCode 已更新为: $COMMIT_COUNT"
           echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
-
-      - name: 构建 WebUI
-        run: python src/webui/build_webui.py
 
       - name: 上传构建产物
         uses: actions/upload-artifact@v7

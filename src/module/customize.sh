@@ -181,8 +181,13 @@ sync_to_live() {
     return 0
   fi
 
-  # 同步非配置文件 (bin, scripts, webroot 等)
-  local sync_dirs="bin scripts webroot action.sh service.sh module.prop"
+  if [ -e "$LIVE_DIR/webroot" ]; then
+    rm -rf "$LIVE_DIR/webroot" 2> /dev/null
+    print_ok "已移除旧 WebUI 文件"
+  fi
+
+  # 同步非配置文件 (bin, scripts 等)
+  local sync_dirs="bin scripts action.sh service.sh module.prop"
 
   for item in $sync_dirs; do
     local src="$MODPATH/$item"

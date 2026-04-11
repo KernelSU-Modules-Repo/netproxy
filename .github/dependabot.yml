@@ -2,22 +2,6 @@
 
 version: 2
 updates:
-  # npm 依赖 (WebUI)
-  - package-ecosystem: "npm"
-    directory: "/src/webui"
-    schedule:
-      interval: "daily"
-    commit-message:
-      prefix: "chore(deps)"
-
-
-  # Gradle 依赖 (Android Manager)
-  - package-ecosystem: "gradle"
-    directory: "/src/manager"
-    schedule:
-      interval: "daily"
-    commit-message:
-      prefix: "chore(deps)"
 
 
   # GitHub Actions
@@ -27,5 +11,4 @@ updates:
       interval: "daily"
     commit-message:
       prefix: "ci(deps)"
-
 

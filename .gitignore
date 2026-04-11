@@ -1,11 +1,5 @@
 *.zip
-/src/module/webroot/*
-!/src/module/webroot/.gitkeep
-deploy_webui.py
 
 # IDE 配置
 .idea/
 *.iml
-
-# Gradle 本地配置
-gradle-daemon-jvm.properties
