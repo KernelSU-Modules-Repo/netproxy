@@ -13,7 +13,7 @@ readonly LOG_FILE="$MODDIR/logs/service.log"
 load_module_config() {
   # 设置开机服务默认值
   AUTO_START=1
-  ONEPLUS_A16_FIX=1
+  GMS_FIX=1
 
   if [ -f "$MODULE_CONF" ]; then
     . "$MODULE_CONF"
@@ -47,9 +47,9 @@ wait_for_boot() {
 #######################################
 check_device_specific() {
   # 启用时执行设备兼容性修复
-  if [ "$ONEPLUS_A16_FIX" = "1" ]; then
-    log "INFO" "OnePlus A16 修复已启用，执行修复脚本"
-    sh "$MODDIR/scripts/utils/oneplus_a16_fix.sh"
+  if [ "$GMS_FIX" = "1" ]; then
+    log "INFO" "GMS 修复已启用，执行修复脚本"
+    sh "$MODDIR/scripts/utils/gms_fix.sh"
   fi
 }
 
