@@ -11,8 +11,7 @@ readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly OUTBOUNDS_DIR="$MODDIR/config/singbox/outbounds"
 readonly LOG_FILE="$MODDIR/logs/subscription.log"
 
-# 导入工具库
-. "$MODDIR/scripts/utils/log.sh"
+. "$MODDIR/scripts/utils/common.sh"
 
 #######################################
 # 显示帮助

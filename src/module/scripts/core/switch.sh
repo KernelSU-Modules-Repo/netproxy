@@ -9,8 +9,6 @@ readonly MODULE_CONF="$MODDIR/config/module.conf"
 readonly CLASH_API="127.0.0.1:9999"
 readonly CLASH_SECRET="singbox"
 
-# 导入工具库
-. "$MODDIR/scripts/utils/log.sh"
 . "$MODDIR/scripts/utils/common.sh"
 
 #######################################

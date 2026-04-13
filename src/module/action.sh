@@ -7,7 +7,7 @@ readonly SERVICE_SCRIPT="$MODDIR/scripts/core/service.sh"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 readonly SING_BOX_BIN="$MODDIR/bin/sing-box"
 
-. "$MODDIR/scripts/utils/log.sh"
+. "$MODDIR/scripts/utils/common.sh"
 
 #######################################
 # 检查 sing-box 是否运行

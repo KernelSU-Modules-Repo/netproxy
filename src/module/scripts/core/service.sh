@@ -12,69 +12,17 @@ readonly TPROXY_CONF_DIR="$MODDIR/config/tproxy"
 readonly SINGBOX_LOG_FILE="$MODDIR/logs/sing-box.log"
 readonly SINGBOX_DIR="$MODDIR/config/singbox"
 readonly CONFDIR="$SINGBOX_DIR/confdir"
-readonly NODES_DIR="$SINGBOX_DIR/outbounds/default"
 readonly RUNTIME_DIR="$SINGBOX_DIR/runtime"
 
 readonly KILL_TIMEOUT=5
 
-# 导入工具库
-. "$MODDIR/scripts/utils/log.sh"
-. "$MODDIR/scripts/utils/process.sh"
 . "$MODDIR/scripts/utils/common.sh"
+. "$MODDIR/scripts/core/runtime.sh"
 
 export PATH="$MODDIR/bin:$PATH"
 
 
 readonly BUSYBOX="$(detect_busybox)"
-
-
-
-#######################################
-# 写入运行时节点选择器配置
-#######################################
-write_runtime_selector() {
-  local current_config="$1"
-  local output="$RUNTIME_DIR/selector.json"
-  local current_tag tags="" f tag
-  
-  current_tag="$(detect_outbound_tag "$current_config")"
-  [ -n "$current_tag" ] || die "无法从当前出站配置读取标签: $current_config"
-
-  # 扫描节点文件，收集可切换的出站标签
-  for f in "$NODES_DIR"/*.json; do
-    [ -f "$f" ] || continue
-    tag="$(detect_outbound_tag "$f")"
-    if [ -n "$tag" ]; then
-      if [ -z "$tags" ]; then
-        tags="\"$tag\""
-      else
-        tags="$tags, \"$tag\""
-      fi
-    fi
-  done
-
-  # 未发现其他节点时，至少保留当前节点
-  [ -z "$tags" ] && tags="\"$current_tag\""
-
-  cat > "$output" << EOF
-{
-  "outbounds": [
-    {
-      "tag": "Proxy",
-      "type": "selector",
-      "outbounds": [
-        "direct",
-        $tags
-      ],
-      "default": "$current_tag",
-      "interrupt_exist_connections": true
-    }
-  ]
-}
-EOF
-
-  echo "$output"
-}
 
 #######################################
 # 环境与配置校验
@@ -83,7 +31,6 @@ verify_environment() {
   [ -x "$SING_BOX_BIN" ] || die "sing-box 二进制不存在或不可执行: $SING_BOX_BIN"
   [ -f "$MODULE_CONF" ] || die "模块配置文件不存在: $MODULE_CONF"
   [ -f "$TPROXY_CONF_DIR/tproxy.conf" ] || die "透明代理配置文件不存在: $TPROXY_CONF_DIR/tproxy.conf"
-  mkdir -p "$RUNTIME_DIR" || die "无法创建运行时目录: $RUNTIME_DIR"
   
   . "$MODULE_CONF"
   . "$TPROXY_CONF_DIR/tproxy.conf"
@@ -111,21 +58,41 @@ do_start() {
   fi
 
   # 准备节点与运行时选择器
-  local outbound_config outbound_mode selector_config
-  outbound_config="$(verify_environment)"
+  local outbound_config outbound_dir outbound_mode selector_mode selector_config
+  outbound_config="$(verify_environment)" || exit 1
+  . "$MODULE_CONF"
   outbound_mode="${OUTBOUND_MODE:-rule}"
-  selector_config="$(write_runtime_selector "$outbound_config")"
+  selector_mode="${SELECTOR_MODE:-urltest}"
+  outbound_dir="$(get_current_outbounds_dir "$outbound_config")" || exit 1
+  selector_config="$(write_runtime_selector "$outbound_config" "$selector_mode")" || exit 1
 
   log "INFO" "路由模式: $outbound_mode"
 
   # 构造启动参数
-  local args="-C $CONFDIR -C $NODES_DIR"
-  [ -n "$selector_config" ] && args="$args -c $selector_config"
+  local f tag node_count=0 skipped_count=0
+  set -- run -C "$CONFDIR"
+
+  for f in "$outbound_dir"/*.json; do
+    is_node_config_file "$f" || continue
+    tag="$(detect_outbound_tag "$f")"
+    if [ -z "$tag" ]; then
+      skipped_count=$((skipped_count + 1))
+      continue
+    fi
+
+    set -- "$@" -c "$f"
+    node_count=$((node_count + 1))
+  done
+
+  [ "$node_count" -gt 0 ] || die "当前节点目录没有可加载的节点配置: $outbound_dir"
+  log "INFO" "节点目录: $outbound_dir"
+  log "INFO" "已加载节点: $node_count，跳过无效节点: $skipped_count"
+  [ -n "$selector_config" ] && set -- "$@" -c "$selector_config"
 
   # 启动 sing-box 进程
   log "INFO" "正在启动 sing-box 进程..."
   cd "$SINGBOX_DIR" || die "无法进入配置目录: $SINGBOX_DIR"
-  nohup "$BUSYBOX" setuidgid root:net_admin "$SING_BOX_BIN" run $args > "$SINGBOX_LOG_FILE" 2>&1 &
+  nohup "$BUSYBOX" setuidgid root:net_admin "$SING_BOX_BIN" "$@" > "$SINGBOX_LOG_FILE" 2>&1 &
   
   local new_pid=$!
   sleep 1

@@ -1,0 +1,40 @@
+* text=auto eol=lf
+
+# Android/Linux shell scripts
+*.sh text eol=lf
+src/module/scripts/cli text eol=lf
+
+# Text configuration and documentation
+*.json text eol=lf
+*.jsonc text eol=lf
+*.conf text eol=lf
+*.prop text eol=lf
+*.md text eol=lf
+*.txt text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+*.svg text eol=lf
+*.webmanifest text eol=lf
+CNAME text eol=lf
+.nojekyll text eol=lf
+
+# Native binaries and packed assets
+src/module/bin/ipset -text
+src/module/bin/proxylink -text
+src/module/bin/sing-box -text
+*.db -text
+*.dat -text
+*.srs -text
+*.png -text
+*.jpg -text
+*.jpeg -text
+*.gif -text
+*.ico -text
+*.webp -text
+*.woff -text
+*.woff2 -text
+*.ttf -text
+*.zip -text

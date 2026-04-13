@@ -12,8 +12,7 @@ set -u
 readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
 readonly LOG_FILE="$MODDIR/logs/service.log"
 
-# 导入工具库
-. "$MODDIR/scripts/utils/log.sh"
+. "$MODDIR/scripts/utils/common.sh"
 
 #######################################
 # 清理指定链中的 REJECT/DROP 规则
