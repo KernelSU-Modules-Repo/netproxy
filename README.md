@@ -169,3 +169,5 @@ This project is built upon the following excellent open-source projects:
 ## Star
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Fanju6/NetProxy-Magisk&type=date&legend=top-left)](https://www.star-history.com/#Fanju6/NetProxy-Magisk&type=date&legend=top-left)
+
+![Stone Badge](https://stone.professorlee.work/api/stone/Fanju6/NetProxy-Magisk)
