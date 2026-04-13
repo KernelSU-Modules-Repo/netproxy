@@ -35,7 +35,7 @@ readonly EXECUTABLE_FILES="
     scripts/core/service.sh
     scripts/core/switch.sh
     scripts/network/tproxy.sh
-    scripts/config/subscription.sh
+    scripts/core/subscription.sh
     scripts/utils/oneplus_a16_fix.sh
 "
 

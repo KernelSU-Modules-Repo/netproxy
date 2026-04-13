@@ -29,6 +29,9 @@
 #   cli sub update <名称>              更新指定订阅
 #   cli sub update-all                 更新全部订阅
 #   cli sub rm <名称>                  删除订阅
+#   cli sub parse <节点链接>           单链接转 sing-box 节点
+#   cli sub file <文件>                文件节点或 Clash YAML 转节点
+#   cli sub sub <链接> [目录]          订阅链接转节点文件
 #
 # 控制接口:
 #   cli groups                         查看代理组和当前选择
@@ -70,7 +73,7 @@ readonly SING_BOX_BIN="$MODDIR/bin/sing-box"
 readonly PROXYLINK_BIN="$MODDIR/bin/proxylink"
 readonly SERVICE_SCRIPT="$SCRIPTS_DIR/core/service.sh"
 readonly SWITCH_SCRIPT="$SCRIPTS_DIR/core/switch.sh"
-readonly SUB_SCRIPT="$SCRIPTS_DIR/config/subscription.sh"
+readonly SUB_SCRIPT="$SCRIPTS_DIR/core/subscription.sh"
 readonly TPROXY_SCRIPT="$SCRIPTS_DIR/network/tproxy.sh"
 
 readonly CLASH_API="127.0.0.1:9999"
@@ -491,7 +494,7 @@ cmd_add() {
   [ -x "$PROXYLINK_BIN" ] || die "proxylink 不存在或不可执行: $PROXYLINK_BIN"
 
   info "正在导入节点..."
-  "$PROXYLINK_BIN" -parse "$link" -insecure -dns -format singbox -dir "$DEFAULT_NODES_DIR" -auto
+  sh "$SUB_SCRIPT" parse "$link" "$DEFAULT_NODES_DIR"
   info "节点导入完成"
 }
 
@@ -503,7 +506,7 @@ cmd_import() {
   [ -x "$PROXYLINK_BIN" ] || die "proxylink 不存在或不可执行: $PROXYLINK_BIN"
 
   info "正在导入文件..."
-  "$PROXYLINK_BIN" -file "$file" -insecure -dns -format singbox -dir "$DEFAULT_NODES_DIR"
+  sh "$SUB_SCRIPT" file "$file" "$DEFAULT_NODES_DIR"
   info "文件导入完成"
 }
 
@@ -680,7 +683,10 @@ cmd_sub() {
     update) sh "$SUB_SCRIPT" update "${1:-}" ;;
     update-all) sh "$SUB_SCRIPT" update-all ;;
     rm | remove) sh "$SUB_SCRIPT" remove "${1:-}" ;;
-    *) die "用法: cli sub {list|add|update|update-all|rm}" ;;
+    parse) sh "$SUB_SCRIPT" parse "${1:-}" "${2:-}" ;;
+    file | import) sh "$SUB_SCRIPT" file "${1:-}" "${2:-}" ;;
+    sub | fetch) sh "$SUB_SCRIPT" sub "${1:-}" "${2:-}" ;;
+    *) die "用法: cli sub {list|add|update|update-all|rm|parse|file|sub}" ;;
   esac
 }
 
@@ -837,6 +843,9 @@ NetProxy CLI
   cli sub update <名称>
   cli sub update-all
   cli sub rm <名称>
+  cli sub parse <节点链接>
+  cli sub file <文件>
+  cli sub sub <链接> [目录]
 
 控制接口:
   cli groups
