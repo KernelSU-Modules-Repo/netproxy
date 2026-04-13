@@ -75,13 +75,17 @@ prepare_output_dir() {
 import_parse() {
   local link="$1"
   local target_dir
+  local old_pwd
 
   [ -n "$link" ] || die "用法: $(basename "$0") parse <节点链接> [目录]"
   check_proxylink
   target_dir="$(prepare_output_dir "${2:-}")"
 
   log "INFO" "导入单个节点到: $target_dir"
-  "$PROXYLINK_BIN" -parse "$link" -insecure -dns -format singbox -dir "$target_dir" -auto >> "$LOG_FILE" 2>&1
+  old_pwd="$(pwd)"
+  cd "$target_dir" || die "Cannot enter output directory: $target_dir"
+  "$PROXYLINK_BIN" -parse "$link" -insecure -dns -format singbox -auto >> "$LOG_FILE" 2>&1
+  cd "$old_pwd" || true
   log "INFO" "单个节点导入完成"
 }
 
