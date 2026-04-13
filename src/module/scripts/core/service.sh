@@ -57,14 +57,14 @@ do_start() {
     return 0
   fi
 
-  # 准备节点与运行时选择器
-  local outbound_config outbound_dir outbound_mode selector_mode selector_config
+  # 准备节点与运行时出站配置
+  local outbound_config outbound_dir outbound_mode selector_mode runtime_outbounds
   outbound_config="$(verify_environment)" || exit 1
   . "$MODULE_CONF"
   outbound_mode="${OUTBOUND_MODE:-rule}"
   selector_mode="${SELECTOR_MODE:-urltest}"
   outbound_dir="$(get_current_outbounds_dir "$outbound_config")" || exit 1
-  selector_config="$(write_runtime_selector "$outbound_config" "$selector_mode")" || exit 1
+  runtime_outbounds="$(write_runtime_outbounds "$outbound_config" "$selector_mode")" || exit 1
 
   log "INFO" "路由模式: $outbound_mode"
 
@@ -87,7 +87,7 @@ do_start() {
   [ "$node_count" -gt 0 ] || die "当前节点目录没有可加载的节点配置: $outbound_dir"
   log "INFO" "节点目录: $outbound_dir"
   log "INFO" "已加载节点: $node_count，跳过无效节点: $skipped_count"
-  [ -n "$selector_config" ] && set -- "$@" -c "$selector_config"
+  [ -n "$runtime_outbounds" ] && set -- "$@" -c "$runtime_outbounds"
 
   # 启动 sing-box 进程
   log "INFO" "正在启动 sing-box 进程..."
@@ -145,7 +145,7 @@ do_stop() {
     log "INFO" "sing-box 进程已终止"
   fi
 
-  rm -f "$RUNTIME_DIR/selector.json" 2> /dev/null || true
+  rm -f "$RUNTIME_DIR/outbounds.json" 2> /dev/null || true
 
   log "INFO" "========== sing-box 服务停止完成 =========="
 }

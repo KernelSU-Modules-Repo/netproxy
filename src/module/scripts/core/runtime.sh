@@ -33,7 +33,7 @@ json_escape() {
 }
 
 #######################################
-# 追加标签到 JSON 数组片段
+# 追加出站标签到 JSON 数组片段
 #######################################
 append_selector_tag() {
   local tags="$1"
@@ -49,36 +49,45 @@ append_selector_tag() {
 }
 
 #######################################
-# 写入运行时节点选择器配置
+# 写入运行时出站配置
 #######################################
-write_runtime_selector() {
+write_runtime_outbounds() {
   local current_config="$1"
   local selector_mode="${2:-urltest}"
-  local output="$RUNTIME_DIR/selector.json"
-  local current_dir current_tag tags="" f tag
+  local output="$RUNTIME_DIR/outbounds.json"
+  local current_dir current_tag current_tag_json tags="" f tag
 
   current_dir="$(get_current_outbounds_dir "$current_config")"
   current_tag="$(detect_outbound_tag "$current_config")"
   [ -n "$current_tag" ] || die "无法从当前出站配置读取标签: $current_config"
+  current_tag_json="$(json_escape "$current_tag")"
+
   mkdir -p "$RUNTIME_DIR" || die "无法创建运行时配置目录: $RUNTIME_DIR"
 
   # 扫描当前节点目录，收集可切换的出站标签
   for f in "$current_dir"/*.json; do
     is_node_config_file "$f" || continue
     tag="$(detect_outbound_tag "$f")"
-    if [ -n "$tag" ]; then
-      tags="$(append_selector_tag "$tags" "$tag")"
-    fi
+    [ -n "$tag" ] || continue
+    tags="$(append_selector_tag "$tags" "$tag")"
   done
 
-  # 未发现其他节点时，至少保留当前节点
-  [ -z "$tags" ] && tags="$(append_selector_tag "" "$current_tag")"
+  # 未发现节点时，至少保留当前节点
+  [ -n "$tags" ] || tags="$(append_selector_tag "" "$current_tag")"
 
   case "$selector_mode" in
     urltest | auto | 动态测速)
       cat > "$output" << EOF
 {
   "outbounds": [
+    {
+      "tag": "direct",
+      "type": "direct"
+    },
+    {
+      "tag": "block",
+      "type": "block"
+    },
     {
       "tag": "Proxy",
       "type": "selector",
@@ -109,13 +118,21 @@ EOF
 {
   "outbounds": [
     {
+      "tag": "direct",
+      "type": "direct"
+    },
+    {
+      "tag": "block",
+      "type": "block"
+    },
+    {
       "tag": "Proxy",
       "type": "selector",
       "outbounds": [
         "direct",
         $tags
       ],
-      "default": "$current_tag",
+      "default": "$current_tag_json",
       "interrupt_exist_connections": true
     }
   ]
