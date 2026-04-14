@@ -48,31 +48,86 @@ append_selector_tag() {
   fi
 }
 
+# 运行时上下文（由 initialize_runtime_context 填充）
+CUR_OUTBOUND_CONFIG=""
+CUR_OUTBOUND_DIR=""
+CUR_OUTBOUND_MODE=""
+CUR_SELECTOR_MODE=""
+
+# 节点扫描结果（由 write_runtime_outbounds 填充）
+SCAN_NODE_ARGS=""
+SCAN_NODE_COUNT=0
+SCAN_SKIPPED_COUNT=0
+
 #######################################
-# 写入运行时出站配置
+# 初始化启动环境与基础配置
+#######################################
+initialize_runtime_context() {
+  # 基础环境检查
+  [ -x "${SING_BOX_BIN:-}" ] || die "sing-box 二进制不存在或不可执行"
+  [ -f "${MODULE_CONF:-}" ] || die "模块配置文件不存在"
+  [ -f "${TPROXY_CONF_DIR:-}/tproxy.conf" ] || die "透明代理配置文件不存在"
+
+  # 加载模块与透明代理配置
+  . "$MODULE_CONF"
+  . "$TPROXY_CONF_DIR/tproxy.conf"
+
+  # 提取并验证当前节点路径
+  CUR_OUTBOUND_CONFIG="$(strip_quotes "${CURRENT_CONFIG:-}")"
+  [ -n "$CUR_OUTBOUND_CONFIG" ] || die "CURRENT_CONFIG 未定义，请先选择节点"
+  [ -f "$CUR_OUTBOUND_CONFIG" ] || die "指定的节点配置文件不存在: $CUR_OUTBOUND_CONFIG"
+
+  # 确定运行模式与选择器模式
+  CUR_OUTBOUND_MODE="${OUTBOUND_MODE:-rule}"
+  CUR_SELECTOR_MODE="${SELECTOR_MODE:-urltest}"
+  
+  # 获取当前节点目录
+  CUR_OUTBOUND_DIR="$(get_current_outbounds_dir "$CUR_OUTBOUND_CONFIG")" || return 1
+}
+
+#######################################
+# 扫描节点并生成运行时出站配置
 #######################################
 write_runtime_outbounds() {
-  local current_config="$1"
-  local selector_mode="${2:-urltest}"
-  local output="$RUNTIME_DIR/outbounds.json"
-  local current_dir current_tag current_tag_json tags="" f tag
+  local output="${RUNTIME_DIR:?RUNTIME_DIR 未定义}/outbounds.json"
+  local current_config="${1:-$CUR_OUTBOUND_CONFIG}"
+  local current_dir="${CUR_OUTBOUND_DIR:-$(get_current_outbounds_dir "$current_config")}"
+  local selector_mode="${2:-$CUR_SELECTOR_MODE}"
+  local current_tag current_tag_json tags="" f tag
 
-  current_dir="$(get_current_outbounds_dir "$current_config")"
+  SCAN_NODE_ARGS=""
+  SCAN_NODE_COUNT=0
+  SCAN_SKIPPED_COUNT=0
+
   current_tag="$(detect_outbound_tag "$current_config")"
   [ -n "$current_tag" ] || die "无法从当前出站配置读取标签: $current_config"
   current_tag_json="$(json_escape "$current_tag")"
 
   mkdir -p "$RUNTIME_DIR" || die "无法创建运行时配置目录: $RUNTIME_DIR"
 
-  # 扫描当前节点目录，收集可切换的出站标签
+  log "INFO" "正在扫描节点目录: $current_dir"
+
+  # 扫描当前节点目录
   for f in "$current_dir"/*.json; do
     is_node_config_file "$f" || continue
     tag="$(detect_outbound_tag "$f")"
-    [ -n "$tag" ] && [ "$tag" != "default" ] || continue
-    tags="$(append_selector_tag "$tags" "$tag")"
+    
+    if [ -z "$tag" ]; then
+      SCAN_SKIPPED_COUNT=$((SCAN_SKIPPED_COUNT + 1))
+      continue
+    fi
+
+    # 收集启动参数（所有节点都加载）
+    SCAN_NODE_ARGS="$SCAN_NODE_ARGS -c \"$f\""
+    SCAN_NODE_COUNT=$((SCAN_NODE_COUNT + 1))
+
+    # 收集可切换标签（过滤掉 default 以防止抢占测速组）
+    if [ "$tag" != "default" ]; then
+      tags="$(append_selector_tag "$tags" "$tag")"
+    fi
   done
 
-  # 未发现节点时，至少保留当前节点
+  # 未发现可切换节点时，至少保留当前节点供测速/选择
   [ -n "$tags" ] || tags="$(append_selector_tag "" "$current_tag")"
 
   case "$selector_mode" in

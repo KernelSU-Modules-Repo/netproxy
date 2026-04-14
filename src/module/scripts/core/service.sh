@@ -21,27 +21,8 @@ readonly KILL_TIMEOUT=5
 
 export PATH="$MODDIR/bin:$PATH"
 
-
 readonly BUSYBOX="$(detect_busybox)"
 
-#######################################
-# 环境与配置校验
-#######################################
-verify_environment() {
-  [ -x "$SING_BOX_BIN" ] || die "sing-box 二进制不存在或不可执行: $SING_BOX_BIN"
-  [ -f "$MODULE_CONF" ] || die "模块配置文件不存在: $MODULE_CONF"
-  [ -f "$TPROXY_CONF_DIR/tproxy.conf" ] || die "透明代理配置文件不存在: $TPROXY_CONF_DIR/tproxy.conf"
-  
-  . "$MODULE_CONF"
-  . "$TPROXY_CONF_DIR/tproxy.conf"
-
-  local outbound_config
-  outbound_config="$(strip_quotes "${CURRENT_CONFIG:-}")"
-  [ -n "$outbound_config" ] || die "CURRENT_CONFIG 未定义，请先选择节点"
-  [ -f "$outbound_config" ] || die "指定的节点配置文件不存在: $outbound_config"
-  
-  echo "$outbound_config"
-}
 
 #######################################
 # 启动服务
@@ -57,37 +38,21 @@ do_start() {
     return 0
   fi
 
-  # 准备节点与运行时出站配置
-  local outbound_config outbound_dir outbound_mode selector_mode runtime_outbounds
-  outbound_config="$(verify_environment)" || exit 1
-  . "$MODULE_CONF"
-  outbound_mode="${OUTBOUND_MODE:-rule}"
-  selector_mode="${SELECTOR_MODE:-urltest}"
-  outbound_dir="$(get_current_outbounds_dir "$outbound_config")" || exit 1
-  runtime_outbounds="$(write_runtime_outbounds "$outbound_config" "$selector_mode")" || exit 1
+  # 准备启动环境与配置
+  initialize_runtime_context || exit 1
+  write_runtime_outbounds || exit 1
+  local runtime_outbounds="$RUNTIME_DIR/outbounds.json"
 
-  log "INFO" "路由模式: $outbound_mode"
+  log "INFO" "路由模式: $CUR_OUTBOUND_MODE"
+  log "INFO" "节点目录: $CUR_OUTBOUND_DIR"
 
-  # 构造启动参数
-  local f tag node_count=0 skipped_count=0
+  # 构造最终启动参数
   set -- run -C "$CONFDIR"
-
-  for f in "$outbound_dir"/*.json; do
-    is_node_config_file "$f" || continue
-    tag="$(detect_outbound_tag "$f")"
-    if [ -z "$tag" ]; then
-      skipped_count=$((skipped_count + 1))
-      continue
-    fi
-
-    set -- "$@" -c "$f"
-    node_count=$((node_count + 1))
-  done
-
-  [ "$node_count" -gt 0 ] || die "当前节点目录没有可加载的节点配置: $outbound_dir"
-  log "INFO" "节点目录: $outbound_dir"
-  log "INFO" "已加载节点: $node_count，跳过无效节点: $skipped_count"
   [ -n "$runtime_outbounds" ] && set -- "$@" -c "$runtime_outbounds"
+  eval "set -- \"\$@\" $SCAN_NODE_ARGS"
+
+  [ "$SCAN_NODE_COUNT" -gt 0 ] || die "当前节点目录没有可加载的节点配置: $CUR_OUTBOUND_DIR"
+  log "INFO" "已加载节点: $SCAN_NODE_COUNT，跳过节点: $SCAN_SKIPPED_COUNT"
 
   # 启动 sing-box 进程
   log "INFO" "正在启动 sing-box 进程..."
@@ -105,7 +70,7 @@ do_start() {
   fi
 
   # 同步运行模式并载入透明代理规则
-  sh "$MODDIR/scripts/core/switch.sh" mode "$outbound_mode" >> "$LOG_FILE" 2>&1 || log "WARN" "控制接口失败"
+  sh "$MODDIR/scripts/core/switch.sh" mode "$CUR_OUTBOUND_MODE" >> "$LOG_FILE" 2>&1 || log "WARN" "控制接口失败"
   log "INFO" "载入透明代理规则..."
   "$MODDIR/scripts/network/tproxy.sh" start -d "$TPROXY_CONF_DIR" >> "$LOG_FILE" 2>&1
 
