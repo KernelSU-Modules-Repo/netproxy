@@ -68,7 +68,7 @@ write_runtime_outbounds() {
   for f in "$current_dir"/*.json; do
     is_node_config_file "$f" || continue
     tag="$(detect_outbound_tag "$f")"
-    [ -n "$tag" ] || continue
+    [ -n "$tag" ] && [ "$tag" != "default" ] || continue
     tags="$(append_selector_tag "$tags" "$tag")"
   done
 
