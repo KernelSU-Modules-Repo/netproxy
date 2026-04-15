@@ -289,6 +289,12 @@ ask_install_app() {
 install_ipset_lkm() {
   print_title "集成 IPSET 驱动安装"
 
+  # 如果安装包中不包含 IPSET 组件，跳过整个流程
+  if [ ! -d "$MODPATH/bin/IPSET-LKM" ] && [ ! -f "$MODPATH/bin/ipset" ]; then
+      print_ok "安装包未包含 IPSET 组件，跳过"
+      return 0
+  fi
+
   local skip_lkm=false
 
   # 1. 检查内核是否已内置 IP_SET 支持
@@ -346,24 +352,26 @@ install_ipset_lkm() {
   fi
 
   # 3. 配置 IPSET 二进制工具环境
-  print_step "配置 IPSET 二进制工具环境..."
-  
-  if [ "$KSU" ] || [ "$APATCH" ]; then
-      print_ok "检测到 KernelSU/APatch 环境"
-      local ksu_bin="/data/adb/ksu/bin"
-      [ "$APATCH" ] && ksu_bin="/data/adb/ap/bin"
-      
-      mkdir -p "$ksu_bin"
-      rm -f "$ksu_bin/ipset"
-      ln -s "/data/adb/modules/netproxy/bin/ipset" "$ksu_bin/ipset"
-      print_ok "已创建符号链接: $ksu_bin/ipset"
+  if [ -f "$MODPATH/bin/ipset" ]; then
+      print_step "配置 IPSET 二进制工具环境..."
 
-  elif [ "$MAGISK_VER_CODE" ]; then
-      print_ok "检测到 Magisk 环境"
-      mkdir -p "$MODPATH/system/bin"
-      cp -f "$MODPATH/bin/ipset" "$MODPATH/system/bin/ipset"
-      set_perm "$MODPATH/system/bin/ipset" 0 0 0755
-      print_ok "ipset 已挂载至 /system/bin"
+      if [ "$KSU" ] || [ "$APATCH" ]; then
+          print_ok "检测到 KernelSU/APatch 环境"
+          local ksu_bin="/data/adb/ksu/bin"
+          [ "$APATCH" ] && ksu_bin="/data/adb/ap/bin"
+
+          mkdir -p "$ksu_bin"
+          rm -f "$ksu_bin/ipset"
+          ln -s "/data/adb/modules/netproxy/bin/ipset" "$ksu_bin/ipset"
+          print_ok "已创建符号链接: $ksu_bin/ipset"
+
+      elif [ "$MAGISK_VER_CODE" ]; then
+          print_ok "检测到 Magisk 环境"
+          mkdir -p "$MODPATH/system/bin"
+          cp -f "$MODPATH/bin/ipset" "$MODPATH/system/bin/ipset"
+          set_perm "$MODPATH/system/bin/ipset" 0 0 0755
+          print_ok "ipset 已挂载至 /system/bin"
+      fi
   fi
 
   # 4. 清理驱动源码以减小模块体积
