@@ -21,21 +21,22 @@ PROXY_WAS_RUNNING=false
 readonly PRESERVE_CONFIGS="
     module.conf
     tproxy/
-    singbox/outbounds
-    singbox/confdir/03_dns.json
-    singbox/routes
+    singbox/
 "
 
 # 需要设置可执行权限的文件
 readonly EXECUTABLE_FILES="
     bin/sing-box
     bin/proxylink
+    bin/IPSET-LKM/ko-loader
+    bin/IPSET-LKM/ipset
     action.sh
     scripts/cli
     scripts/core/service.sh
     scripts/core/switch.sh
     scripts/network/tproxy.sh
     scripts/core/subscription.sh
+    scripts/utils/ipset.sh
     scripts/utils/gms_fix.sh
 "
 
@@ -284,6 +285,93 @@ ask_install_app() {
   return 0
 }
 
+# 集成 IPSET LKM 驱动安装
+install_ipset_lkm() {
+  print_title "集成 IPSET 驱动安装"
+
+  local skip_lkm=false
+
+  # 1. 检查内核是否已内置 IP_SET 支持
+  print_step "正在检查系统 IPSET 状态..."
+  if [ -f /proc/config.gz ] && zcat /proc/config.gz | grep -q "CONFIG_IP_SET=y"; then
+      skip_lkm=true
+  fi
+
+  if [ "$skip_lkm" = "true" ]; then
+      if command -v ipset >/dev/null 2>&1; then
+          print_ok "内核支持与工具均已完备，无需安装。"
+          # 清理防止占用空间
+          rm -rf "$MODPATH/bin/IPSET-LKM/netfilter"
+          return 0
+      else
+          print_ok "内核已内置支持，将仅安装二进制工具。"
+      fi
+  fi
+
+  # 2. 检测内核版本并选择驱动
+  if [ "$skip_lkm" = "false" ]; then
+      local kernel_ver=$(uname -r | cut -d. -f1,2)
+      print_step "检测到内核版本: $kernel_ver"
+
+      local src=""
+      case "$kernel_ver" in
+          5.10) src="5.10" ;;
+          5.15) src="5.15" ;;
+          6.1)  src="6.1" ;;
+          6.6)  src="6.6" ;;
+          6.12) src="6.12" ;;
+          *) 
+              print_warn "不支持的内核版本: $kernel_ver"
+              print_warn "将跳过 IPSET 驱动安装"
+              skip_lkm=true
+              ;;
+      esac
+
+      if [ "$skip_lkm" = "false" ]; then
+          local driver_source="$MODPATH/bin/IPSET-LKM/netfilter/$src"
+          if [ -d "$driver_source" ]; then
+              print_step "正在安装适用于内核 $src 的驱动..."
+              rm -rf "/data/adb/netfilter"
+              mkdir -p "/data/adb/netfilter"
+              if cp -rf "$driver_source/"* "/data/adb/netfilter/" 2> /dev/null; then
+                  set_perm_recursive "/data/adb/netfilter" 0 0 0755 0755
+                  print_ok "IPSET LKM 驱动已部署到 /data/adb/netfilter"
+              else
+                  print_error "驱动部署失败"
+              fi
+          else
+              print_warn "模块中缺少内核 $src 的驱动文件"
+          fi
+      fi
+  fi
+
+  # 3. 配置 IPSET 二进制工具环境
+  print_step "配置 IPSET 二进制工具环境..."
+  
+  if [ "$KSU" ] || [ "$APATCH" ]; then
+      print_ok "检测到 KernelSU/APatch 环境"
+      local ksu_bin="/data/adb/ksu/bin"
+      [ "$APATCH" ] && ksu_bin="/data/adb/ap/bin"
+      
+      mkdir -p "$ksu_bin"
+      rm -f "$ksu_bin/ipset"
+      ln -s "/data/adb/modules/netproxy/bin/ipset" "$ksu_bin/ipset"
+      print_ok "已创建符号链接: $ksu_bin/ipset"
+
+  elif [ "$MAGISK_VER_CODE" ]; then
+      print_ok "检测到 Magisk 环境"
+      mkdir -p "$MODPATH/system/bin"
+      cp -f "$MODPATH/bin/ipset" "$MODPATH/system/bin/ipset"
+      set_perm "$MODPATH/system/bin/ipset" 0 0 0755
+      print_ok "ipset 已挂载至 /system/bin"
+  fi
+
+  # 4. 清理驱动源码以减小模块体积
+  rm -rf "$MODPATH/bin/IPSET-LKM/netfilter"
+
+  return 0
+}
+
 # 清理临时文件
 cleanup() {
   rm -rf "$BACKUP_DIR" 2> /dev/null
@@ -304,6 +392,7 @@ if backup_config \
   && extract_module \
   && restore_config \
   && stop_proxy_if_running \
+  && install_ipset_lkm \
   && sync_to_live \
   && set_permissions \
   && restart_proxy_if_needed; then
