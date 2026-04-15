@@ -18,6 +18,7 @@
 #   cli rm <名称|标签|路径>             删除节点
 #   cli show <名称|标签|路径>           查看节点配置
 #   cli delay [名称|标签|all]           测试节点延迟
+#   cli convert <文件>                 sing-box 节点转链接
 #
 # 模式:
 #   cli mode                           查看出站模式
@@ -30,6 +31,7 @@
 #   cli sub update-all                 更新全部订阅
 #   cli sub rm <名称>                  删除订阅
 #   cli sub parse <节点链接>           单链接转 sing-box 节点
+#   cli sub convert <文件>             sing-box 节点转链接
 #   cli sub file <文件>                文件节点或 Clash YAML 转节点
 #   cli sub sub <链接> [目录]          订阅链接转节点文件
 #
@@ -532,6 +534,12 @@ cmd_show() {
   cat "$node"
 }
 
+cmd_convert() {
+  local file="${1:-}"
+  [ -n "$file" ] || die "用法: cli convert <文件>"
+  sh "$SUB_SCRIPT" convert "$file"
+}
+
 #######################################
 # 出站模式与控制接口
 #######################################
@@ -684,9 +692,10 @@ cmd_sub() {
     update-all) sh "$SUB_SCRIPT" update-all ;;
     rm | remove) sh "$SUB_SCRIPT" remove "${1:-}" ;;
     parse) sh "$SUB_SCRIPT" parse "${1:-}" "${2:-}" ;;
+    convert) sh "$SUB_SCRIPT" convert "${1:-}" ;;
     file | import) sh "$SUB_SCRIPT" file "${1:-}" "${2:-}" ;;
     sub | fetch) sh "$SUB_SCRIPT" sub "${1:-}" "${2:-}" ;;
-    *) die "用法: cli sub {list|add|update|update-all|rm|parse|file|sub}" ;;
+    *) die "用法: cli sub {list|add|update|update-all|rm|parse|convert|file|sub}" ;;
   esac
 }
 
@@ -831,6 +840,7 @@ NetProxy CLI
   cli import <文件>
   cli rm <名称|标签|路径>
   cli show <名称|标签|路径>
+  cli convert <文件>
   cli delay [名称|标签|all]
 
 模式:
@@ -844,6 +854,7 @@ NetProxy CLI
   cli sub update-all
   cli sub rm <名称>
   cli sub parse <节点链接>
+  cli sub convert <文件>
   cli sub file <文件>
   cli sub sub <链接> [目录]
 
@@ -889,6 +900,7 @@ main() {
     import) cmd_import "$@" ;;
     rm | remove) cmd_rm "$@" ;;
     show) cmd_show "$@" ;;
+    convert) cmd_convert "$@" ;;
     delay) cmd_delay "$@" ;;
     mode) cmd_mode "$@" ;;
     sub | subscription) cmd_sub "$@" ;;

@@ -21,6 +21,7 @@ show_help() {
 
 导入节点:
   parse <节点链接> [目录]       单个链接转 sing-box 节点
+  convert <文件>                sing-box 节点转链接
   file <文件> [目录]           文件节点或 Clash YAML 转 sing-box 节点
   sub <订阅链接> [目录]        订阅转 sing-box 节点，每个节点一个文件
 
@@ -87,6 +88,19 @@ import_parse() {
   "$PROXYLINK_BIN" -parse "$link" -insecure -dns -format singbox -auto >> "$LOG_FILE" 2>&1
   cd "$old_pwd" || true
   log "INFO" "单个节点导入完成"
+}
+
+#######################################
+# sing-box 节点转链接
+#######################################
+export_link() {
+  local file="$1"
+
+  [ -n "$file" ] || die "用法: $(basename "$0") convert <文件>"
+  [ -f "$file" ] || die "文件不存在: $file"
+  check_proxylink
+
+  "$PROXYLINK_BIN" -singbox "$file" -format uri
 }
 
 #######################################
@@ -255,6 +269,9 @@ main() {
   case "$command" in
     parse)
       import_parse "${1:-}" "${2:-}"
+      ;;
+    convert)
+      export_link "${1:-}"
       ;;
     file | import)
       import_file "${1:-}" "${2:-}"
