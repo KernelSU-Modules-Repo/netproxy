@@ -55,14 +55,30 @@ jobs:
         if: ${{ needs.build.result == 'success' }}
         run: |
           COMMIT_COUNT=${{ needs.build.outputs.commit_count }}
-          # 从 module.prop 读取 version
           VERSION=$(grep '^version=' src/module/module.prop | cut -d= -f2)
-          ZIP_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}.zip"
-          echo "ZIP_NAME=$ZIP_NAME" >> $GITHUB_ENV
-          
+          echo "VERSION=$VERSION" >> $GITHUB_ENV
+          echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
+
+          # 1. 完整包 (全部组件)
+          FULL_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}.zip"
+          echo "FULL_NAME=$FULL_NAME" >> $GITHUB_ENV
           cd src/module
-          zip -r "../../$ZIP_NAME" .
-          cd ..
+          zip -r "../../$FULL_NAME" .
+          cd ../..
+
+          # 2. 精简包 (排除 IPSET 相关文件)
+          LITE_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}_lite.zip"
+          echo "LITE_NAME=$LITE_NAME" >> $GITHUB_ENV
+          cd src/module
+          zip -r "../../$LITE_NAME" . -x "bin/IPSET-LKM/*" "bin/ipset"
+          cd ../..
+
+          # 3. 纯脚本包 (排除所有二进制文件)
+          MINI_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}_mini.zip"
+          echo "MINI_NAME=$MINI_NAME" >> $GITHUB_ENV
+          cd src/module
+          zip -r "../../$MINI_NAME" . -x "bin/sing-box" "bin/proxylink" "bin/ipset" "bin/IPSET-LKM/*" "bin/zashboard/*"
+          cd ../..
 
       - name: 发送模块到 Telegram
         if: ${{ needs.build.result == 'success' }}
@@ -71,7 +87,7 @@ jobs:
         run: |
           CAPTION="模块构建成功通知
           
-          文件: \`${{ env.ZIP_NAME }}\`
+          版本: \`${{ env.VERSION }}\` (build ${{ env.COMMIT_COUNT }})
           说明:
           \`\`\`
           $COMMIT_MSG
@@ -79,12 +95,27 @@ jobs:
 
           [提交记录](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           [构建日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
-          
-          curl -v -F "chat_id=${{ secrets.TG_CHAT_ID }}" \
-               -F "document=@${{ env.ZIP_NAME }}" \
+
+          # 发送完整包
+          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" \
+               -F "document=@${{ env.FULL_NAME }}" \
                -F "message_thread_id=2275" \
                -F "parse_mode=Markdown" \
                -F "caption=$CAPTION" \
+               https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
+
+          # 发送精简包
+          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" \
+               -F "document=@${{ env.LITE_NAME }}" \
+               -F "message_thread_id=2275" \
+               -F "caption=lite: 不含 IPSET 驱动，适用于内核已内置 IPSET 的设备" \
+               https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
+
+          # 发送纯脚本包
+          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" \
+               -F "document=@${{ env.MINI_NAME }}" \
+               -F "message_thread_id=2275" \
+               -F "caption=mini: 不含二进制文件和 IPSET 驱动，需自行放入 sing-box、proxylink、zashboard 等组件" \
                https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
 
       - name: 失败通知
