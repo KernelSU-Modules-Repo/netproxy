@@ -619,7 +619,10 @@ fw_restore_apply() {
 # Helper: Execute idempotent rule (jump or terminal) with existence check
 # Unified with run_ipt_command for consistent logging and flags
 fw_rule_idempotent() {
-    local family="$1" table="$2" chain="$3" target="$4"
+    local family="$1"
+    local table="$2"
+    local chain="$3"
+    local target="$4"
     shift 4
 
     local cmd="iptables"
@@ -970,7 +973,8 @@ cleanup_static_bypass_ipset() {
 # Helper: add sub-chain jump rules with optional performance mode conntrack optimization
 # Uses dynamic scoping for $cmd and $table from the calling function
 _add_chain_jumps() {
-    local parent="$1" perf="$2"
+    local parent="$1"
+    local perf="$2"
     shift 2
     local target
     for target in "$@"; do
@@ -1018,7 +1022,8 @@ setup_proxy_chain() {
     # Initialize restore session for the target table
     fw_restore_init "$family" "$table"
     
-    local c c_count=0
+    local c
+    local c_count=0
     for c in $chains; do
         fw_restore_add_chain "$c"
         c_count=$((c_count + 1))
@@ -1734,7 +1739,15 @@ block_loopback_traffic() {
 block_quic() {
     case "$1" in
         enable)
-            local family cmd target hooks h exists missing_hooks current_rules
+            local family
+            local cmd
+            local target
+            local hooks
+            local h
+            local exists
+            local missing_hooks
+            local current_rules
+
             for family in 4 6; do
                 [ "$family" = "6" ] && [ "$PROXY_IPV6" -ne 1 ] && continue
                 
