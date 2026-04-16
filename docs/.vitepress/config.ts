@@ -28,6 +28,7 @@ export default defineConfig({
                     text: '入门',
                     items: [
                         { text: '项目介绍', link: '/guide/introduction' },
+                        { text: '模块理念', link: '/guide/philosophy' },
                         { text: '安装教程', link: '/guide/installation' },
                         { text: '快速开始', link: '/guide/quick-start' }
                     ]
