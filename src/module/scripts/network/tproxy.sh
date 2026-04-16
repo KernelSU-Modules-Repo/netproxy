@@ -227,19 +227,19 @@ load_config() {
 
     if [ "$VERBOSE" -eq 1 ]; then
         for _var in DRY_RUN CORE_USER_GROUP ROUTING_MARK FORCE_MARK_BYPASS \
-                    PROXY_TCP_PORT PROXY_UDP_PORT PROXY_MODE PERFORMANCE_MODE \
-                    DNS_HIJACK_ENABLE DNS_PORT \
-                    MOBILE_INTERFACE WIFI_INTERFACE HOTSPOT_INTERFACE USB_INTERFACE \
-                    OTHER_BYPASS_INTERFACES OTHER_PROXY_INTERFACES \
-                    PROXY_MOBILE PROXY_WIFI PROXY_HOTSPOT PROXY_USB \
-                    PROXY_TCP PROXY_UDP PROXY_IPV6 \
-                    MARK_VALUE MARK_VALUE6 TABLE_ID \
-                    PROXY_IPv4_LIST PROXY_IPv6_LIST BYPASS_IPv4_LIST BYPASS_IPv6_LIST \
-                    HOTSPOT_SUBNET_IPV4 HOTSPOT_SUBNET_IPV6 \
-                    APP_PROXY_ENABLE PROXY_APPS_LIST BYPASS_APPS_LIST APP_PROXY_MODE \
-                    BYPASS_CN_IP CN_IP_FILE CN_IPV6_FILE CN_IP_URL CN_IPV6_URL \
-                    MAC_FILTER_ENABLE PROXY_MACS_LIST BYPASS_MACS_LIST MAC_PROXY_MODE \
-                    BLOCK_QUIC LOG_TIMESTAMP SKIP_CHECK_FEATURE; do
+            PROXY_TCP_PORT PROXY_UDP_PORT PROXY_MODE PERFORMANCE_MODE \
+            DNS_HIJACK_ENABLE DNS_PORT \
+            MOBILE_INTERFACE WIFI_INTERFACE HOTSPOT_INTERFACE USB_INTERFACE \
+            OTHER_BYPASS_INTERFACES OTHER_PROXY_INTERFACES \
+            PROXY_MOBILE PROXY_WIFI PROXY_HOTSPOT PROXY_USB \
+            PROXY_TCP PROXY_UDP PROXY_IPV6 \
+            MARK_VALUE MARK_VALUE6 TABLE_ID \
+            PROXY_IPv4_LIST PROXY_IPv6_LIST BYPASS_IPv4_LIST BYPASS_IPv6_LIST \
+            HOTSPOT_SUBNET_IPV4 HOTSPOT_SUBNET_IPV6 \
+            APP_PROXY_ENABLE PROXY_APPS_LIST BYPASS_APPS_LIST APP_PROXY_MODE \
+            BYPASS_CN_IP CN_IP_FILE CN_IPV6_FILE CN_IP_URL CN_IPV6_URL \
+            MAC_FILTER_ENABLE PROXY_MACS_LIST BYPASS_MACS_LIST MAC_PROXY_MODE \
+            BLOCK_QUIC LOG_TIMESTAMP SKIP_CHECK_FEATURE; do
             eval "log Debug \"$_var: \$$_var\""
         done
     fi
@@ -332,7 +332,7 @@ init_kernel_config_cache() {
 # Helper: validate a value is a positive integer
 is_positive_integer() {
     case "$1" in
-        ''|*[!0-9]*) return 1 ;;
+        '' | *[!0-9]*) return 1 ;;
     esac
     return 0
 }
@@ -351,13 +351,19 @@ validate_config() {
     fi
 
     case "$PROXY_MODE" in
-        0|1|2) ;;
-        *) log Error "Invalid PROXY_MODE: $PROXY_MODE (must be 0=auto, 1=force TPROXY, 2=force REDIRECT)"; return 1 ;;
+        0 | 1 | 2) ;;
+        *)
+            log Error "Invalid PROXY_MODE: $PROXY_MODE (must be 0=auto, 1=force TPROXY, 2=force REDIRECT)"
+            return 1
+            ;;
     esac
 
     case "$DNS_HIJACK_ENABLE" in
-        0|1|2) ;;
-        *) log Error "Invalid DNS_HIJACK_ENABLE: $DNS_HIJACK_ENABLE (must be 0=disabled, 1=tproxy, 2=redirect)"; return 1 ;;
+        0 | 1 | 2) ;;
+        *)
+            log Error "Invalid DNS_HIJACK_ENABLE: $DNS_HIJACK_ENABLE (must be 0=disabled, 1=tproxy, 2=redirect)"
+            return 1
+            ;;
     esac
 
     if ! is_positive_integer "$DNS_PORT" || [ "$DNS_PORT" -lt 1 ] || [ "$DNS_PORT" -gt 65535 ]; then
@@ -506,10 +512,10 @@ check_kernel_feature() {
     # check runtime loaded modules (/sys/module/)
     local module_name=""
     case "$feature" in
-        IP_SET)                       module_name="ip_set" ;;
-        NETFILTER_XT_SET)             module_name="xt_set" ;;
-        NETFILTER_XT_MATCH_ADDRTYPE)  module_name="xt_addrtype" ;;
-        NETFILTER_XT_TARGET_TPROXY)   module_name="xt_TPROXY" ;;
+        IP_SET) module_name="ip_set" ;;
+        NETFILTER_XT_SET) module_name="xt_set" ;;
+        NETFILTER_XT_MATCH_ADDRTYPE) module_name="xt_addrtype" ;;
+        NETFILTER_XT_TARGET_TPROXY) module_name="xt_TPROXY" ;;
     esac
     if [ -n "$module_name" ] && [ -d "/sys/module/$module_name" ]; then
         log Debug "Kernel feature $feature is enabled (loaded module)"
@@ -602,17 +608,17 @@ fw_restore_apply() {
             cat "$RESTORE_FILE" >&2
         fi
     else
-        if ! $cmd --noflush < "$RESTORE_FILE" 2>/dev/null; then
+        if ! $cmd --noflush < "$RESTORE_FILE" 2> /dev/null; then
             log Error "Failed to apply restore rules for IPv$RESTORE_FAMILY $RESTORE_TABLE"
             if [ "$VERBOSE" -eq 1 ]; then
                 log Debug "Failed restore content:"
                 cat "$RESTORE_FILE" >&2
             fi
-            rm -f "$RESTORE_FILE" 2>/dev/null
+            rm -f "$RESTORE_FILE" 2> /dev/null
             return 1
         fi
     fi
-    rm -f "$RESTORE_FILE" 2>/dev/null
+    rm -f "$RESTORE_FILE" 2> /dev/null
     return 0
 }
 
@@ -629,7 +635,7 @@ fw_rule_idempotent() {
     [ "$family" = "6" ] && cmd="ip6tables"
 
     # Verify if rule already exists (-C check)
-    if "$cmd" -t "$table" -w 100 -C "$chain" "$@" -j "$target" 2>/dev/null; then
+    if "$cmd" -t "$table" -w 100 -C "$chain" "$@" -j "$target" 2> /dev/null; then
         return 0
     fi
 
@@ -722,7 +728,6 @@ find_packages_uid() {
     ' /data/system/packages.list
 }
 
-
 download_file() {
     local url="$1"
     local output="$2"
@@ -798,7 +803,7 @@ setup_cn_ipset() {
         log Debug "CN IP bypass is disabled, ipset setup skipped"
         return 0
     fi
-    
+
     if ! command -v ipset > /dev/null 2>&1; then
         log Error "ipset command not found. Cannot bypass CN IPs"
         return 1
@@ -921,7 +926,7 @@ setup_static_bypass_ipset() {
         return 0
     fi
 
-    if ! command -v ipset >/dev/null 2>&1; then
+    if ! command -v ipset > /dev/null 2>&1; then
         log Warn "ipset command not found, skipping static bypass optimization"
         return 1
     fi
@@ -935,8 +940,8 @@ setup_static_bypass_ipset() {
     fi
 
     # Rebuild sets to ensure content matches current configuration
-    ipset destroy bypass4_static 2>/dev/null || true
-    ipset destroy bypass6_static 2>/dev/null || true
+    ipset destroy bypass4_static 2> /dev/null || true
+    ipset destroy bypass6_static 2> /dev/null || true
 
     {
         echo "create bypass4_static hash:net family inet hashsize 64 maxelem 256"
@@ -963,11 +968,11 @@ setup_static_bypass_ipset() {
 cleanup_static_bypass_ipset() {
     # Loose cleanup semantics: ignore failures if sets don't exist
     if [ "$DRY_RUN" -eq 1 ]; then
-         log Debug "[EXEC] ipset destroy bypass[46]_static (skipped, dry-run)"
-         return 0
+        log Debug "[EXEC] ipset destroy bypass[46]_static (skipped, dry-run)"
+        return 0
     fi
-    ipset destroy bypass4_static 2>/dev/null || true
-    ipset destroy bypass6_static 2>/dev/null || true
+    ipset destroy bypass4_static 2> /dev/null || true
+    ipset destroy bypass6_static 2> /dev/null || true
 }
 
 # Helper: add sub-chain jump rules with optional performance mode conntrack optimization
@@ -1021,7 +1026,7 @@ setup_proxy_chain() {
 
     # Initialize restore session for the target table
     fw_restore_init "$family" "$table"
-    
+
     local c
     local c_count=0
     for c in $chains; do
@@ -1031,7 +1036,7 @@ setup_proxy_chain() {
     log Info "Custom chain initialization ($c_count chains) completed"
 
     # Rules building
-    
+
     # Build entry dispatch rules in the restore session
     if [ "$PROXY_UDP" -eq 1 ] || [ "$mode" = "redirect" ]; then
         fw_restore_append_rule "PROXY_PRE_ENTRY$suffix" -p udp -j "PROXY_PREROUTING$suffix"
@@ -1115,7 +1120,7 @@ setup_proxy_chain() {
     [ "$family" = "6" ] && ipset_name="bypass6_static"
 
     if [ "$HAS_IPSET" -eq 1 ] && [ "$HAS_XT_SET" -eq 1 ]; then
-        if ipset list "$ipset_name" >/dev/null 2>&1; then
+        if ipset list "$ipset_name" > /dev/null 2>&1; then
             use_ipset=1
         fi
     fi
@@ -1537,8 +1542,8 @@ cleanup_chain() {
     fi
 
     # Remove from main chains (symmetric with setup)
-    run_ipt_command "$cmd" -t "$table" -D PREROUTING -j "PROXY_PRE_ENTRY$suffix" 2>/dev/null || true
-    run_ipt_command "$cmd" -t "$table" -D OUTPUT -j "PROXY_OUT_ENTRY$suffix" 2>/dev/null || true
+    run_ipt_command "$cmd" -t "$table" -D PREROUTING -j "PROXY_PRE_ENTRY$suffix" 2> /dev/null || true
+    run_ipt_command "$cmd" -t "$table" -D OUTPUT -j "PROXY_OUT_ENTRY$suffix" 2> /dev/null || true
 
     # Define custom chains including dispatchers for symmetric cleanup
     local chains="PROXY_PREROUTING$suffix PROXY_OUTPUT$suffix DIVERT$suffix PROXY_IP$suffix BYPASS_IP$suffix BYPASS_INTERFACE$suffix PROXY_INTERFACE$suffix DNS_HIJACK_PRE$suffix DNS_HIJACK_OUT$suffix APP_CHAIN$suffix MAC_CHAIN$suffix PROXY_PRE_ENTRY$suffix PROXY_OUT_ENTRY$suffix"
@@ -1546,19 +1551,19 @@ cleanup_chain() {
     # Teardown custom chains
     local c
     for c in $chains; do
-        run_ipt_command "$cmd" -t "$table" -F "$c" 2>/dev/null || true
-        run_ipt_command "$cmd" -t "$table" -X "$c" 2>/dev/null || true
+        run_ipt_command "$cmd" -t "$table" -F "$c" 2> /dev/null || true
+        run_ipt_command "$cmd" -t "$table" -X "$c" 2> /dev/null || true
     done
 
     # Cleanup DNS hijack entry rules and chains
     if [ "$mode" = "tproxy" ] && [ "$DNS_HIJACK_ENABLE" -eq 2 ]; then
-        run_ipt_command "$cmd" -t nat -D PREROUTING -j "NAT_DNS_PRE_ENTRY$suffix" 2>/dev/null || true
-        run_ipt_command "$cmd" -t nat -D OUTPUT -j "NAT_DNS_OUT_ENTRY$suffix" 2>/dev/null || true
-        
+        run_ipt_command "$cmd" -t nat -D PREROUTING -j "NAT_DNS_PRE_ENTRY$suffix" 2> /dev/null || true
+        run_ipt_command "$cmd" -t nat -D OUTPUT -j "NAT_DNS_OUT_ENTRY$suffix" 2> /dev/null || true
+
         local dns_chains="NAT_DNS_HIJACK$suffix NAT_DNS_PRE_ENTRY$suffix NAT_DNS_OUT_ENTRY$suffix"
         for c in $dns_chains; do
-            run_ipt_command "$cmd" -t nat -F "$c" 2>/dev/null || true
-            run_ipt_command "$cmd" -t nat -X "$c" 2>/dev/null || true
+            run_ipt_command "$cmd" -t nat -F "$c" 2> /dev/null || true
+            run_ipt_command "$cmd" -t nat -X "$c" 2> /dev/null || true
         done
     fi
 
@@ -1618,8 +1623,8 @@ cleanup_ipset() {
     log Debug "[EXEC] ipset destroy cnip"
     log Debug "[EXEC] ipset destroy cnip6"
     if [ "$DRY_RUN" -eq 0 ]; then
-        ipset destroy cnip 2>/dev/null || true
-        ipset destroy cnip6 2>/dev/null || true
+        ipset destroy cnip 2> /dev/null || true
+        ipset destroy cnip6 2> /dev/null || true
         log Info "ipset 'cnip' and 'cnip6' destroyed"
     fi
 }
@@ -1730,8 +1735,8 @@ block_loopback_traffic() {
             fw_rule_idempotent "4" "filter" "OUTPUT" "REJECT" -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT"
             ;;
         disable)
-            run_ipt_command ip6tables -t filter -D OUTPUT -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2>/dev/null || true
-            run_ipt_command iptables -t filter -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2>/dev/null || true
+            run_ipt_command ip6tables -t filter -D OUTPUT -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2> /dev/null || true
+            run_ipt_command iptables -t filter -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2> /dev/null || true
             ;;
     esac
 }
@@ -1750,14 +1755,17 @@ block_quic() {
 
             for family in 4 6; do
                 [ "$family" = "6" ] && [ "$PROXY_IPV6" -ne 1 ] && continue
-                
+
                 cmd="iptables"
                 target="BLOCK_QUIC"
-                [ "$family" = "6" ] && { cmd="ip6tables"; target="BLOCK_QUIC6"; }
+                [ "$family" = "6" ] && {
+                    cmd="ip6tables"
+                    target="BLOCK_QUIC6"
+                }
 
                 # Align BLOCK_QUIC hooks by snapshotting current rules and batching missing hooks
-                current_rules=$("$cmd" -t filter -S 2>/dev/null)
-                
+                current_rules=$("$cmd" -t filter -S 2> /dev/null)
+
                 missing_hooks=""
                 for h in INPUT FORWARD OUTPUT; do
                     case "$current_rules" in
@@ -1793,12 +1801,12 @@ block_quic() {
                 [ "$cmd" = "ip6tables" ] && [ "$PROXY_IPV6" -ne 1 ] && continue
                 local target="BLOCK_QUIC"
                 [ "$cmd" = "ip6tables" ] && target="BLOCK_QUIC6"
-                
+
                 for chain in INPUT FORWARD OUTPUT; do
-                    run_ipt_command "$cmd" -D "$chain" -j "$target" 2>/dev/null || true
+                    run_ipt_command "$cmd" -D "$chain" -j "$target" 2> /dev/null || true
                 done
-                run_ipt_command "$cmd" -F "$target" 2>/dev/null || true
-                run_ipt_command "$cmd" -X "$target" 2>/dev/null || true
+                run_ipt_command "$cmd" -F "$target" 2> /dev/null || true
+                run_ipt_command "$cmd" -X "$target" 2> /dev/null || true
             done
             log Info "QUIC traffic blocking disabled"
             ;;
