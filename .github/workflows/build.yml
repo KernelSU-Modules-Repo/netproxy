@@ -50,8 +50,7 @@ jobs:
         with:
           name: NetProxy-Module
           path: src/module
-
-      - name: 打包模块
+      - name: 准备变量
         if: ${{ needs.build.result == 'success' }}
         run: |
           COMMIT_COUNT=${{ needs.build.outputs.commit_count }}
@@ -59,25 +58,28 @@ jobs:
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
 
+      - name: 打包模块
+        if: ${{ needs.build.result == 'success' }}
+        run: |
           # 1. 完整包 (全部组件)
-          FULL_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}.zip"
+          FULL_NAME="NetProxy_${{ env.VERSION }}_${{ env.COMMIT_COUNT }}.zip"
           echo "FULL_NAME=$FULL_NAME" >> $GITHUB_ENV
           cd src/module
-          zip -r "../../$FULL_NAME" .
+          7z a -tzip -mx=9 "../../$FULL_NAME" .
           cd ../..
 
           # 2. 精简包 (排除 IPSET 相关文件)
-          LITE_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}_lite.zip"
+          LITE_NAME="NetProxy_${{ env.VERSION }}_${{ env.COMMIT_COUNT }}_lite.zip"
           echo "LITE_NAME=$LITE_NAME" >> $GITHUB_ENV
           cd src/module
-          zip -r "../../$LITE_NAME" . -x "bin/IPSET-LKM/*" "bin/ipset"
+          7z a -tzip -mx=9 "../../$LITE_NAME" . -x!"bin/IPSET-LKM/*" -x!"bin/ipset"
           cd ../..
 
           # 3. 纯脚本包 (排除所有二进制文件)
-          MINI_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}_mini.zip"
+          MINI_NAME="NetProxy_${{ env.VERSION }}_${{ env.COMMIT_COUNT }}_mini.zip"
           echo "MINI_NAME=$MINI_NAME" >> $GITHUB_ENV
           cd src/module
-          zip -r "../../$MINI_NAME" . -x "bin/sing-box" "bin/proxylink" "bin/ipset" "bin/IPSET-LKM/*" "bin/zashboard/*"
+          7z a -tzip -mx=9 "../../$MINI_NAME" . -x!"bin/sing-box" -x!"bin/proxylink" -x!"bin/ipset" -x!"bin/IPSET-LKM/*" -x!"bin/zashboard/*"
           cd ../..
 
       - name: 发送模块到 Telegram
