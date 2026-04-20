@@ -85,7 +85,7 @@ import_parse() {
   log "INFO" "导入单个节点到: $target_dir"
   old_pwd="$(pwd)"
   cd "$target_dir" || die "Cannot enter output directory: $target_dir"
-  "$PROXYLINK_BIN" -parse "$link" -insecure -dns -format singbox -auto >> "$LOG_FILE" 2>&1
+  "$PROXYLINK_BIN" -parse "$link" -insecure -format singbox -auto >> "$LOG_FILE" 2>&1
   cd "$old_pwd" || true
   log "INFO" "单个节点导入完成"
 }
@@ -116,7 +116,7 @@ import_file() {
   target_dir="$(prepare_output_dir "${2:-}")"
 
   log "INFO" "导入文件节点到: $target_dir"
-  "$PROXYLINK_BIN" -file "$file" -insecure -dns -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
+  "$PROXYLINK_BIN" -file "$file" -insecure -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
   log "INFO" "文件节点导入完成"
 }
 
@@ -132,7 +132,7 @@ import_sub() {
   target_dir="$(prepare_output_dir "${2:-}")"
 
   log "INFO" "导入订阅节点到: $target_dir"
-  "$PROXYLINK_BIN" -sub "$url" -insecure -dns -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
+  "$PROXYLINK_BIN" -sub "$url" -insecure -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
   log "INFO" "订阅节点导入完成"
 }
 
