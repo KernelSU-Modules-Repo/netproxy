@@ -184,19 +184,6 @@ api_selector_options() {
 }
 
 #######################################
-# 判断代理组是否包含指定节点
-#######################################
-api_selector_has_option() {
-  local tag="$1"
-  local group="${2:-$(api_selector_group)}"
-  local json options
-
-  json="$(api_get_proxies 2> /dev/null)" || return 1
-  options="$(api_selector_options "$json" "$group")" || return 1
-  printf "%s\n" "$options" | grep -Fx -- "$tag" > /dev/null 2>&1
-}
-
-#######################################
 # 通过控制接口切换节点
 #######################################
 api_select_proxy() {

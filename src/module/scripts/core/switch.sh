@@ -58,15 +58,15 @@ switch_config() {
     return 0
   fi
 
-  if [ -n "$target_tag" ] && api_selector_has_option "$target_tag"; then
+  if [ -n "$target_tag" ]; then
     if api_select_proxy "$target_tag"; then
       log "INFO" "已通过控制接口切换到节点: $target_tag"
       log "INFO" "========== 节点配置切换完成 =========="
       return 0
     fi
-    log "WARN" "控制接口切换节点失败，准备回退为重启服务"
+    log "INFO" "当前运行实例未加载目标节点或控制接口切换失败，准备重启服务"
   else
-    log "INFO" "目标节点未被当前运行实例加载，准备重启服务"
+    log "INFO" "无法读取目标节点标签，准备重启服务"
   fi
 
   restart_service_if_allowed || {
