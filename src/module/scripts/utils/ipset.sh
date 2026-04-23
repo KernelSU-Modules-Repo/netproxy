@@ -1,56 +1,87 @@
 #!/system/bin/sh
-# IPSET 内核驱动加载
+# IPSET 驱动加载脚本
+
+set -u
 
 readonly MODDIR="$(cd "$(dirname "$0")/../.." && pwd)"
-NETFILTER_DIR="/data/adb/netfilter"
+readonly LOG_FILE="$MODDIR/logs/service.log"
+readonly NETFILTER_DIR="/data/adb/netfilter"
+readonly KO_LOADER="$MODDIR/bin/IPSET-LKM/ko-loader"
+
 . "$MODDIR/scripts/utils/common.sh"
 
+#######################################
+# 加载内核驱动
+#######################################
 load_drivers() {
-  # 检查驱动目录是否存在
+  local module
+
   if [ ! -d "$NETFILTER_DIR" ]; then
-    log "INFO" "未检测到集成的 IPSET 驱动，跳过加载"
+    log "INFO" "未检测到集成的 IPSET 驱动目录，跳过加载"
     return 0
   fi
 
-  # 检查内核是否已经加载了 ip_set
   if [ -d /sys/module/ip_set ]; then
     log "INFO" "内核已内置或已加载 IPSET 模块"
     return 0
   fi
 
-  log "INFO" "加载集成 IPSET 内核驱动..."
-  cd "$NETFILTER_DIR" || return 1
+  [ -x "$KO_LOADER" ] || chmod 0755 "$KO_LOADER"
 
-  # 加载器定义
-  local loader="$MODDIR/bin/IPSET-LKM/ko-loader"
-  [ -x "$loader" ] || chmod 0755 "$loader"
+  log "INFO" "开始加载集成 IPSET 内核驱动..."
+  cd "$NETFILTER_DIR" || die "无法进入驱动目录: $NETFILTER_DIR"
 
-  i() { "$loader" "$@"; }
+  load_module() {
+    "$KO_LOADER" "$@"
+  }
 
-  # 1. 基础网络模块
-  [ -f "iptables/ip6table_nat.ko" ] && i iptables/ip6table_nat.ko
-  [ -f "ip_set.ko" ] && i ip_set.ko
-  [ -f "ipset/ip_set.ko" ] && i ipset/ip_set.ko
+  [ -f "iptables/ip6table_nat.ko" ] && load_module "iptables/ip6table_nat.ko"
+  [ -f "ip_set.ko" ] && load_module "ip_set.ko"
+  [ -f "ipset/ip_set.ko" ] && load_module "ipset/ip_set.ko"
 
-  # 2. 算法模块
-  for m in bitmap_ip bitmap_ipmac bitmap_port; do
-    [ -f "ipset/ip_set_$m.ko" ] && i "ipset/ip_set_$m.ko"
+  for module in bitmap_ip bitmap_ipmac bitmap_port; do
+    [ -f "ipset/ip_set_$module.ko" ] && load_module "ipset/ip_set_$module.ko"
   done
 
-  for m in ip ipmac ipmark ipport ipportip ipportnet mac net netiface netnet netport netportnet; do
-    [ -f "ipset/ip_set_hash_$m.ko" ] && i "ipset/ip_set_hash_$m.ko"
+  for module in ip ipmac ipmark ipport ipportip ipportnet mac net netiface netnet netport netportnet; do
+    [ -f "ipset/ip_set_hash_$module.ko" ] && load_module "ipset/ip_set_hash_$module.ko"
   done
 
-  [ -f "ipset/ip_set_list_set.ko" ] && i "ipset/ip_set_list_set.ko"
+  [ -f "ipset/ip_set_list_set.ko" ] && load_module "ipset/ip_set_list_set.ko"
+  [ -f "xt_set.ko" ] && load_module "xt_set.ko"
+  [ -f "xt_addrtype.ko" ] && load_module "xt_addrtype.ko"
 
-  # 3. 扩展匹配模块
-  [ -f "xt_set.ko" ] && i xt_set.ko
-  [ -f "xt_addrtype.ko" ] && i xt_addrtype.ko
-
-  log "INFO" "驱动加载流程执行完毕"
+  log "INFO" "IPSET 驱动加载流程执行完成"
 }
 
-case "$1" in
-  load) load_drivers ;;
-  *) echo "用法: $0 load" ;;
-esac
+#######################################
+# 显示帮助
+#######################################
+show_usage() {
+  cat << EOF
+用法: $(basename "$0") load
+
+命令:
+  load      加载集成的 IPSET 驱动
+EOF
+}
+
+#######################################
+# 主入口
+#######################################
+main() {
+  case "${1:-}" in
+    load)
+      load_drivers
+      ;;
+    -h | --help | help)
+      show_usage
+      ;;
+    *)
+      show_usage
+      exit 1
+      ;;
+  esac
+}
+
+main "$@"

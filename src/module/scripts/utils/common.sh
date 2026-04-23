@@ -7,18 +7,18 @@
 log() {
   local level="INFO"
   local message="$1"
+  local timestamp log_content
 
   if [ $# -ge 2 ]; then
     level="$1"
     message="$2"
   fi
 
-  local timestamp log_content
   timestamp="$(date '+%Y-%m-%d %H:%M:%S')"
   log_content="[$timestamp] [$level] $message"
 
-  [ -n "${LOG_FILE:-}" ] && echo "$log_content" >> "$LOG_FILE"
-  echo "$log_content" >&2
+  [ -n "${LOG_FILE:-}" ] && printf "%s\n" "$log_content" >> "$LOG_FILE"
+  [ "${LOG_STDERR:-1}" = "0" ] || printf "%s\n" "$log_content" >&2
 }
 
 #######################################
@@ -33,31 +33,60 @@ die() {
 # 检测 busybox 路径
 #######################################
 detect_busybox() {
+  local path
+
   for path in "/data/adb/ksu/bin/busybox" "/data/adb/ap/bin/busybox" "/data/adb/magisk/busybox"; do
-    if [ -f "$path" ]; then
-      echo "$path"
+    if [ -x "$path" ]; then
+      printf "%s\n" "$path"
       return 0
     fi
   done
-  echo "busybox"
+
+  printf "%s\n" "busybox"
 }
 
 #######################################
-# 去除配置值中的双引号
+# 判断命令是否存在
 #######################################
-strip_quotes() {
-  echo "${1//\"/}"
+command_exists() {
+  command -v "$1" > /dev/null 2>&1
 }
 
 #######################################
-# 从出站配置中读取标签
+# 检查文件是否存在
 #######################################
-detect_outbound_tag() {
-  local config_file="$1"
-  [ -f "$config_file" ] || return 1
+require_file() {
+  local file="$1"
+  local message="${2:-文件不存在: $file}"
 
-  grep -m 1 -E '"tag"[[:space:]]*:' "$config_file" 2> /dev/null \
-    | sed -n 's/.*"tag"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+  [ -f "$file" ] || die "$message"
+}
+
+#######################################
+# 检查目录是否存在
+#######################################
+require_dir() {
+  local dir="$1"
+  local message="${2:-目录不存在: $dir}"
+
+  [ -d "$dir" ] || die "$message"
+}
+
+#######################################
+# 创建目录
+#######################################
+ensure_dir() {
+  local dir="$1"
+  local message="${2:-无法创建目录: $dir}"
+
+  [ -d "$dir" ] || mkdir -p "$dir" || die "$message"
+}
+
+#######################################
+# 转义 JSON 字符串
+#######################################
+json_escape() {
+  printf "%s" "$1" | sed 's/\\/\\\\/g; s/"/\\"/g'
 }
 
 #######################################
@@ -65,8 +94,8 @@ detect_outbound_tag() {
 #######################################
 get_pid() {
   local bin="$1"
-  [ -z "$bin" ] && return 1
 
+  [ -n "$bin" ] || return 1
   pidof -s "$bin" 2> /dev/null || pgrep -f "^$bin" 2> /dev/null | head -1 || true
 }
 
@@ -75,15 +104,24 @@ get_pid() {
 #######################################
 get_process_uptime() {
   local pid="$1"
-  [ -z "$pid" ] || [ ! -d "/proc/$pid" ] && { echo 0; return 1; }
-
   local start_time now_ticks
+
+  [ -n "$pid" ] || { printf "0\n"; return 1; }
+  [ -d "/proc/$pid" ] || { printf "0\n"; return 1; }
+
   start_time="$(awk '{print $22}' "/proc/$pid/stat" 2> /dev/null || echo 0)"
   now_ticks="$(awk '{print int($1 * 100)}' /proc/uptime 2> /dev/null || echo 0)"
 
   if [ "$start_time" -gt 0 ] && [ "$now_ticks" -gt 0 ]; then
-    echo "$(( (now_ticks - start_time) / 100 ))"
+    printf "%s\n" "$(( (now_ticks - start_time) / 100 ))"
   else
-    echo 0
+    printf "0\n"
   fi
+}
+
+#######################################
+# 检测设备主要 IPv4 地址
+#######################################
+detect_primary_ipv4() {
+  ip route get 1.1.1.1 2> /dev/null | sed -n 's/.* src \([0-9.]*\).*/\1/p' | head -1
 }
