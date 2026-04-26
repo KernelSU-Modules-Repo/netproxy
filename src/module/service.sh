@@ -104,7 +104,6 @@ log "INFO" "service阶段"
 log "INFO" "========== NetProxy 服务启动 =========="
 log_env_info
 load_module_config
-sh "$MODDIR/scripts/utils/ipset.sh" load
 
 wait_for_boot
 
