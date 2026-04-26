@@ -30,9 +30,7 @@ wait_for_boot() {
   log "INFO" "等待系统启动完成..."
 
   # 等待系统开机完成
-  while [ "$(getprop sys.boot_completed)" != "1" ]; do
-    sleep 1
-  done
+  resetprop -w sys.boot_completed
   log "INFO" "系统启动完成"
 
   # 等待存储挂载完成
@@ -99,6 +97,8 @@ log_env_info() {
 
   log "INFO" "=================================="
 }
+
+log "INFO" "service阶段"
 
 # 主流程
 log "INFO" "========== NetProxy 服务启动 =========="
