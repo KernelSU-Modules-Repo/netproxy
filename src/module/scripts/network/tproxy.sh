@@ -2,7 +2,7 @@
 
 readonly SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd -P)"
 # Version (use YY.MM.DD format)
-readonly SCRIPT_VERSION="v26.04.05"
+readonly SCRIPT_VERSION="v26.04.16"
 
 export TZ=Asia/Shanghai
 
@@ -329,7 +329,7 @@ init_kernel_config_cache() {
     fi
 }
 
-# Helper: validate a value is a positive integer
+# Helper: validate a value is a positive integer (zero forks)
 is_positive_integer() {
     case "$1" in
         '' | *[!0-9]*) return 1 ;;
@@ -440,7 +440,7 @@ check_dependencies() {
     fi
 
     local missing=""
-    local required_commands="ip iptables iptables-restore ip6tables-restore"
+    local required_commands="ip iptables"
     local cmd
 
     for cmd in $required_commands; do
@@ -488,16 +488,6 @@ setup_busybox() {
 }
 
 check_kernel_feature() {
-    if [ "$DRY_RUN" -eq 1 ]; then
-        log Debug "Skip kernel feature check for $1"
-        return 0
-    fi
-
-    if [ "$SKIP_CHECK_FEATURE" = "1" ]; then
-        log Warn "Kernel feature check skipped"
-        return 0
-    fi
-
     local feature="$1"
     local config_name="CONFIG_${feature}"
 
@@ -512,10 +502,10 @@ check_kernel_feature() {
     # check runtime loaded modules (/sys/module/)
     local module_name=""
     case "$feature" in
-        IP_SET) module_name="ip_set" ;;
-        NETFILTER_XT_SET) module_name="xt_set" ;;
-        NETFILTER_XT_MATCH_ADDRTYPE) module_name="xt_addrtype" ;;
-        NETFILTER_XT_TARGET_TPROXY) module_name="xt_TPROXY" ;;
+        IP_SET)                       module_name="ip_set" ;;
+        NETFILTER_XT_SET)             module_name="xt_set" ;;
+        NETFILTER_XT_MATCH_ADDRTYPE)  module_name="xt_addrtype" ;;
+        NETFILTER_XT_TARGET_TPROXY)   module_name="xt_TPROXY" ;;
     esac
     if [ -n "$module_name" ] && [ -d "/sys/module/$module_name" ]; then
         log Debug "Kernel feature $feature is enabled (loaded module)"
@@ -527,6 +517,23 @@ check_kernel_feature() {
 }
 
 init_feature_flags() {
+    if [ "$SKIP_CHECK_FEATURE" = "1" ] || [ "$DRY_RUN" -eq 1 ]; then
+        log Warn "Kernel feature check skipped"
+        HAS_TPROXY=1
+        HAS_CONNTRACK=1
+        HAS_OWNER=1
+        HAS_MARK_MT=1
+        HAS_MARK_TG=1
+        HAS_SOCKET=1
+        HAS_ADDRTYPE=1
+        HAS_MAC=1
+        HAS_IPSET=1
+        HAS_XT_SET=1
+        HAS_NAT6=1
+        HAS_REDIRECT6=1
+        return 0
+    fi
+
     log Info "Detecting kernel features..."
     check_kernel_feature "NETFILTER_XT_TARGET_TPROXY" && HAS_TPROXY=1
     check_kernel_feature "NETFILTER_XT_MATCH_CONNTRACK" && HAS_CONNTRACK=1
@@ -567,80 +574,6 @@ run_ipt_command() {
     [ "$DRY_RUN" -eq 1 ] && return 0
 
     command "$cmd" -w 100 "$@"
-}
-
-# iptables-restore helper functions
-fw_restore_init() {
-    local family="$1"
-    local table="$2"
-    # Create temp file in TMPDIR
-    RESTORE_FILE="$(mktemp "$TMPDIR/np_restore.XXXXXX")"
-    RESTORE_FAMILY="$family"
-    RESTORE_TABLE="$table"
-    echo "*$table" > "$RESTORE_FILE"
-}
-
-fw_restore_add_chain() {
-    local chain="$1"
-    # Declare and flush custom chain in restore format
-    echo ":$chain - [0:0]" >> "$RESTORE_FILE"
-}
-
-fw_restore_append_rule() {
-    local chain="$1"
-    shift
-    # Standard iptables-restore rule format (omitting -t table)
-    echo "-A $chain $@" >> "$RESTORE_FILE"
-}
-
-fw_restore_commit() {
-    echo "COMMIT" >> "$RESTORE_FILE"
-}
-
-fw_restore_apply() {
-    local cmd="iptables-restore"
-    [ "$RESTORE_FAMILY" = "6" ] && cmd="ip6tables-restore"
-
-    if [ "$DRY_RUN" -eq 1 ]; then
-        log Debug "[EXEC] $cmd --noflush < $RESTORE_FILE"
-        if [ "$VERBOSE" -eq 1 ]; then
-            log Debug "Restore content for IPv$RESTORE_FAMILY ($RESTORE_TABLE):"
-            cat "$RESTORE_FILE" >&2
-        fi
-    else
-        if ! $cmd --noflush < "$RESTORE_FILE" 2> /dev/null; then
-            log Error "Failed to apply restore rules for IPv$RESTORE_FAMILY $RESTORE_TABLE"
-            if [ "$VERBOSE" -eq 1 ]; then
-                log Debug "Failed restore content:"
-                cat "$RESTORE_FILE" >&2
-            fi
-            rm -f "$RESTORE_FILE" 2> /dev/null
-            return 1
-        fi
-    fi
-    rm -f "$RESTORE_FILE" 2> /dev/null
-    return 0
-}
-
-# Helper: Execute idempotent rule (jump or terminal) with existence check
-# Unified with run_ipt_command for consistent logging and flags
-fw_rule_idempotent() {
-    local family="$1"
-    local table="$2"
-    local chain="$3"
-    local target="$4"
-    shift 4
-
-    local cmd="iptables"
-    [ "$family" = "6" ] && cmd="ip6tables"
-
-    # Verify if rule already exists (-C check)
-    if "$cmd" -t "$table" -w 100 -C "$chain" "$@" -j "$target" 2> /dev/null; then
-        return 0
-    fi
-
-    # Insert if missing
-    run_ipt_command "$cmd" -t "$table" -I "$chain" "$@" -j "$target"
 }
 
 iptables() {
@@ -726,6 +659,18 @@ find_packages_uid() {
         print final_out
     }
     ' /data/system/packages.list
+}
+
+safe_chain_create() {
+    local family="$1"
+    local table="$2"
+    local chain="$3"
+    local cmd="iptables"
+
+    [ "$family" = "6" ] && cmd="ip6tables"
+
+    $cmd -t "$table" -N "$chain" 2> /dev/null || true
+    $cmd -t "$table" -F "$chain"
 }
 
 download_file() {
@@ -917,77 +862,20 @@ setup_cn_ipset() {
 
         log Info "ipset 'cnip6' loaded with China mainland IPv6 IPs"
     fi
-    return 0
-}
-
-setup_static_bypass_ipset() {
-    if [ "$HAS_IPSET" -eq 0 ] || [ "$HAS_XT_SET" -eq 0 ]; then
-        log Debug "Kernel does not support ipset, static bypass ipset skipped"
-        return 0
-    fi
-
-    if ! command -v ipset > /dev/null 2>&1; then
-        log Warn "ipset command not found, skipping static bypass optimization"
-        return 1
-    fi
-
-    log Info "Setting up static bypass ipsets for default ranges"
-
-    if [ "$DRY_RUN" -eq 1 ]; then
-        log Debug "[EXEC] ipset destroy bypass4_static (skipped, dry-run)"
-        log Debug "[EXEC] ipset restore -! (skipped, dry-run)"
-        return 0
-    fi
-
-    # Rebuild sets to ensure content matches current configuration
-    ipset destroy bypass4_static 2> /dev/null || true
-    ipset destroy bypass6_static 2> /dev/null || true
-
-    {
-        echo "create bypass4_static hash:net family inet hashsize 64 maxelem 256"
-        for ip in $BYPASS_IPv4_LIST; do
-            echo "add bypass4_static $ip"
-        done
-
-        if [ "$PROXY_IPV6" -eq 1 ]; then
-            echo "create bypass6_static hash:net family inet6 hashsize 64 maxelem 256"
-            for ip in $BYPASS_IPv6_LIST; do
-                echo "add bypass6_static $ip"
-            done
-        fi
-    } | ipset restore -!
-
-    if [ $? -eq 0 ]; then
-        return 0
-    else
-        log Error "Failed to populate static bypass ipsets"
-        return 1
-    fi
-}
-
-cleanup_static_bypass_ipset() {
-    # Loose cleanup semantics: ignore failures if sets don't exist
-    if [ "$DRY_RUN" -eq 1 ]; then
-        log Debug "[EXEC] ipset destroy bypass[46]_static (skipped, dry-run)"
-        return 0
-    fi
-    ipset destroy bypass4_static 2> /dev/null || true
-    ipset destroy bypass6_static 2> /dev/null || true
 }
 
 # Helper: add sub-chain jump rules with optional performance mode conntrack optimization
 # Uses dynamic scoping for $cmd and $table from the calling function
 _add_chain_jumps() {
-    local parent="$1"
-    local perf="$2"
+    local parent="$1" perf="$2"
     shift 2
     local target
     for target in "$@"; do
         if [ "$perf" -eq 1 ]; then
-            fw_restore_append_rule "$parent" -p tcp --syn -j "$target"
-            fw_restore_append_rule "$parent" -p udp -m conntrack --ctstate NEW,RELATED -j "$target"
+            $cmd -t "$table" -A "$parent" -p tcp --syn -j "$target"
+            $cmd -t "$table" -A "$parent" -p udp -m conntrack --ctstate NEW,RELATED -j "$target"
         else
-            fw_restore_append_rule "$parent" -j "$target"
+            $cmd -t "$table" -A "$parent" -j "$target"
         fi
     done
 }
@@ -1015,63 +903,45 @@ setup_proxy_chain() {
 
     log Info "Setting up $mode_name chains for IPv${family}"
 
+    # Define chains based on family
+    local chains=""
+    chains="PROXY_PREROUTING$suffix PROXY_OUTPUT$suffix DIVERT$suffix PROXY_IP$suffix BYPASS_IP$suffix BYPASS_INTERFACE$suffix PROXY_INTERFACE$suffix DNS_HIJACK_PRE$suffix DNS_HIJACK_OUT$suffix APP_CHAIN$suffix MAC_CHAIN$suffix"
+
     local table="mangle"
     if [ "$mode" = "redirect" ]; then
         table="nat"
     fi
 
-    # Define chains based on family
-    local chains=""
-    chains="PROXY_PREROUTING$suffix PROXY_OUTPUT$suffix DIVERT$suffix PROXY_IP$suffix BYPASS_IP$suffix BYPASS_INTERFACE$suffix PROXY_INTERFACE$suffix DNS_HIJACK_PRE$suffix DNS_HIJACK_OUT$suffix APP_CHAIN$suffix MAC_CHAIN$suffix PROXY_PRE_ENTRY$suffix PROXY_OUT_ENTRY$suffix"
-
-    # Initialize restore session for the target table
-    fw_restore_init "$family" "$table"
-
-    local c
-    local c_count=0
+    # Create chains
     for c in $chains; do
-        fw_restore_add_chain "$c"
-        c_count=$((c_count + 1))
+        safe_chain_create "$family" "$table" "$c"
     done
-    log Info "Custom chain initialization ($c_count chains) completed"
-
-    # Rules building
-
-    # Build entry dispatch rules in the restore session
-    if [ "$PROXY_UDP" -eq 1 ] || [ "$mode" = "redirect" ]; then
-        fw_restore_append_rule "PROXY_PRE_ENTRY$suffix" -p udp -j "PROXY_PREROUTING$suffix"
-        fw_restore_append_rule "PROXY_OUT_ENTRY$suffix" -p udp -j "PROXY_OUTPUT$suffix"
-    fi
-    if [ "$PROXY_TCP" -eq 1 ]; then
-        fw_restore_append_rule "PROXY_PRE_ENTRY$suffix" -p tcp -j "PROXY_PREROUTING$suffix"
-        fw_restore_append_rule "PROXY_OUT_ENTRY$suffix" -p tcp -j "PROXY_OUTPUT$suffix"
-    fi
 
     if [ "$PERFORMANCE_MODE" -eq 1 ] && [ "$HAS_MARK_TG" -eq 1 ] && [ "$HAS_SOCKET" -eq 1 ]; then
-        fw_restore_append_rule DIVERT$suffix -j MARK --set-mark "$mark"
-        fw_restore_append_rule DIVERT$suffix -j ACCEPT
+        $cmd -t "$table" -A DIVERT$suffix -j MARK --set-mark "$mark"
+        $cmd -t "$table" -A DIVERT$suffix -j ACCEPT
 
-        fw_restore_append_rule "PROXY_PREROUTING$suffix" -p tcp -m socket --transparent -j DIVERT$suffix
+        $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -p tcp -m socket --transparent -j DIVERT$suffix
     fi
 
     if [ "$HAS_CONNTRACK" -eq 1 ]; then
-        fw_restore_append_rule "PROXY_PREROUTING$suffix" -m conntrack --ctdir REPLY -j ACCEPT
-        fw_restore_append_rule "PROXY_OUTPUT$suffix" -m conntrack --ctdir REPLY -j ACCEPT
+        $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -m conntrack --ctdir REPLY -j ACCEPT
+        $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m conntrack --ctdir REPLY -j ACCEPT
         log Info "Added reply connection direction bypass"
     fi
 
     local bypass_success=0
     if [ "$FORCE_MARK_BYPASS" -eq 1 ] && [ "$HAS_MARK_MT" -eq 1 ] && [ -n "$ROUTING_MARK" ]; then
-        fw_restore_append_rule "PROXY_PREROUTING$suffix" -m mark --mark "$ROUTING_MARK" -j ACCEPT
-        fw_restore_append_rule "PROXY_OUTPUT$suffix" -m mark --mark "$ROUTING_MARK" -j ACCEPT
+        $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -m mark --mark "$ROUTING_MARK" -j ACCEPT
+        $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m mark --mark "$ROUTING_MARK" -j ACCEPT
         log Info "Added bypass for marked traffic with core mark $ROUTING_MARK (forced)"
         bypass_success=1
     elif [ "$HAS_OWNER" -eq 1 ]; then
-        fw_restore_append_rule "PROXY_OUTPUT$suffix" -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT
+        $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT
         log Info "Added bypass for core user $CORE_USER:$CORE_GROUP"
         bypass_success=1
     elif [ "$HAS_MARK_MT" -eq 1 ] && [ -n "$ROUTING_MARK" ]; then
-        fw_restore_append_rule "PROXY_OUTPUT$suffix" -m mark --mark "$ROUTING_MARK" -j ACCEPT
+        $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m mark --mark "$ROUTING_MARK" -j ACCEPT
         log Info "Added bypass for marked traffic with core mark $ROUTING_MARK"
         bypass_success=1
     fi
@@ -1096,52 +966,37 @@ setup_proxy_chain() {
     if [ "$family" = "6" ]; then
         if [ -n "$PROXY_IPv6_LIST" ]; then
             for subnet6 in $PROXY_IPv6_LIST; do
-                fw_restore_append_rule "PROXY_IP$suffix" -d "$subnet6" -j RETURN
+                $cmd -t "$table" -A "PROXY_IP$suffix" -d "$subnet6" -j RETURN
             done
             log Info "Added proxy rules for PROXY IPv6 ranges"
         fi
     else
         if [ -n "$PROXY_IPv4_LIST" ]; then
             for subnet4 in $PROXY_IPv4_LIST; do
-                fw_restore_append_rule "PROXY_IP$suffix" -d "$subnet4" -j RETURN
+                $cmd -t "$table" -A "PROXY_IP$suffix" -d "$subnet4" -j RETURN
             done
             log Info "Added proxy rules for PROXY IPv4 ranges"
         fi
     fi
 
     if [ "$HAS_ADDRTYPE" -eq 1 ]; then
-        fw_restore_append_rule "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL -p udp ! --dport 53 -j ACCEPT
-        fw_restore_append_rule "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL ! -p udp -j ACCEPT
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL -p udp ! --dport 53 -j ACCEPT
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m addrtype --dst-type LOCAL ! -p udp -j ACCEPT
         log Info "Added local address type bypass"
     fi
 
-    local use_ipset=0
-    local ipset_name="bypass4_static"
-    [ "$family" = "6" ] && ipset_name="bypass6_static"
-
-    if [ "$HAS_IPSET" -eq 1 ] && [ "$HAS_XT_SET" -eq 1 ]; then
-        if ipset list "$ipset_name" > /dev/null 2>&1; then
-            use_ipset=1
-        fi
-    fi
-
-    if [ "$use_ipset" -eq 1 ]; then
-        fw_restore_append_rule "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst -p udp ! --dport 53 -j ACCEPT
-        fw_restore_append_rule "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst ! -p udp -j ACCEPT
-        log Info "Added ipset-based ($ipset_name) bypass rules"
+    if [ "$family" = "6" ]; then
+        for subnet6 in $BYPASS_IPv6_LIST; do
+            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" -p udp ! --dport 53 -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" ! -p udp -j ACCEPT
+        done
+        log Info "Added bypass rules for BYPASS IPv6 ranges"
     else
-        log Info "Using per-rule fallback for bypass ranges (ipset not available)"
-        if [ "$family" = "6" ]; then
-            for subnet6 in $BYPASS_IPv6_LIST; do
-                fw_restore_append_rule "BYPASS_IP$suffix" -d "$subnet6" -p udp ! --dport 53 -j ACCEPT
-                fw_restore_append_rule "BYPASS_IP$suffix" -d "$subnet6" ! -p udp -j ACCEPT
-            done
-        else
-            for subnet4 in $BYPASS_IPv4_LIST; do
-                fw_restore_append_rule "BYPASS_IP$suffix" -d "$subnet4" -p udp ! --dport 53 -j ACCEPT
-                fw_restore_append_rule "BYPASS_IP$suffix" -d "$subnet4" ! -p udp -j ACCEPT
-            done
-        fi
+        for subnet4 in $BYPASS_IPv4_LIST; do
+            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" -p udp ! --dport 53 -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" ! -p udp -j ACCEPT
+        done
+        log Info "Added bypass rules for BYPASS IPv4 ranges"
     fi
 
     if [ "$BYPASS_CN_IP" -eq 1 ]; then
@@ -1150,8 +1005,8 @@ setup_proxy_chain() {
             ipset_name="cnip6"
         fi
         if command -v ipset > /dev/null 2>&1 && ipset list "$ipset_name" > /dev/null 2>&1; then
-            fw_restore_append_rule "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst -p udp ! --dport 53 -j ACCEPT
-            fw_restore_append_rule "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst ! -p udp -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst -p udp ! --dport 53 -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst ! -p udp -j ACCEPT
             log Info "Added ipset-based CN IP bypass rule"
         else
             log Warn "ipset '$ipset_name' not available, skipping CN IP bypass"
@@ -1159,13 +1014,13 @@ setup_proxy_chain() {
     fi
 
     log Info "Configuring interface proxy rules"
-    fw_restore_append_rule "PROXY_INTERFACE$suffix" -i lo -j RETURN
+    $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i lo -j RETURN
     if [ "$PROXY_MOBILE" -eq 1 ]; then
-        fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$MOBILE_INTERFACE" -j RETURN
+        $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$MOBILE_INTERFACE" -j RETURN
         log Info "Mobile interface $MOBILE_INTERFACE will be proxied"
     else
-        fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$MOBILE_INTERFACE" -j ACCEPT
-        fw_restore_append_rule "BYPASS_INTERFACE$suffix" -o "$MOBILE_INTERFACE" -j ACCEPT
+        $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$MOBILE_INTERFACE" -j ACCEPT
+        $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$MOBILE_INTERFACE" -j ACCEPT
         log Info "Mobile interface $MOBILE_INTERFACE will bypass proxy"
     fi
 
@@ -1178,65 +1033,67 @@ setup_proxy_chain() {
 
     if [ "$HOTSPOT_INTERFACE" = "$WIFI_INTERFACE" ]; then
         if [ "$PROXY_HOTSPOT" -eq 1 ]; then
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -s "$subnet" -j RETURN
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -s "$subnet" -j RETURN
             log Info "Hotspot interface $HOTSPOT_INTERFACE will be proxied"
         else
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -s "$subnet" -j ACCEPT
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -s "$subnet" -j ACCEPT
             log Info "Hotspot interface $HOTSPOT_INTERFACE will bypass proxy"
         fi
 
         if [ "$PROXY_WIFI" -eq 1 ]; then
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" ! -s "$subnet" -j RETURN
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" ! -s "$subnet" -j RETURN
             log Info "WiFi interface $WIFI_INTERFACE will be proxied"
         else
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" ! -s "$subnet" -j ACCEPT
-            fw_restore_append_rule "BYPASS_INTERFACE$suffix" -o "$WIFI_INTERFACE" -j ACCEPT
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" ! -s "$subnet" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$WIFI_INTERFACE" -j ACCEPT
             log Info "WiFi interface $WIFI_INTERFACE will bypass proxy"
         fi
     else
         if [ "$PROXY_WIFI" -eq 1 ]; then
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j RETURN
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j RETURN
             log Info "WiFi interface $WIFI_INTERFACE will be proxied"
         else
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j ACCEPT
-            fw_restore_append_rule "BYPASS_INTERFACE$suffix" -o "$WIFI_INTERFACE" -j ACCEPT
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$WIFI_INTERFACE" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$WIFI_INTERFACE" -j ACCEPT
             log Info "WiFi interface $WIFI_INTERFACE will bypass proxy"
         fi
 
         if [ "$PROXY_HOTSPOT" -eq 1 ]; then
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -j RETURN
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -j RETURN
             log Info "Hotspot interface $HOTSPOT_INTERFACE will be proxied"
         else
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -j ACCEPT
-            fw_restore_append_rule "BYPASS_INTERFACE$suffix" -o "$HOTSPOT_INTERFACE" -j ACCEPT
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$HOTSPOT_INTERFACE" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$HOTSPOT_INTERFACE" -j ACCEPT
             log Info "Hotspot interface $HOTSPOT_INTERFACE will bypass proxy"
         fi
     fi
 
     if [ "$PROXY_USB" -eq 1 ]; then
-        fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$USB_INTERFACE" -j RETURN
+        $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$USB_INTERFACE" -j RETURN
         log Info "USB interface $USB_INTERFACE will be proxied"
     else
-        fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$USB_INTERFACE" -j ACCEPT
-        fw_restore_append_rule "BYPASS_INTERFACE$suffix" -o "$USB_INTERFACE" -j ACCEPT
+        $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$USB_INTERFACE" -j ACCEPT
+        $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$USB_INTERFACE" -j ACCEPT
         log Info "USB interface $USB_INTERFACE will bypass proxy"
     fi
 
     local interface
     if [ -n "$OTHER_PROXY_INTERFACES" ]; then
         for interface in $OTHER_PROXY_INTERFACES; do
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$interface" -j RETURN
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$interface" -j RETURN
         done
         log Info "Other interface $OTHER_PROXY_INTERFACES will be proxied"
     fi
 
     if [ -n "$OTHER_BYPASS_INTERFACES" ]; then
         for interface in $OTHER_BYPASS_INTERFACES; do
-            fw_restore_append_rule "PROXY_INTERFACE$suffix" -i "$interface" -j ACCEPT
-            fw_restore_append_rule "BYPASS_INTERFACE$suffix" -o "$interface" -j ACCEPT
+            $cmd -t "$table" -A "PROXY_INTERFACE$suffix" -i "$interface" -j ACCEPT
+            $cmd -t "$table" -A "BYPASS_INTERFACE$suffix" -o "$interface" -j ACCEPT
         done
         log Info "Other interface $OTHER_PROXY_INTERFACES will bypass proxy"
     fi
+
+    log Info "Interface proxy rules configuration completed"
 
     local mac
     if [ "$MAC_FILTER_ENABLE" -eq 1 ] && [ "$PROXY_HOTSPOT" -eq 1 ] && [ -n "$HOTSPOT_INTERFACE" ]; then
@@ -1247,27 +1104,27 @@ setup_proxy_chain() {
                     if [ -n "$BYPASS_MACS_LIST" ]; then
                         for mac in $BYPASS_MACS_LIST; do
                             if [ -n "$mac" ]; then
-                                fw_restore_append_rule "MAC_CHAIN$suffix" -m mac --mac-source "$mac" -i "$HOTSPOT_INTERFACE" -j ACCEPT
+                                $cmd -t "$table" -A "MAC_CHAIN$suffix" -m mac --mac-source "$mac" -i "$HOTSPOT_INTERFACE" -j ACCEPT
                                 log Info "Added MAC bypass rule for $mac"
                             fi
                         done
                     else
                         log Warn "MAC blacklist mode enabled but no bypass MACs configured"
                     fi
-                    fw_restore_append_rule "MAC_CHAIN$suffix" -i "$HOTSPOT_INTERFACE" -j RETURN
+                    $cmd -t "$table" -A "MAC_CHAIN$suffix" -i "$HOTSPOT_INTERFACE" -j RETURN
                     ;;
                 whitelist)
                     if [ -n "$PROXY_MACS_LIST" ]; then
                         for mac in $PROXY_MACS_LIST; do
                             if [ -n "$mac" ]; then
-                                fw_restore_append_rule "MAC_CHAIN$suffix" -m mac --mac-source "$mac" -i "$HOTSPOT_INTERFACE" -j RETURN
+                                $cmd -t "$table" -A "MAC_CHAIN$suffix" -m mac --mac-source "$mac" -i "$HOTSPOT_INTERFACE" -j RETURN
                                 log Info "Added MAC proxy rule for $mac"
                             fi
                         done
                     else
                         log Warn "MAC whitelist mode enabled but no proxy MACs configured"
                     fi
-                    fw_restore_append_rule "MAC_CHAIN$suffix" -i "$HOTSPOT_INTERFACE" -j ACCEPT
+                    $cmd -t "$table" -A "MAC_CHAIN$suffix" -i "$HOTSPOT_INTERFACE" -j ACCEPT
                     ;;
             esac
         else
@@ -1287,7 +1144,7 @@ setup_proxy_chain() {
                         if [ $? -eq 0 ] && [ -n "$uids" ]; then
                             for uid in $uids; do
                                 if [ -n "$uid" ]; then
-                                    fw_restore_append_rule "APP_CHAIN$suffix" -m owner --uid-owner "$uid" -j ACCEPT
+                                    $cmd -t "$table" -A "APP_CHAIN$suffix" -m owner --uid-owner "$uid" -j ACCEPT
                                     log Info "Added bypass for UID $uid"
                                 fi
                             done
@@ -1295,7 +1152,7 @@ setup_proxy_chain() {
                     else
                         log Warn "App blacklist mode enabled but no bypass apps configured"
                     fi
-                    fw_restore_append_rule "APP_CHAIN$suffix" -j RETURN
+                    $cmd -t "$table" -A "APP_CHAIN$suffix" -j RETURN
                     ;;
                 whitelist)
                     if [ -n "$PROXY_APPS_LIST" ]; then
@@ -1303,7 +1160,7 @@ setup_proxy_chain() {
                         if [ $? -eq 0 ] && [ -n "$uids" ]; then
                             for uid in $uids; do
                                 if [ -n "$uid" ]; then
-                                    fw_restore_append_rule "APP_CHAIN$suffix" -m owner --uid-owner "$uid" -j RETURN
+                                    $cmd -t "$table" -A "APP_CHAIN$suffix" -m owner --uid-owner "$uid" -j RETURN
                                     log Info "Added proxy for UID $uid"
                                 fi
                             done
@@ -1311,7 +1168,7 @@ setup_proxy_chain() {
                     else
                         log Warn "App whitelist mode enabled but no proxy apps configured"
                     fi
-                    fw_restore_append_rule "APP_CHAIN$suffix" -j ACCEPT
+                    $cmd -t "$table" -A "APP_CHAIN$suffix" -j ACCEPT
                     ;;
             esac
         else
@@ -1319,7 +1176,6 @@ setup_proxy_chain() {
         fi
     fi
 
-    # DNS Hijack configuration
     if [ "$DNS_HIJACK_ENABLE" -ne 0 ]; then
         if [ "$mode" = "redirect" ]; then
             setup_dns_hijack "$family" "redirect"
@@ -1334,41 +1190,45 @@ setup_proxy_chain() {
 
     if [ "$_perf_ct" -eq 1 ]; then
         if [ "$mode" = "tproxy" ]; then
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -p tcp -m connmark --mark "$mark" -j TPROXY --on-port "$PROXY_TCP_PORT" --tproxy-mark "$mark"
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -p udp -m connmark --mark "$mark" -j TPROXY --on-port "$PROXY_UDP_PORT" --tproxy-mark "$mark"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -p tcp -m connmark --mark "$mark" -j TPROXY --on-port "$PROXY_TCP_PORT" --tproxy-mark "$mark"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -p udp -m connmark --mark "$mark" -j TPROXY --on-port "$PROXY_UDP_PORT" --tproxy-mark "$mark"
 
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -m connmark --mark "$mark" -j MARK --set-mark "$mark"
+            $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
+            $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m connmark --mark "$mark" -j MARK --set-mark "$mark"
             log Info "TPROXY mode rules added"
         else
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -m connmark --mark "$mark" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -m connmark --mark "$mark" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
 
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -m connmark --mark "$mark" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
+            $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m conntrack --ctstate NEW,RELATED -j CONNMARK --set-mark "$mark"
+            $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -m connmark --mark "$mark" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
             log Info "REDIRECT mode rules added"
         fi
     else
         if [ "$mode" = "tproxy" ]; then
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -p tcp -j TPROXY --on-port "$PROXY_TCP_PORT" --tproxy-mark "$mark"
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -p udp -j TPROXY --on-port "$PROXY_UDP_PORT" --tproxy-mark "$mark"
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -j MARK --set-mark "$mark"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -p tcp -j TPROXY --on-port "$PROXY_TCP_PORT" --tproxy-mark "$mark"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -p udp -j TPROXY --on-port "$PROXY_UDP_PORT" --tproxy-mark "$mark"
+            $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -j MARK --set-mark "$mark"
             log Info "TPROXY mode rules added"
         else
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
+            $cmd -t "$table" -A "PROXY_PREROUTING$suffix" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
+            $cmd -t "$table" -A "PROXY_OUTPUT$suffix" -j REDIRECT --to-ports "$PROXY_TCP_PORT"
             log Info "REDIRECT mode rules added"
         fi
     fi
 
-    # Commit and apply restore file for custom chains
-    fw_restore_commit
-    fw_restore_apply
-
-    # Apply entry hooks to system chains
-    fw_rule_idempotent "$family" "$table" PREROUTING "PROXY_PRE_ENTRY$suffix"
-    fw_rule_idempotent "$family" "$table" OUTPUT "PROXY_OUT_ENTRY$suffix"
+    # Add rules to main chains
+    if [ "$PROXY_UDP" -eq 1 ] || [ "$mode" = "redirect" ]; then
+        $cmd -t "$table" -I PREROUTING -p udp -j "PROXY_PREROUTING$suffix"
+        $cmd -t "$table" -I OUTPUT -p udp -j "PROXY_OUTPUT$suffix"
+        log Info "Added UDP rules to PREROUTING and OUTPUT chains"
+    fi
+    if [ "$PROXY_TCP" -eq 1 ]; then
+        $cmd -t "$table" -I PREROUTING -p tcp -j "PROXY_PREROUTING$suffix"
+        $cmd -t "$table" -I OUTPUT -p tcp -j "PROXY_OUTPUT$suffix"
+        log Info "Added TCP rules to PREROUTING and OUTPUT chains"
+    fi
 
     log Info "$mode_name chains for IPv${family} setup completed"
 }
@@ -1389,18 +1249,18 @@ setup_dns_hijack() {
     case "$mode" in
         tproxy)
             # Handle DNS from interfaces in PREROUTING chain (DNS_HIJACK_PRE)
-            fw_restore_append_rule "DNS_HIJACK_PRE$suffix" -j RETURN
+            $cmd -t mangle -A "DNS_HIJACK_PRE$suffix" -j RETURN
             # Handle local DNS hijacking in OUTPUT chain (DNS_HIJACK_OUT)
-            fw_restore_append_rule "DNS_HIJACK_OUT$suffix" -j RETURN
+            $cmd -t mangle -A "DNS_HIJACK_OUT$suffix" -j RETURN
 
             log Info "DNS hijack enabled using TPROXY mode"
             ;;
         redirect)
             # Handle DNS using REDIRECT method
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -p tcp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
-            fw_restore_append_rule "PROXY_PREROUTING$suffix" -p udp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -p tcp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
-            fw_restore_append_rule "PROXY_OUTPUT$suffix" -p udp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
+            $cmd -t nat -A "PROXY_PREROUTING$suffix" -p tcp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
+            $cmd -t nat -A "PROXY_PREROUTING$suffix" -p udp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
+            $cmd -t nat -A "PROXY_OUTPUT$suffix" -p tcp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
+            $cmd -t nat -A "PROXY_OUTPUT$suffix" -p udp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
             log Info "DNS hijack enabled using REDIRECT mode to port $DNS_PORT"
             ;;
         redirect2)
@@ -1411,47 +1271,23 @@ setup_dns_hijack() {
                 log Warn "IPv6: Kernel does not support IPv6 NAT or REDIRECT, IPv6 DNS hijack skipped"
                 return 0
             fi
+            safe_chain_create "$family" "nat" "NAT_DNS_HIJACK$suffix"
+            $cmd -t nat -A "NAT_DNS_HIJACK$suffix" -p tcp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
+            $cmd -t nat -A "NAT_DNS_HIJACK$suffix" -p udp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
 
-            # Declare nat table chains for DNS hijack in restore session
-            local _outer_file="$RESTORE_FILE"
-            local _outer_family="$RESTORE_FAMILY"
-            local _outer_table="$RESTORE_TABLE"
-
-            fw_restore_init "$family" "nat"
-            fw_restore_add_chain "NAT_DNS_HIJACK$suffix"
-            fw_restore_add_chain "NAT_DNS_PRE_ENTRY$suffix"
-            fw_restore_add_chain "NAT_DNS_OUT_ENTRY$suffix"
-
-            fw_restore_append_rule "NAT_DNS_HIJACK$suffix" -p tcp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
-            fw_restore_append_rule "NAT_DNS_HIJACK$suffix" -p udp --dport 53 -j REDIRECT --to-ports "$DNS_PORT"
-
-            # Build DNS entry transitions in restore batch
-            [ "$PROXY_MOBILE" -eq 1 ] && fw_restore_append_rule "NAT_DNS_PRE_ENTRY$suffix" -i "$MOBILE_INTERFACE" -j "NAT_DNS_HIJACK$suffix"
-            [ "$PROXY_WIFI" -eq 1 ] && fw_restore_append_rule "NAT_DNS_PRE_ENTRY$suffix" -i "$WIFI_INTERFACE" -j "NAT_DNS_HIJACK$suffix"
-            [ "$PROXY_USB" -eq 1 ] && fw_restore_append_rule "NAT_DNS_PRE_ENTRY$suffix" -i "$USB_INTERFACE" -j "NAT_DNS_HIJACK$suffix"
-
+            [ "$PROXY_MOBILE" -eq 1 ] && $cmd -t nat -A PREROUTING -i "$MOBILE_INTERFACE" -j "NAT_DNS_HIJACK$suffix"
+            [ "$PROXY_WIFI" -eq 1 ] && $cmd -t nat -A PREROUTING -i "$WIFI_INTERFACE" -j "NAT_DNS_HIJACK$suffix"
+            [ "$PROXY_USB" -eq 1 ] && $cmd -t nat -A PREROUTING -i "$USB_INTERFACE" -j "NAT_DNS_HIJACK$suffix"
             local interface
             if [ -n "$OTHER_PROXY_INTERFACES" ]; then
                 for interface in $OTHER_PROXY_INTERFACES; do
-                    fw_restore_append_rule "NAT_DNS_PRE_ENTRY$suffix" -i "$interface" -j "NAT_DNS_HIJACK$suffix"
+                    $cmd -t nat -A PREROUTING -i "$interface" -j "NAT_DNS_HIJACK$suffix"
                 done
             fi
 
-            fw_restore_append_rule "NAT_DNS_OUT_ENTRY$suffix" -p udp --dport 53 -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT
-            fw_restore_append_rule "NAT_DNS_OUT_ENTRY$suffix" -p tcp --dport 53 -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT
-            fw_restore_append_rule "NAT_DNS_OUT_ENTRY$suffix" -j "NAT_DNS_HIJACK$suffix"
-
-            fw_restore_commit
-            fw_restore_apply
-
-            # Restore outer session state from locals
-            RESTORE_FILE="$_outer_file"
-            RESTORE_FAMILY="$_outer_family"
-            RESTORE_TABLE="$_outer_table"
-
-            # Apply DNS hooks to system chains
-            fw_rule_idempotent "$family" "nat" PREROUTING "NAT_DNS_PRE_ENTRY$suffix"
-            fw_rule_idempotent "$family" "nat" OUTPUT "NAT_DNS_OUT_ENTRY$suffix"
+            $cmd -t nat -A OUTPUT -p udp --dport 53 -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT
+            $cmd -t nat -A OUTPUT -p tcp --dport 53 -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT
+            $cmd -t nat -A OUTPUT -j "NAT_DNS_HIJACK$suffix"
 
             log Info "DNS hijack enabled using REDIRECT mode to port $DNS_PORT"
             ;;
@@ -1542,29 +1378,40 @@ cleanup_chain() {
     fi
 
     # Remove from main chains (symmetric with setup)
-    run_ipt_command "$cmd" -t "$table" -D PREROUTING -j "PROXY_PRE_ENTRY$suffix" 2> /dev/null || true
-    run_ipt_command "$cmd" -t "$table" -D OUTPUT -j "PROXY_OUT_ENTRY$suffix" 2> /dev/null || true
+    if [ "$PROXY_TCP" -eq 1 ]; then
+        $cmd -t "$table" -D PREROUTING -p tcp -j "PROXY_PREROUTING$suffix" 2> /dev/null || true
+        $cmd -t "$table" -D OUTPUT -p tcp -j "PROXY_OUTPUT$suffix" 2> /dev/null || true
+    fi
+    if [ "$PROXY_UDP" -eq 1 ] || [ "$mode" = "redirect" ]; then
+        $cmd -t "$table" -D PREROUTING -p udp -j "PROXY_PREROUTING$suffix" 2> /dev/null || true
+        $cmd -t "$table" -D OUTPUT -p udp -j "PROXY_OUTPUT$suffix" 2> /dev/null || true
+    fi
 
-    # Define custom chains including dispatchers for symmetric cleanup
-    local chains="PROXY_PREROUTING$suffix PROXY_OUTPUT$suffix DIVERT$suffix PROXY_IP$suffix BYPASS_IP$suffix BYPASS_INTERFACE$suffix PROXY_INTERFACE$suffix DNS_HIJACK_PRE$suffix DNS_HIJACK_OUT$suffix APP_CHAIN$suffix MAC_CHAIN$suffix PROXY_PRE_ENTRY$suffix PROXY_OUT_ENTRY$suffix"
+    # Define chains based on family
+    local chains="PROXY_PREROUTING$suffix PROXY_OUTPUT$suffix DIVERT$suffix PROXY_IP$suffix BYPASS_IP$suffix BYPASS_INTERFACE$suffix PROXY_INTERFACE$suffix DNS_HIJACK_PRE$suffix DNS_HIJACK_OUT$suffix APP_CHAIN$suffix MAC_CHAIN$suffix"
 
-    # Teardown custom chains
-    local c
+    # Clean up chains
     for c in $chains; do
-        run_ipt_command "$cmd" -t "$table" -F "$c" 2> /dev/null || true
-        run_ipt_command "$cmd" -t "$table" -X "$c" 2> /dev/null || true
+        $cmd -t "$table" -F "$c" 2> /dev/null || true
+        $cmd -t "$table" -X "$c" 2> /dev/null || true
     done
 
-    # Cleanup DNS hijack entry rules and chains
+    # Remove DNS rules if applicable
     if [ "$mode" = "tproxy" ] && [ "$DNS_HIJACK_ENABLE" -eq 2 ]; then
-        run_ipt_command "$cmd" -t nat -D PREROUTING -j "NAT_DNS_PRE_ENTRY$suffix" 2> /dev/null || true
-        run_ipt_command "$cmd" -t nat -D OUTPUT -j "NAT_DNS_OUT_ENTRY$suffix" 2> /dev/null || true
-
-        local dns_chains="NAT_DNS_HIJACK$suffix NAT_DNS_PRE_ENTRY$suffix NAT_DNS_OUT_ENTRY$suffix"
-        for c in $dns_chains; do
-            run_ipt_command "$cmd" -t nat -F "$c" 2> /dev/null || true
-            run_ipt_command "$cmd" -t nat -X "$c" 2> /dev/null || true
-        done
+        $cmd -t nat -D PREROUTING -i "$MOBILE_INTERFACE" -j "NAT_DNS_HIJACK$suffix" 2> /dev/null || true
+        $cmd -t nat -D PREROUTING -i "$WIFI_INTERFACE" -j "NAT_DNS_HIJACK$suffix" 2> /dev/null || true
+        $cmd -t nat -D PREROUTING -i "$USB_INTERFACE" -j "NAT_DNS_HIJACK$suffix" 2> /dev/null || true
+        local interface
+        if [ -n "$OTHER_PROXY_INTERFACES" ]; then
+            for interface in $OTHER_PROXY_INTERFACES; do
+                $cmd -t nat -D PREROUTING -i "$interface" -j "NAT_DNS_HIJACK$suffix" 2> /dev/null || true
+            done
+        fi
+        $cmd -t nat -D OUTPUT -p udp --dport 53 -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT 2> /dev/null || true
+        $cmd -t nat -D OUTPUT -p tcp --dport 53 -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -j ACCEPT 2> /dev/null || true
+        $cmd -t nat -D OUTPUT -j "NAT_DNS_HIJACK$suffix" 2> /dev/null || true
+        $cmd -t nat -F "NAT_DNS_HIJACK$suffix" 2> /dev/null || true
+        $cmd -t nat -X "NAT_DNS_HIJACK$suffix" 2> /dev/null || true
     fi
 
     log Info "$mode_name chains for IPv${family} cleanup completed"
@@ -1670,9 +1517,6 @@ start_proxy() {
         fi
     fi
 
-    # Initialize static bypass ipsets if supported
-    setup_static_bypass_ipset
-
     if [ "$USE_TPROXY" -eq 1 ]; then
         setup_tproxy_chain4
         setup_routing4
@@ -1717,7 +1561,6 @@ stop_proxy() {
             cleanup_redirect_chain6
         fi
     fi
-    cleanup_static_bypass_ipset
     cleanup_ipset
     log Info "Proxy stopped"
     block_loopback_traffic disable
@@ -1728,15 +1571,16 @@ stop_proxy() {
     [ "$DRY_RUN" -eq 1 ] || rm -f "$CONFIG_DIR/runtime_tproxy.conf" 2> /dev/null
 }
 
+# This rule blocks local access to tproxy-port to prevent traffic loopback.
 block_loopback_traffic() {
     case "$1" in
         enable)
-            fw_rule_idempotent "6" "filter" "OUTPUT" "REJECT" -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT"
-            fw_rule_idempotent "4" "filter" "OUTPUT" "REJECT" -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT"
+            ip6tables -t filter -A OUTPUT -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT
+            iptables -t filter -A OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT
             ;;
         disable)
-            run_ipt_command ip6tables -t filter -D OUTPUT -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2> /dev/null || true
-            run_ipt_command iptables -t filter -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2> /dev/null || true
+            ip6tables -t filter -D OUTPUT -d ::1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2> /dev/null || true
+            iptables -t filter -D OUTPUT -d 127.0.0.1 -p tcp -m owner --uid-owner "$CORE_USER" --gid-owner "$CORE_GROUP" -m tcp --dport "$PROXY_TCP_PORT" -j REJECT 2> /dev/null || true
             ;;
     esac
 }
@@ -1744,70 +1588,41 @@ block_loopback_traffic() {
 block_quic() {
     case "$1" in
         enable)
-            local family
-            local cmd
-            local target
-            local hooks
-            local h
-            local exists
-            local missing_hooks
-            local current_rules
+            iptables -N BLOCK_QUIC 2> /dev/null || true
+            iptables -F BLOCK_QUIC
+            if [ "$BYPASS_CN_IP" -eq 1 ]; then
+                iptables -A BLOCK_QUIC -p udp --dport 443 -m set ! --match-set cnip dst -j REJECT
+            else
+                iptables -A BLOCK_QUIC -p udp --dport 443 -j REJECT
+            fi
+            iptables -I INPUT -j BLOCK_QUIC
+            iptables -I FORWARD -j BLOCK_QUIC
+            iptables -I OUTPUT -j BLOCK_QUIC
 
-            for family in 4 6; do
-                [ "$family" = "6" ] && [ "$PROXY_IPV6" -ne 1 ] && continue
-
-                cmd="iptables"
-                target="BLOCK_QUIC"
-                [ "$family" = "6" ] && {
-                    cmd="ip6tables"
-                    target="BLOCK_QUIC6"
-                }
-
-                # Align BLOCK_QUIC hooks by snapshotting current rules and batching missing hooks
-                current_rules=$("$cmd" -t filter -S 2> /dev/null)
-
-                missing_hooks=""
-                for h in INPUT FORWARD OUTPUT; do
-                    case "$current_rules" in
-                        *"-$h -j $target"* | *"$h -j $target"*) ;; # Rule exists
-                        *) missing_hooks="$missing_hooks $h" ;;
-                    esac
-                done
-
-                # Batch chain creation and hook application
-                fw_restore_init "$family" "filter"
-                fw_restore_add_chain "$target"
+            if [ "$PROXY_IPV6" -eq 1 ]; then
+                ip6tables -N BLOCK_QUIC6 2> /dev/null || true
+                ip6tables -F BLOCK_QUIC6
                 if [ "$BYPASS_CN_IP" -eq 1 ]; then
-                    local set_name="cnip"
-                    [ "$family" = "6" ] && set_name="cnip6"
-                    fw_restore_append_rule "$target" -p udp --dport 443 -m set ! --match-set "$set_name" dst -j REJECT
+                    ip6tables -A BLOCK_QUIC6 -p udp --dport 443 -m set ! --match-set cnip6 dst -j REJECT
                 else
-                    fw_restore_append_rule "$target" -p udp --dport 443 -j REJECT
+                    ip6tables -A BLOCK_QUIC6 -p udp --dport 443 -j REJECT
                 fi
-
-                # Apply missing system hooks in the same batch
-                for h in $missing_hooks; do
-                    echo "-I $h -j $target" >> "$RESTORE_FILE"
-                done
-
-                fw_restore_commit
-                fw_restore_apply
-            done
+                ip6tables -I INPUT -j BLOCK_QUIC6
+                ip6tables -I FORWARD -j BLOCK_QUIC6
+                ip6tables -I OUTPUT -j BLOCK_QUIC6
+            fi
             log Info "QUIC traffic blocked"
             ;;
         disable)
-            local chain cmd
-            for cmd in iptables ip6tables; do
-                [ "$cmd" = "ip6tables" ] && [ "$PROXY_IPV6" -ne 1 ] && continue
-                local target="BLOCK_QUIC"
-                [ "$cmd" = "ip6tables" ] && target="BLOCK_QUIC6"
-
-                for chain in INPUT FORWARD OUTPUT; do
-                    run_ipt_command "$cmd" -D "$chain" -j "$target" 2> /dev/null || true
-                done
-                run_ipt_command "$cmd" -F "$target" 2> /dev/null || true
-                run_ipt_command "$cmd" -X "$target" 2> /dev/null || true
+            local chain
+            for chain in INPUT FORWARD OUTPUT; do
+                iptables -D "$chain" -j BLOCK_QUIC 2> /dev/null || true
+                ip6tables -D "$chain" -j BLOCK_QUIC6 2> /dev/null || true
             done
+            iptables -F BLOCK_QUIC 2> /dev/null || true
+            iptables -X BLOCK_QUIC 2> /dev/null || true
+            ip6tables -F BLOCK_QUIC6 2> /dev/null || true
+            ip6tables -X BLOCK_QUIC6 2> /dev/null || true
             log Info "QUIC traffic blocking disabled"
             ;;
     esac
