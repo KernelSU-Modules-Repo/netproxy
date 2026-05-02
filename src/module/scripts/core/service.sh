@@ -106,7 +106,7 @@ EOF
   fi
 
   log "INFO" "正在加载透明代理规则..."
-  sh "$TPROXY_SCRIPT" start -d "$TPROXY_CONF_DIR" >> "$LOG_FILE" 2>&1 || die "透明代理规则加载失败"
+  "$TPROXY_SCRIPT" start -d "$TPROXY_CONF_DIR" >> "$LOG_FILE" 2>&1 || die "透明代理规则加载失败"
 
   log "INFO" "========== sing-box 服务启动完成 =========="
 }
@@ -121,7 +121,7 @@ do_stop() {
   verify_environment
 
   log "INFO" "正在清理透明代理规则..."
-  sh "$TPROXY_SCRIPT" stop -d "$TPROXY_CONF_DIR" >> "$LOG_FILE" 2>&1 || true
+  "$TPROXY_SCRIPT" stop -d "$TPROXY_CONF_DIR" >> "$LOG_FILE" 2>&1 || true
 
   pid="$(get_pid "$SING_BOX_BIN")"
   if [ -z "$pid" ]; then
