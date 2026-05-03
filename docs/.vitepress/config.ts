@@ -4,9 +4,9 @@ export default defineConfig({
   title: 'NetProxy',
   description: '基于 sing-box 的 Android 透明代理模块',
   lang: 'zh-CN',
-  base: '/NetProxy-Magisk/',
+  base: '/',
 
-  head: [['link', { rel: 'icon', href: '/NetProxy-Magisk/logo.png' }]],
+  head: [['link', { rel: 'icon', href: '/logo.png' }]],
 
   themeConfig: {
     logo: '/logo.png',
