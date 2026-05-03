@@ -6,7 +6,17 @@ export default defineConfig({
   lang: 'zh-CN',
   base: '/',
 
-  head: [['link', { rel: 'icon', href: '/logo.png' }]],
+  head: [
+    ['link', { rel: 'icon', href: '/logo.png' }],
+    [
+      'script',
+      {
+        async: '',
+        src: 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4560980501971534',
+        crossorigin: 'anonymous'
+      }
+    ]
+  ],
 
   themeConfig: {
     logo: '/logo.png',
