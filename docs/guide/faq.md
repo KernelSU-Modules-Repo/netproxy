@@ -1,74 +1,70 @@
 # 常见问题
 
-## 安装问题
+## 服务启动失败怎么办
 
-### Q: 安装后模块未生效
+先看三类日志：
 
-**A:** 请确保：
-1. 已完成重启
-2. 在 Magisk/KernelSU 模块页面确认模块已启用
-3. 检查模块日志：`/data/adb/modules/netproxy/logs/`
+- `/data/adb/modules/netproxy/logs/service.log`
+- `/data/adb/modules/netproxy/logs/sing-box.log`
+- `/data/adb/modules/netproxy/logs/subscription.log`
 
-### Q: WebUI 无法打开
+再确认这几项：
 
-**A:** 可能原因：
-1. 模块未正确安装，重新刷入
-2. WebUI 文件缺失，检查 `/data/adb/modules/netproxy/webroot/` 目录
+- `CURRENT_CONFIG` 指向的节点文件存在
+- `config/singbox/outbounds/` 下至少有一个可用节点
+- `PROXY_TCP_PORT / PROXY_UDP_PORT / DNS_PORT` 未与其他服务冲突
+- 当前节点或订阅生成的 sing-box 配置没有语法错误
 
----
+## 打不开 zashboard
 
-## 使用问题
+请依次检查：
 
-### Q: 代理启动失败
+1. 服务是否在运行
+2. 设备与访问端是否处于同一局域网
+3. `9999` 端口是否可达
+4. 是否带上正确的 Secret：`singbox`
 
-**A:** 常见原因：
-1. **未添加节点**：请先添加代理节点
-2. **配置错误**：检查节点配置是否正确
-3. **端口冲突**：其他 VPN 或代理应用可能占用端口
+默认入口：
 
-查看详细错误：
-```bash
-cat /data/adb/modules/netproxy/logs/xray.log
-```
+- `http://<设备IP>:9999`
+- `http://<设备IP>:9999/ui`
 
-### Q: 部分应用无法联网
+## 升级后找不到旧 WebUI
 
-**A:** 可能原因：
-1. 检查分应用代理设置，是否误将应用加入黑名单
-2. 检查路由规则，是否有规则阻断了该应用的流量
+这是正常变化。
+当前版本已移除内置模块 WebUI，图形化入口改为 **Android 管理器**，控制面板改为 **Clash API + zashboard**。
 
-### Q: DNS 解析失败
+## 节点导入失败
 
-**A:** 尝试：
-1. 确保 DNS 配置正确
-2. 检查 DNS 服务器是否可达
-3. 清除系统 DNS 缓存
+优先检查：
 
----
+- 链接本身是否完整
+- 订阅地址是否返回有效内容
+- 导入文件是否为标准 Clash YAML 或节点列表
+- `proxylink` 生成的配置是否包含 sing-box 所需字段
 
-## 性能问题
+## 切换节点后没有立刻生效
 
-### Q: 网络速度慢
+通常先区分两种情况：
 
-**A:** 建议：
-1. 切换到延迟更低的节点
-2. 使用 WebUI 的延迟测试功能筛选节点
+- **同目录已加载节点**：优先通过 Clash API 即时切换
+- **目标节点不在当前运行目录**：服务可能会重启后生效
 
----
+如果你启用了 `SELECTOR_MODE=urltest`，运行时默认优先使用动态测速组，而不是固定节点。
 
-## 其他问题
+## 访问 Google / Chrome 出现个别异常
 
-### Q: 如何查看日志
+部分 ROM、浏览器和安全 DNS 组合会影响表现。常见排查方向：
 
-**A:** 日志位于 `/data/adb/modules/netproxy/logs/` 目录：
-- `service.log` - 服务启停日志
-- `xray.log` - Xray 核心日志
-- `subscription.log` - 订阅更新日志
+- 检查是否启用了 `GMS_FIX`
+- 观察 `BLOCK_QUIC` 是否影响目标应用
+- 临时切换 `rule / global / direct` 对比行为
+- 在 Android 管理器或控制面板里检查当前实际节点和代理组
 
-### Q: 如何完全卸载
+## 想看当前真实运行模式和代理组
 
-**A:** 
-1. 停止代理服务
-2. 在 Magisk/KernelSU 中删除模块
-3. 重启设备
-4. (可选) 删除残留数据：`rm -rf /data/adb/modules/netproxy`
+可以使用：
+
+- Android 管理器的仪表盘与节点页
+- CLI：`cli mode`、`cli api groups`、`cli api conns`
+- zashboard：查看代理组、规则和连接

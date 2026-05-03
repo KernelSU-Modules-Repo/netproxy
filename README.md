@@ -58,7 +58,9 @@ The old built-in module WebUI has been removed. NetProxy is now managed through:
 2. **CLI**
 3. **Clash API + zashboard**
 
-The Android Manager is a separately maintained native Android application that provides dashboard, nodes, subscriptions, per-app proxy, logs, and module configuration management.
+The Android Manager is a separately maintained native Android application that provides dashboard, nodes, subscriptions, per-app proxy, logs, and module configuration management. Install it from Google Play: [`NetProxy`](https://play.google.com/store/apps/details?id=com.fanjv.netproxy)
+
+There is no public source repository for the manager app.
 
 Default control endpoints:
 

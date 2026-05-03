@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: NetProxy
-  text: Android 透明代理模块
-  tagline: 基于 Xray 核心的 Magisk/KernelSU 透明代理解决方案
+  text: Android sing-box 透明代理模块
+  tagline: 以 sing-box 为核心，支持 Android 管理器、CLI、Clash API 和 zashboard 的 Android 透明代理模块。
   image:
     src: /logo.png
     alt: NetProxy Logo
@@ -13,26 +13,23 @@ hero:
       text: 快速开始
       link: /guide/quick-start
     - theme: alt
-      text: 查看 GitHub
+      text: 安装与升级
+      link: /guide/installation
+    - theme: alt
+      text: GitHub
       link: https://github.com/Fanju6/NetProxy-Magisk
 
 features:
-  - icon: 🚀
-    title: 透明代理
-    details: 基于 TProxy 实现全局透明代理。
-  - icon: 📱
-    title: WebUI 管理
-    details: 内置美观的 Web 管理界面，支持节点管理、订阅更新、规则配置等功能。
-  - icon: ⚡
-    title: Xray 核心
-    details: 使用高性能的 Xray-core，支持 VLESS、VMess、Trojan、Shadowsocks 等多种协议。
-  - icon: 🔧
-    title: 灵活配置
-    details: 支持分应用代理、路由规则自定义、DNS 分流等高级功能。
-  - icon: 🔒
-    title: 安全可靠
-    details: 支持 TLS、Reality、XTLS 等现代加密技术，保护网络隐私。
-  - icon: 📦
-    title: 开箱即用
-    details: 一键安装，快速配置，支持 Magisk 和 KernelSU 两种 Root 方案。
+  - title: sing-box 核心
+    details: 当前版本以 sing-box 为核心，配置、运行时和控制接口都围绕 sing-box 组织。
+  - title: Android 管理器
+    details: 原生 Android 管理器负责仪表盘、节点、订阅、分应用代理、日志和常用配置编辑。
+  - title: CLI + Clash API
+    details: 命令行分组命令与 Clash API / zashboard 并存，既适合日常操作，也方便自动化和排障。
+  - title: TPROXY / REDIRECT
+    details: 保留透明代理自动检测与 REDIRECT 回退能力，覆盖 TCP、UDP、DNS 和分应用代理场景。
+  - title: 节点与订阅
+    details: 支持单链接、文件和订阅三种导入方式，统一转为 sing-box 节点配置。
+  - title: 兼容与排障
+    details: 文档覆盖安装、升级、控制入口、配置参考和常见问题，方便日常使用与排障。
 ---

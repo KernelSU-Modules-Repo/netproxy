@@ -1,53 +1,66 @@
 # 项目介绍
 
-NetProxy 是一个基于 Xray-core 的 Android 透明代理模块，支持 Magisk 和 KernelSU。
+NetProxy 是一个面向 Android Root 环境的透明代理模块，当前版本以 **sing-box** 为核心。
+它把透明代理、节点与订阅管理、分应用代理、Clash API 与面板控制整理成同一套运行体系，适用于 **Magisk / KernelSU / APatch** 环境。
 
-## 特性
+## 这套文档面向什么场景
 
-- **透明代理**：基于 TProxy 实现
-- **WebUI 管理**：美观的 Web 界面，支持节点、订阅、规则管理
-- **多协议支持**：VLESS、VMess、Trojan、Shadowsocks、Hysteria2 等
-- **规则分流**：支持 GeoIP、GeoSite 规则，可自定义路由策略
-- **分应用代理**：可设置黑白名单，按需代理指定应用
+- 第一次安装 NetProxy
+- 从 6.x 升级到 7.x
+- 通过 Android 管理器或 CLI 日常使用
+- 调整透明代理、分应用代理、路由和 DNS
+- 使用 Clash API 或 zashboard 做观察与排障
 
-## 系统要求
+## 当前架构重点
 
-- Android 8.0+
-- Root (Magisk 24.0+ 或 KernelSU)
-- 约 30MB 存储空间
+- 使用 **sing-box** 作为代理核心
+- 图形化主入口为 **Android 管理器**
+- 默认控制面板为 **Clash API + zashboard**
+- 配置主目录位于 `/data/adb/modules/netproxy/config/singbox/`
+- 节点与订阅统一转换为 sing-box 配置
 
-## 项目结构
+## 控制入口
 
-```
-/data/adb/modules/netproxy/
-├── bin/                     # 二进制文件
-│   ├── xray                 # Xray 核心
-│   ├── proxylink            # 节点链接解析工具
-│   ├── geoip.dat            # GeoIP 数据库
-│   └── geosite.dat          # GeoSite 数据库
-├── config/                  # 配置文件
-│   ├── module.conf          # 模块主配置
-│   ├── tproxy.conf          # TProxy 配置
-│   ├── routing_rules.json   # 路由规则
-│   └── xray/                # Xray 配置目录
-│       ├── confdir/         # 模块化配置
-│       └── outbounds/       # 节点配置
-├── scripts/                 # 脚本文件
-│   ├── cli                  # 命令行工具
-│   ├── core/                # 核心服务脚本
-│   ├── config/              # 配置管理脚本
-│   ├── network/             # 网络脚本
-│   └── utils/               # 工具脚本
-├── webroot/                 # WebUI 静态文件
-├── logs/                    # 日志目录
-│   ├── service.log          # 服务日志
-│   ├── xray.log             # Xray 日志
-│   └── tproxy.log           # TProxy 日志
-├── service.sh               # 服务入口脚本
-├── action.sh                # KernelSU Action 脚本
-└── module.prop              # 模块信息
-```
+NetProxy 现在有三种正式入口：
 
-## 开源协议
+1. **Android 管理器**
+   适合日常用户，负责仪表盘、节点、订阅、模式切换、分应用代理、日志和常用配置编辑。
+2. **CLI**
+   适合脚本化、终端排障和快速批量操作。
+3. **Clash API + zashboard**
+   适合查看连接、代理组、延迟、实时切换和跨设备访问。
 
-本项目基于 [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) 协议开源。
+## 当前架构
+
+### 模块侧
+
+- `bin/sing-box`：核心进程
+- `config/module.conf`：模块级默认项
+- `config/tproxy/tproxy.conf`：透明代理与分应用代理配置
+- `config/singbox/confdir/`：通用 sing-box 配置片段
+- `config/singbox/outbounds/`：节点与订阅目录
+- `config/singbox/runtime/`：运行时生成配置
+- `logs/`：服务、核心、订阅日志
+
+### Android 管理器侧
+
+Android 管理器下载地址：[`NetProxy - Google Play`](https://play.google.com/store/apps/details?id=com.fanjv.netproxy)
+
+当前不提供公开源码仓库。
+
+它当前负责的主要能力包括：
+
+- 服务状态与仪表盘
+- 当前节点与出站模式
+- 节点 / 订阅导入、切换、测速、导出
+- 分应用代理开关与黑白名单
+- GMS 修复、自动启动、动态测速等常用项
+- sing-box / tproxy / JSON 配置编辑
+- 日志查看与导出
+
+## 推荐使用路径
+
+- 日常使用：优先 Android 管理器
+- 批量或远程操作：CLI
+- 观察代理组、连接和延迟：Clash API / zashboard
+- 深度排障：查看 `service.log`、`sing-box.log`、`subscription.log`

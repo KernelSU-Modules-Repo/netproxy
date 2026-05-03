@@ -1,39 +1,76 @@
 # 快速开始
 
-本指南帮助您在 5 分钟内完成 NetProxy 的基本配置。
+这是一条最短闭环：安装模块、导入节点、启动服务、切换模式、验证面板。
 
-## 第一步：添加节点
+## 1. 检查服务状态
 
-有两种方式添加代理节点：
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli service status
+```
 
-### 方式一：导入节点链接
+## 2. 导入节点或订阅
 
-1. 打开 WebUI，进入 **节点** 页面
-2. 点击右上角 **导入链接** 按钮
-3. 粘贴节点链接（支持 vless://、vmess://、trojan:// 等）
-4. 点击 **导入**
+### 单个链接
 
-### 方式二：添加订阅
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node add "vless://..."'
+```
 
-1. 进入 **节点** 页面
-2. 点击右上角 **添加订阅** 按钮
-3. 输入订阅名称和 URL
-4. 点击 **添加**，等待导入完成
+### 导入节点文件或 Clash YAML
 
-## 第二步：选择节点
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node import /sdcard/clash.yaml'
+```
 
-1. 在节点列表中找到要使用的节点
-2. 点击节点卡片进行切换
-3. 当前选中的节点会显示高亮状态
+### 添加订阅并更新
 
-## 第三步：启动代理
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli sub add 我的订阅 https://example.com/sub'
+su -c '/data/adb/modules/netproxy/scripts/cli sub update-all'
+```
 
-1. 进入 **状态** 页面（首页）
-2. 点击大的 **启动/停止** 按钮
-3. 服务启动完成
+## 3. 启动服务
 
-## 下一步
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli service start
+```
 
-- [模块配置](/config/module) - 了解更多配置选项
-- [路由规则](/config/routing) - 自定义分流规则
-- [常见问题](/guide/faq) - 遇到问题时查阅
+## 4. 切换节点
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node list'
+su -c '/data/adb/modules/netproxy/scripts/cli node use 节点名称'
+```
+
+## 5. 确认出站模式
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli mode'
+su -c '/data/adb/modules/netproxy/scripts/cli mode rule'
+```
+
+可选模式：
+
+- `rule`：规则分流
+- `global`：全局代理
+- `direct`：全局直连
+
+## 6. 打开控制面板
+
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli api ui
+```
+
+默认入口：
+
+- Controller：`http://<设备IP>:9999`
+- UI：`http://<设备IP>:9999/ui`
+- Secret：`singbox`
+
+## 7. 遇到问题先看日志
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli service logs service 80'
+su -c '/data/adb/modules/netproxy/scripts/cli service logs core 80'
+su -c '/data/adb/modules/netproxy/scripts/cli service logs sub 80'
+```

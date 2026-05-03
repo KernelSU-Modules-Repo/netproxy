@@ -57,7 +57,9 @@
 2. **CLI**
 3. **Clash API + zashboard**
 
-其中 Android 管理器为独立维护的原生应用工程，提供仪表盘、节点、订阅、分应用代理、日志与模块配置等图形化管理能力。
+其中 Android 管理器为独立维护的原生应用，提供仪表盘、节点、订阅、分应用代理、日志与模块配置等图形化管理能力。可通过 Google Play 安装：[`NetProxy`](https://play.google.com/store/apps/details?id=com.fanjv.netproxy)
+
+当前不提供公开源码仓库。
 
 默认控制入口：
 
