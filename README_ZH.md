@@ -5,8 +5,8 @@
 <h1 align="center">NetProxy</h1>
 
 <p align="center">
-  <strong>Android 系统级 Xray 透明代理模块</strong><br>
-  支持 TPROXY、UDP、IPv6、分应用代理、订阅管理
+  <strong>Android 系统级 sing-box 透明代理模块</strong><br>
+  支持 Android 管理器、TPROXY / REDIRECT、TCP / UDP、Clash API、zashboard、分应用代理、订阅管理
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
   <a href="https://github.com/Fanju6/NetProxy-Magisk/releases">
     <img src="https://img.shields.io/github/downloads/Fanju6/NetProxy-Magisk/total?style=flat-square&color=green" alt="Downloads" />
   </a>
-  <img src="https://img.shields.io/badge/Xray-Core-blueviolet?style=flat-square" alt="Xray Core" />
+  <img src="https://img.shields.io/badge/sing--box-Core-blueviolet?style=flat-square" alt="sing-box Core" />
 </p>
 
 <p align="center">
@@ -27,16 +27,18 @@
 
 ## 功能特性
 
-| 功能 | 描述 |
+| 功能 | 说明 |
 |------|------|
 | **APP管理** | Miuix 现代化界面，支持莫奈取色 |
-| **透明代理** | 支持 TPROXY / REDIRECT 两种模式，TCP + UDP 全接管 |
+| **Clash API / zashboard** | 默认启用 Clash API，内置 zashboard 面板 |
+| **透明代理** | 支持 TPROXY / REDIRECT，覆盖 TCP、UDP 与 DNS 劫持 |
 | **分应用代理** | 黑名单 / 白名单模式，精准控制代理范围 |
 | **路由设置** | 自定义域名、IP、端口等路由规则 |
 | **DNS 设置** | 自定义 DNS 服务器和静态 Hosts 映射 |
-| **订阅管理** | 在线添加、更新订阅，自动解析节点 |
+| **节点与订阅** | 支持单链接、文件、订阅三种导入方式，统一转换为 sing-box 配置 |
 | **热点共享** | 支持代理 WiFi 热点和 USB 共享的流量 |
 | **热切换配置** | 无需重启即可切换节点 |
+| **内核兼容** | 集成 IPSET LKM |
 
 ---
 
@@ -48,82 +50,186 @@
 
 ---
 
+## 界面与控制入口
+
+
+1. **Android 管理器**
+2. **CLI**
+3. **Clash API + zashboard**
+
+其中 Android 管理器为独立维护的原生应用工程，提供仪表盘、节点、订阅、分应用代理、日志与模块配置等图形化管理能力。
+
+默认控制入口：
+
+- Controller: `http://<设备IP>:9999`
+- UI: `http://<设备IP>:9999/ui`
+- Secret: `singbox`
+
+---
+
 ## 安装
 
-1. 从 [Releases](https://github.com/Fanju6/NetProxy-Magisk/releases) 下载最新版 ZIP
+1. 从 [Releases](https://github.com/Fanju6/NetProxy-Magisk/releases) 下载最新 ZIP
 2. 在 **Magisk / KernelSU / APatch** 中刷入模块
 3. 重启设备
-4. 打开模块管理器的 WebUI 进行配置
+4. 通过 Android 管理器、CLI 或 zashboard 完成后续配置
 
 ---
 
 ## 目录结构
 
-```
+```text
 /data/adb/modules/netproxy/
-├── bin/                      # Xray 二进制文件
-├── config/
-│   ├── xray/
-│   │   ├── confdir/          # Xray 核心配置
-│   │   │   ├── routing/      # 路由分流配置
-│   │   │   │   ├── internal/ # 内部系统配置
-│   │   │   │   ├── direct.json
-│   │   │   │   ├── global.json
-│   │   │   │   ├── rule.json
-│   │   │   │   └── routing_rules.json
-│   │   │   ├── 00_log.json
-│   │   │   ├── 01_api.json
-│   │   │   ├── 02_dns.json
-│   │   │   ├── 03_inbounds.json
-│   │   │   ├── 04_outbounds.json
-│   │   │   └── 05_policy.json
-│   │   └── outbounds/        # 出站节点分组目录
-│   │       ├── default/      # 默认节点分组
-│   │       └── sub_xxx/      # 订阅分组目录
-│   ├── tproxy/
-│   │   └── tproxy.conf       # 透明代理配置
-│   └── module.conf           # 模块设置（开机自启等）
-├── logs/                     # 运行日志
-├── scripts/                  # 启动、停止、订阅等脚本
-├── webroot/                  # WebUI 静态资源
-└── service.sh                # 模块启动入口
+├─ bin/
+│  ├─ sing-box                 # sing-box 内核
+│  ├─ proxylink                # 节点 / 订阅转换工具
+│  ├─ ipset                    # ipset 工具
+│  ├─ IPSET-LKM/               # 集成 IPSET 内核驱动
+│  └─ zashboard/               # 内置控制面板
+├─ config/
+│  ├─ module.conf              # 模块配置
+│  ├─ tproxy/
+│  │  └─ tproxy.conf           # 透明代理配置
+│  └─ singbox/
+│     ├─ confdir/              # 通用 sing-box 配置
+│     ├─ outbounds/            # 节点目录
+│     │  ├─ default/
+│     │  └─ sub_xxx/
+│     ├─ runtime/              # 运行时生成配置
+│     └─ source/               # 路由规则与规则集
+├─ logs/
+│  ├─ service.log
+│  ├─ sing-box.log
+│  └─ subscription.log
+├─ scripts/
+│  ├─ cli
+│  ├─ core/
+│  ├─ network/
+│  └─ utils/
+├─ post-fs-data.sh
+└─ service.sh
 ```
 
 ---
 
 ## 快速开始
 
-### 方式一：节点链接导入（推荐）
+### 1. 查看状态
 
-在 APP节点页面点击 **从剪切板导入**，直接导入节点链接：
-
-```
-vless://... 或 vmess://... 或 trojan://... 等
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli service status
 ```
 
-### 方式二：订阅导入
+### 2. 启动 / 停止服务
 
-在 APP节点页面点击 **添加订阅**，输入订阅名称和地址，自动解析全部节点。
-
-### 方式三：手动配置
-
- 在 `outbounds/default` 目录创建 JSON 配置文件，格式示例：
-
-```json
-{
-  "outbounds": [
-    {
-      "tag": "proxy",
-      "protocol": "vless",
-      "settings": { ... }
-    }
-  ]
-}
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli service start
+su -c /data/adb/modules/netproxy/scripts/cli service stop
+su -c /data/adb/modules/netproxy/scripts/cli service restart
 ```
 
+### 3. 导入节点
 
+单个链接：
 
-## 交流群组
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node add "vless://..."'
+```
+
+导入文件：
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node import /sdcard/clash.yaml'
+```
+
+添加订阅：
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli sub add 我的订阅 https://example.com/sub'
+su -c '/data/adb/modules/netproxy/scripts/cli sub update-all'
+```
+
+### 4. 切换节点
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node list'
+su -c '/data/adb/modules/netproxy/scripts/cli node use 节点名称'
+```
+
+### 5. 切换模式
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli mode'
+su -c '/data/adb/modules/netproxy/scripts/cli mode rule'
+su -c '/data/adb/modules/netproxy/scripts/cli mode global'
+su -c '/data/adb/modules/netproxy/scripts/cli mode direct'
+```
+
+### 6. 查看面板地址
+
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli api ui
+```
+
+---
+
+## CLI 概览
+
+```text
+cli service {status|start|stop|restart|logs}
+cli node {list|current|use|add|import|export|show|remove|delay}
+cli mode [rule|global|direct]
+cli sub {list|add|update|update-all|remove}
+cli api {groups|conns|close|close-all|ui}
+cli app {list|mode|add|remove|enable|disable}
+cli tproxy {status|reload|quic|cnip}
+```
+
+完整帮助：
+
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli help
+```
+
+---
+
+## 默认配置说明
+
+`module.conf` 默认项：
+
+- `AUTO_START=1`
+- `OUTBOUND_MODE=rule`
+- `SELECTOR_MODE=urltest`
+- `GMS_FIX=0`
+- `CURRENT_CONFIG=/data/adb/modules/netproxy/config/singbox/outbounds/default/default.json`
+
+`tproxy.conf` 默认项中较常用的部分：
+
+- `PROXY_TCP_PORT=1536`
+- `PROXY_UDP_PORT=1536`
+- `DNS_PORT=1536`
+- `PROXY_MODE=0`
+- `BLOCK_QUIC=1`
+- `BYPASS_CN_IP=0`
+- `LOG_TIMESTAMP=0`
+
+其中：
+
+- `PROXY_MODE=0` 表示自动检测 TPROXY，不支持时回退为 REDIRECT
+- `LOG_TIMESTAMP=0` 表示默认关闭透明代理脚本日志时间戳
+
+---
+
+## 兼容性说明
+
+- 支持 **Magisk / KernelSU / APatch**
+- 透明代理脚本保留 TPROXY 自动检测与 REDIRECT 回退能力
+- 模块内集成 IPSET LKM，用于增强部分设备与内核版本下的兼容性
+- 已包含针对部分 OnePlus / ColorOS 等环境的兼容性修复逻辑
+
+---
+
+## 交流
 
 <p align="center">
   <a href="https://t.me/NetProxy_Magisk">
@@ -135,33 +241,33 @@ vless://... 或 vmess://... 或 trojan://... 等
 
 ## 贡献
 
-欢迎参与项目！
+欢迎参与项目：
 
-- 提交 Issue 反馈 BUG
+- 提交 Issue 反馈问题
 - 提出功能建议
 - 提交 Pull Request
-- Star 支持项目！
+- Star 支持项目
 
 ---
 
 ## 鸣谢
 
-本项目的开发离不开以下优秀的开源项目：
+本项目离不开以下开源项目：
 
 | 项目 | 说明 |
 |------|------|
-| [Xray-core](https://github.com/XTLS/Xray-core) | 核心代理引擎，支持 VLESS、XTLS、REALITY 等先进协议 |
-| [v2rayNG](https://github.com/2dust/v2rayNG) | 节点链接解析逻辑参考 |
-| [AndroidTProxyShell](https://github.com/CHIZI-0618/AndroidTProxyShell) | Android TProxy 透明代理实现参考 |
-| [KsuWebUIStandalone](https://github.com/KOWX712/KsuWebUIStandalone) | WebUI 独立运行方案参考 |
-| [Proxylink](https://github.com/Fanju6/Proxylink) | 代理链接解析器，用于订阅解析和配置生成 |
+| [sing-box](https://github.com/SagerNet/sing-box) | 当前核心代理引擎 |
+| [Proxylink](https://github.com/Fanju6/Proxylink) | 节点链接、订阅与配置转换 |
+| [AndroidTProxyShell](https://github.com/CHIZI-0618/AndroidTProxyShell) | Android 透明代理实现参考 |
+| [IPSET_LKM](https://github.com/TanakaLun/IPSET_LKM) | IPSET 内核模块与兼容性支持参考 |
+| [zashboard](https://github.com/Zephyruso/zashboard) | Clash API 前端面板 |
+| [v2rayNG](https://github.com/2dust/v2rayNG) | 部分节点解析逻辑参考 |
 
 ---
 
 ## 许可证
 
 [GPL-3.0 License](LICENSE)
-
 
 ## Star
 
