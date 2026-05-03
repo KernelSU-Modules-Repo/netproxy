@@ -5,8 +5,8 @@
 <h1 align="center">NetProxy</h1>
 
 <p align="center">
-  <strong>Android System-Level Xray Transparent Proxy Module</strong><br>
-  Supports TPROXY, UDP, IPv6, Per-App Proxy, Subscription Management
+  <strong>Android System-Level sing-box Transparent Proxy Module</strong><br>
+  Supports Android Manager, TPROXY / REDIRECT, TCP / UDP, Clash API, zashboard, per-app proxy, and subscription management
 </p>
 
 <p align="center">
@@ -16,7 +16,7 @@
   <a href="https://github.com/Fanju6/NetProxy-Magisk/releases">
     <img src="https://img.shields.io/github/downloads/Fanju6/NetProxy-Magisk/total?style=flat-square&color=green" alt="Downloads" />
   </a>
-  <img src="https://img.shields.io/badge/Xray-Core-blueviolet?style=flat-square" alt="Xray Core" />
+  <img src="https://img.shields.io/badge/sing--box-Core-blueviolet?style=flat-square" alt="sing-box Core" />
 </p>
 
 <p align="center">
@@ -29,25 +29,42 @@
 
 | Feature | Description |
 |------|------|
-| **WebUI Management** | Material Design 3 modern interface with Monet theming support |
-| **Transparent Proxy** | Supports TPROXY / REDIRECT modes, full TCP + UDP interception |
-| **Per-App Proxy** | Blacklist / Whitelist mode for precise proxy control |
-| **Routing Rules** | Custom domain, IP, port and other routing rules |
-| **DNS Settings** | Custom DNS servers and static Hosts mapping |
-| **Subscription** | Add and update subscriptions online, auto-parse nodes |
-| **Hotspot Sharing** | Proxy WiFi hotspot and USB tethering traffic |
-| **Hot Switch** | Switch nodes without restarting the service |
+| **Android Manager** | Native Android app with a modern interface for module management |
+| **Clash API / zashboard** | Clash API enabled by default with built-in zashboard |
+| **Transparent Proxy** | Supports TPROXY / REDIRECT with TCP, UDP, and DNS hijacking |
+| **Per-App Proxy** | Blacklist / whitelist modes for precise app-level control |
+| **Routing Rules** | Custom domain, IP, port, and traffic routing rules |
+| **DNS Settings** | Configurable DNS behavior and related proxy DNS options |
+| **Nodes & Subscriptions** | Import from links, files, and subscriptions, then convert to sing-box configs |
+| **Hotspot Sharing** | Proxy Wi-Fi hotspot and USB tethering traffic |
+| **Hot Switching** | Switch nodes without a full module reinstall |
+| **Kernel Compatibility** | Integrated IPSET LKM for wider kernel compatibility |
 
 ---
 
 ## Screenshots
 
 <div align="center">
-  <img src="image/Screenshot1.jpg" width="24%" alt="Status Page" />
-  <img src="image/Screenshot2.jpg" width="24%" alt="Node Management" />
-  <img src="image/Screenshot3.jpg" width="24%" alt="App Control" />
-  <img src="image/Screenshot4.jpg" width="24%" alt="Settings" />
+  <img src="image/Screenshot.jpg" width="60%" alt="Interface Preview" />
 </div>
+
+---
+
+## Interface & Control Entry Points
+
+The old built-in module WebUI has been removed. NetProxy is now managed through:
+
+1. **Android Manager**
+2. **CLI**
+3. **Clash API + zashboard**
+
+The Android Manager is a separately maintained native Android application that provides dashboard, nodes, subscriptions, per-app proxy, logs, and module configuration management.
+
+Default control endpoints:
+
+- Controller: `http://<device-ip>:9999`
+- UI: `http://<device-ip>:9999/ui`
+- Secret: `singbox`
 
 ---
 
@@ -56,75 +73,162 @@
 1. Download the latest ZIP from [Releases](https://github.com/Fanju6/NetProxy-Magisk/releases)
 2. Flash the module in **Magisk / KernelSU / APatch**
 3. Reboot your device
-4. Open the WebUI from your module manager to configure
+4. Finish configuration through Android Manager, CLI, or zashboard
 
 ---
 
 ## Directory Structure
 
-```
+```text
 /data/adb/modules/netproxy/
-├── bin/                      # Xray binary
-├── config/
-│   ├── xray/
-│   │   ├── confdir/          # Xray core configuration
-│   │   │   ├── routing/      # Routing & Shunting configuration
-│   │   │   │   ├── internal/ # Internal system configuration
-│   │   │   │   ├── direct.json
-│   │   │   │   ├── global.json
-│   │   │   │   ├── rule.json
-│   │   │   │   └── routing_rules.json
-│   │   │   ├── 00_log.json
-│   │   │   ├── 01_api.json
-│   │   │   ├── 02_dns.json
-│   │   │   ├── 03_inbounds.json
-│   │   │   ├── 04_outbounds.json
-│   │   │   └── 05_policy.json
-│   │   └── outbounds/        # Outbound node group directories
-│   │       ├── default/      # Default node group
-│   │       └── sub_xxx/      # Subscription group directories
-│   ├── tproxy/
-│   │   └── tproxy.conf       # Transparent proxy configuration
-│   └── module.conf           # Module settings (autostart, etc.)
-├── logs/                     # Runtime logs
-├── scripts/                  # Start, stop, subscription scripts
-├── webroot/                  # WebUI static resources
-└── service.sh                # Module entry point
+├─ bin/
+│  ├─ sing-box                 # sing-box core
+│  ├─ proxylink                # node / subscription conversion tool
+│  ├─ ipset                    # ipset binary
+│  ├─ IPSET-LKM/               # integrated IPSET kernel modules
+│  └─ zashboard/               # built-in control panel
+├─ config/
+│  ├─ module.conf              # module configuration
+│  ├─ tproxy/
+│  │  └─ tproxy.conf           # transparent proxy configuration
+│  └─ singbox/
+│     ├─ confdir/              # common sing-box configuration
+│     ├─ outbounds/            # node directories
+│     │  ├─ default/
+│     │  └─ sub_xxx/
+│     ├─ runtime/              # runtime-generated configuration
+│     └─ source/               # routing rules and rule sets
+├─ logs/
+│  ├─ service.log
+│  ├─ sing-box.log
+│  └─ subscription.log
+├─ scripts/
+│  ├─ cli
+│  ├─ core/
+│  ├─ network/
+│  └─ utils/
+├─ post-fs-data.sh
+└─ service.sh
 ```
 
 ---
 
 ## Quick Start
 
-### Method 1: Import Node Link (Recommended)
+### 1. Check status
 
-In the WebUI Config page, click **Add → Add Node** and paste your node link:
-
-```
-vless://... or vmess://... or trojan://... etc.
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli service status
 ```
 
-### Method 2: Import Subscription
+### 2. Start / stop the service
 
-Click **Add → Add Subscription**, enter the subscription name and URL to auto-parse all nodes.
-
-### Method 3: Manual Configuration
-
-Create a JSON config file in the `outbounds/default` directory:
-
-```json
-{
-  "outbounds": [
-    {
-      "tag": "proxy",
-      "protocol": "vless",
-      "settings": { ... }
-    }
-  ]
-}
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli service start
+su -c /data/adb/modules/netproxy/scripts/cli service stop
+su -c /data/adb/modules/netproxy/scripts/cli service restart
 ```
 
+### 3. Import nodes
 
+Single link:
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node add "vless://..."'
+```
+
+Import from file:
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node import /sdcard/clash.yaml'
+```
+
+Add and update subscriptions:
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli sub add MySub https://example.com/sub'
+su -c '/data/adb/modules/netproxy/scripts/cli sub update-all'
+```
+
+### 4. Switch nodes
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli node list'
+su -c '/data/adb/modules/netproxy/scripts/cli node use NodeName'
+```
+
+### 5. Switch mode
+
+```sh
+su -c '/data/adb/modules/netproxy/scripts/cli mode'
+su -c '/data/adb/modules/netproxy/scripts/cli mode rule'
+su -c '/data/adb/modules/netproxy/scripts/cli mode global'
+su -c '/data/adb/modules/netproxy/scripts/cli mode direct'
+```
+
+### 6. Show panel endpoints
+
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli api ui
+```
+
+---
+
+## CLI Overview
+
+```text
+cli service {status|start|stop|restart|logs}
+cli node {list|current|use|add|import|export|show|remove|delay}
+cli mode [rule|global|direct]
+cli sub {list|add|update|update-all|remove}
+cli api {groups|conns|close|close-all|ui}
+cli app {list|mode|add|remove|enable|disable}
+cli tproxy {status|reload|quic|cnip}
+```
+
+Full help:
+
+```sh
+su -c /data/adb/modules/netproxy/scripts/cli help
+```
+
+---
+
+## Default Configuration Notes
+
+Default values in `module.conf`:
+
+- `AUTO_START=1`
+- `OUTBOUND_MODE=rule`
+- `SELECTOR_MODE=urltest`
+- `GMS_FIX=0`
+- `CURRENT_CONFIG=/data/adb/modules/netproxy/config/singbox/outbounds/default/default.json`
+
+Common defaults in `tproxy.conf`:
+
+- `PROXY_TCP_PORT=1536`
+- `PROXY_UDP_PORT=1536`
+- `DNS_PORT=1536`
+- `PROXY_MODE=0`
+- `BLOCK_QUIC=1`
+- `BYPASS_CN_IP=0`
+- `LOG_TIMESTAMP=0`
+
+Notes:
+
+- `PROXY_MODE=0` means auto-detect TPROXY and fall back to REDIRECT when unavailable
+- `LOG_TIMESTAMP=0` disables timestamp output in transparent proxy script logs by default
+
+---
+
+## Compatibility
+
+- Supports **Magisk / KernelSU / APatch**
+- Transparent proxy scripts retain automatic TPROXY detection with REDIRECT fallback
+- Integrated IPSET LKM improves compatibility across more devices and kernel versions
+- Includes compatibility handling for some OnePlus / ColorOS environments
+
+---
 
 ## Community
 
@@ -138,26 +242,27 @@ Create a JSON config file in the `outbounds/default` directory:
 
 ## Contributing
 
-Contributions are welcome!
+Contributions are welcome:
 
-- Submit Issues to report bugs
+- Submit Issues to report problems
 - Suggest new features
 - Submit Pull Requests
-- Star the project to show support!
+- Star the project to support it
 
 ---
 
 ## Acknowledgments
 
-This project is built upon the following excellent open-source projects:
+This project builds on the following open-source projects:
 
 | Project | Description |
 |------|------|
-| [Xray-core](https://github.com/XTLS/Xray-core) | Core proxy engine with VLESS, XTLS, REALITY protocols |
-| [v2rayNG](https://github.com/2dust/v2rayNG) | Node link parsing logic reference |
-| [AndroidTProxyShell](https://github.com/CHIZI-0618/AndroidTProxyShell) | Android TProxy implementation reference |
-| [KsuWebUIStandalone](https://github.com/KOWX712/KsuWebUIStandalone) | WebUI standalone solution reference |
-| [Proxylink](https://github.com/Fanju6/Proxylink) | Proxy link parser for subscription parsing and config generation |
+| [sing-box](https://github.com/SagerNet/sing-box) | Current core proxy engine |
+| [Proxylink](https://github.com/Fanju6/Proxylink) | Node links, subscriptions, and config conversion |
+| [AndroidTProxyShell](https://github.com/CHIZI-0618/AndroidTProxyShell) | Reference for Android transparent proxy implementation |
+| [IPSET_LKM](https://github.com/TanakaLun/IPSET_LKM) | Reference for IPSET kernel modules and compatibility support |
+| [zashboard](https://github.com/Zephyruso/zashboard) | Frontend panel for Clash API |
+| [v2rayNG](https://github.com/2dust/v2rayNG) | Reference for parts of node parsing logic |
 
 ---
 
@@ -165,9 +270,6 @@ This project is built upon the following excellent open-source projects:
 
 [GPL-3.0 License](LICENSE)
 
-
 ## Star
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Fanju6/NetProxy-Magisk&type=date&legend=top-left)](https://www.star-history.com/#Fanju6/NetProxy-Magisk&type=date&legend=top-left)
-
-![Stone Badge](https://stone.professorlee.work/api/stone/Fanju6/NetProxy-Magisk)
