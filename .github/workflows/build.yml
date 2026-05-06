@@ -1,4 +1,4 @@
-name: 构建模块与通知
+name: 构建与发布工作流
 
 on:
   workflow_dispatch:
@@ -6,84 +6,52 @@ on:
     branches: [ main ]
     paths:
       - 'src/module/**'
-  release:
-    types: [published]
+    tags:
+      - '*'
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: 构建
+  build_and_release:
+    name: 构建与发布
     runs-on: ubuntu-latest
-    outputs:
-      commit_count: ${{ steps.get_version.outputs.commit_count }}
     steps:
       - name: 拉取代码
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
-      - name: 更新 versionCode
-        id: get_version
+      - name: 更新并准备变量
         run: |
           COMMIT_COUNT=$(git rev-list --count HEAD)
           sed -i "s/^versionCode=.*/versionCode=$COMMIT_COUNT/" src/module/module.prop
-          echo "versionCode 已更新为: $COMMIT_COUNT"
-          echo "commit_count=$COMMIT_COUNT" >> $GITHUB_OUTPUT
-
-      - name: 上传构建产物
-        uses: actions/upload-artifact@v7
-        with:
-          name: NetProxy-Module
-          path: src/module/
-
-  notify:
-    name: 发送通知
-    runs-on: ubuntu-latest
-    needs: build
-    if: always()
-    steps:
-      - name: 下载构建产物
-        if: ${{ needs.build.result == 'success' }}
-        uses: actions/download-artifact@v8
-        with:
-          name: NetProxy-Module
-          path: src/module
-      - name: 准备变量
-        if: ${{ needs.build.result == 'success' }}
-        run: |
-          COMMIT_COUNT=${{ needs.build.outputs.commit_count }}
           VERSION=$(grep '^version=' src/module/module.prop | cut -d= -f2)
           echo "VERSION=$VERSION" >> $GITHUB_ENV
           echo "COMMIT_COUNT=$COMMIT_COUNT" >> $GITHUB_ENV
+          
+          # 定义包名
+          FULL_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}.zip"
+          LITE_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}_lite.zip"
+          MINI_NAME="NetProxy_${VERSION}_${COMMIT_COUNT}_mini.zip"
+          
+          echo "FULL_NAME=$FULL_NAME" >> $GITHUB_ENV
+          echo "LITE_NAME=$LITE_NAME" >> $GITHUB_ENV
+          echo "MINI_NAME=$MINI_NAME" >> $GITHUB_ENV
 
       - name: 打包模块
-        if: ${{ needs.build.result == 'success' }}
         run: |
+          cd src/module
           # 1. 完整包 (全部组件)
-          FULL_NAME="NetProxy_${{ env.VERSION }}_${{ env.COMMIT_COUNT }}.zip"
-          echo "FULL_NAME=$FULL_NAME" >> $GITHUB_ENV
-          cd src/module
-          7z a -tzip -mx=9 "../../$FULL_NAME" .
-          cd ../..
-
+          7z a -tzip -mx=9 "../../${{ env.FULL_NAME }}" .
           # 2. 精简包 (排除 IPSET 相关文件)
-          LITE_NAME="NetProxy_${{ env.VERSION }}_${{ env.COMMIT_COUNT }}_lite.zip"
-          echo "LITE_NAME=$LITE_NAME" >> $GITHUB_ENV
-          cd src/module
-          7z a -tzip -mx=9 "../../$LITE_NAME" . -x!"bin/IPSET-LKM/*" -x!"bin/ipset"
-          cd ../..
-
+          7z a -tzip -mx=9 "../../${{ env.LITE_NAME }}" . -x!"bin/IPSET-LKM/*" -x!"bin/ipset"
           # 3. 纯脚本包 (排除所有二进制文件)
-          MINI_NAME="NetProxy_${{ env.VERSION }}_${{ env.COMMIT_COUNT }}_mini.zip"
-          echo "MINI_NAME=$MINI_NAME" >> $GITHUB_ENV
-          cd src/module
-          7z a -tzip -mx=9 "../../$MINI_NAME" . -x!"bin/sing-box" -x!"bin/proxylink" -x!"bin/ipset" -x!"bin/IPSET-LKM/*" -x!"bin/zashboard/*"
+          7z a -tzip -mx=9 "../../${{ env.MINI_NAME }}" . -x!"bin/sing-box" -x!"bin/proxylink" -x!"bin/ipset" -x!"bin/IPSET-LKM/*" -x!"bin/zashboard/*"
           cd ../..
 
-      - name: 发送模块到 Telegram
-        if: ${{ needs.build.result == 'success' }}
+      - name: 发送模块到 Telegram (分支推送/手动触发)
+        if: ${{ github.ref_type != 'tag' }}
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         run: |
@@ -92,36 +60,55 @@ jobs:
           版本: \`${{ env.VERSION }}\` (build ${{ env.COMMIT_COUNT }})
           说明:
           \`\`\`
-          $COMMIT_MSG
+          ${COMMIT_MSG:-"手动触发或无说明"}
           \`\`\`
 
           [提交记录](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
           [构建日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
 
           # 发送完整包
-          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" \
-               -F "document=@${{ env.FULL_NAME }}" \
-               -F "message_thread_id=2275" \
-               -F "parse_mode=Markdown" \
-               -F "caption=$CAPTION" \
-               https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
+          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" -F "document=@${{ env.FULL_NAME }}" -F "message_thread_id=2275" -F "parse_mode=Markdown" -F "caption=$CAPTION" https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
 
           # 发送精简包
-          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" \
-               -F "document=@${{ env.LITE_NAME }}" \
-               -F "message_thread_id=2275" \
-               -F "caption=lite: 不含 IPSET 驱动，适用于内核已内置 IPSET 的设备" \
-               https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
+          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" -F "document=@${{ env.LITE_NAME }}" -F "message_thread_id=2275" -F "caption=lite: 不含 IPSET 驱动，适用于内核已内置 IPSET 的设备" https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
 
           # 发送纯脚本包
-          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" \
-               -F "document=@${{ env.MINI_NAME }}" \
-               -F "message_thread_id=2275" \
-               -F "caption=mini: 不含二进制文件和 IPSET 驱动，需自行放入 sing-box、proxylink、zashboard 等组件" \
-               https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
+          curl -s -F "chat_id=${{ secrets.TG_CHAT_ID }}" -F "document=@${{ env.MINI_NAME }}" -F "message_thread_id=2275" -F "caption=mini: 不含二进制文件和 IPSET 驱动，需自行放入 sing-box、proxylink、zashboard 等组件" https://api.telegram.org/bot${{ secrets.TG_BOT_TOKEN }}/sendDocument
+
+      - name: 发布 GitHub Release (Tag 触发)
+        if: ${{ github.ref_type == 'tag' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: .github/changelog.md
+          files: |
+            ${{ env.FULL_NAME }}
+            ${{ env.LITE_NAME }}
+            ${{ env.MINI_NAME }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 发送 Release 通知到 Telegram (Tag 触发)
+        if: ${{ github.ref_type == 'tag' }}
+        uses: cbrgm/telegram-github-action@v1
+        with:
+          token: ${{ secrets.TG_BOT_TOKEN }}
+          to: ${{ secrets.TG_CHAT_ID }}
+          thread-id: 2343
+          parse-mode: markdown
+          message: |
+            **新版本发布通知**
+            
+            版本: `${{ github.ref_name }}`
+            
+            [查看更新日志并下载](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }})
+            
+            **直接下载:**
+            [完整包](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.FULL_NAME }})
+            [精简包](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.LITE_NAME }})
+            [纯脚本包](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.ref_name }}/${{ env.MINI_NAME }})
 
       - name: 失败通知
-        if: ${{ needs.build.result == 'failure' }}
+        if: ${{ failure() }}
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
         uses: cbrgm/telegram-github-action@v1
@@ -131,29 +118,11 @@ jobs:
           thread-id: 2275
           parse-mode: markdown
           message: |
-            模块构建失败通知！
+            **工作流执行失败！**
             
             说明:
             \`\`\`
-            $COMMIT_MSG
+            ${COMMIT_MSG:-"无"}
             \`\`\`
 
-            [提交记录](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
-            [构建日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-      - name: Release 发布通知
-        if: ${{ github.event_name == 'release' }}
-        uses: cbrgm/telegram-github-action@v1
-        with:
-          token: ${{ secrets.TG_BOT_TOKEN }}
-          to: ${{ secrets.TG_CHAT_ID }}
-          thread-id: 2343
-          parse-mode: markdown
-          message: |
-            新版本发布通知！
-            
-            版本: `${{ github.event.release.tag_name }}`
-            
-            [查看更新日志](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.event.release.tag_name }})
-            
-            [下载模块](${{ github.server_url }}/${{ github.repository }}/releases/download/${{ github.event.release.tag_name }}/NetProxy-Module.zip)
+            [点击查看构建日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
