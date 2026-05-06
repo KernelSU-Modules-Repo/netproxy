@@ -77,7 +77,7 @@ jobs:
 
       - name: 发布 GitHub Release (Tag 触发)
         if: ${{ github.ref_type == 'tag' }}
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           body_path: .github/changelog.md
           files: |
