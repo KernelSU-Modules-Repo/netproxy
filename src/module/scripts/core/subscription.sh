@@ -23,6 +23,7 @@ show_help() {
 节点导入:
   parse <节点链接> [目录]        单个链接转 sing-box 节点
   file <文件> [目录]            文件节点或 Clash YAML 转 sing-box 节点
+  stdin [目录]                  从标准输入读取节点并转 sing-box 节点
   sub <订阅链接> [目录]         订阅转 sing-box 节点，每个节点一个文件
   convert <节点文件>            sing-box 节点转链接
 
@@ -79,6 +80,9 @@ run_proxylink() {
     file)
       "$PROXYLINK_BIN" -file "$value" -insecure -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
       ;;
+    stdin)
+      "$PROXYLINK_BIN" -insecure -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
+      ;;
     sub)
       "$PROXYLINK_BIN" -sub "$value" -insecure -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
       ;;
@@ -120,6 +124,18 @@ import_file() {
   log "INFO" "开始导入文件节点: $target_dir"
   run_proxylink file "$file" "$target_dir" || die "文件节点导入失败"
   log "INFO" "文件节点导入完成"
+}
+
+#######################################
+# 标准输入读取节点转 sing-box
+#######################################
+import_stdin() {
+  local target_dir
+  target_dir="$(prepare_output_dir "${1:-}")"
+
+  log "INFO" "开始导入标准输入节点: $target_dir"
+  run_proxylink stdin "" "$target_dir" || die "标准输入节点导入失败"
+  log "INFO" "标准输入节点导入完成"
 }
 
 #######################################
@@ -299,6 +315,9 @@ main() {
       ;;
     file | import)
       import_file "${1:-}" "${2:-}"
+      ;;
+    stdin)
+      import_stdin "${1:-}"
       ;;
     sub)
       import_sub "${1:-}" "${2:-}"
