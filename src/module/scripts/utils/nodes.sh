@@ -70,11 +70,24 @@ write_subscription_meta() {
   local target_dir="$1"
   local name="$2"
   local url="$3"
+  local ua="${4:-}"
+  local hwid_val="${5:-}"
+  local extra=""
+
+  if [ -n "$ua" ]; then
+    extra="$extra
+  \"ua\": \"$(json_escape "$ua")\","
+  fi
+
+  if [ -n "$hwid_val" ]; then
+    extra="$extra
+  \"hwid\": \"$(json_escape "$hwid_val")\","
+  fi
 
   cat > "$target_dir/_meta.json" << EOF
 {
   "name": "$(json_escape "$name")",
-  "url": "$(json_escape "$url")",
+  "url": "$(json_escape "$url")",${extra}
   "updated": "$(date -Iseconds)"
 }
 EOF

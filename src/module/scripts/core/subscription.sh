@@ -13,12 +13,16 @@ readonly LOG_FILE="$MODDIR/logs/subscription.log"
 . "$MODDIR/scripts/utils/common.sh"
 . "$MODDIR/scripts/utils/nodes.sh"
 
+# 全局订阅请求参数 (由 -ua / -hwid 选项设置)
+SUB_UA=""
+SUB_HWID=""
+
 #######################################
 # 显示帮助
 #######################################
 show_help() {
   cat << EOF
-用法: $(basename "$0") <命令> [参数]
+用法: $(basename "$0") <命令> [参数] [选项]
 
 节点导入:
   parse <节点链接> [目录]        单个链接转 sing-box 节点
@@ -34,10 +38,15 @@ show_help() {
   remove <名称>                 删除订阅
   list                          列出订阅
 
+订阅选项 (适用于 sub / add / update / update-all):
+  -ua <value>                   指定订阅请求 User-Agent；留空时自动处理
+  -hwid <value>                 指定订阅请求 HWID 设备标识 (X-HWID 请求头)
+
 示例:
   $(basename "$0") parse "vless://..."
   $(basename "$0") file "/sdcard/clash.yaml"
   $(basename "$0") sub "https://example.com/sub" "$OUTBOUNDS_DIR/sub_demo"
+  $(basename "$0") sub "https://example.com/sub" -ua "ClashMeta" -hwid "abc123"
   $(basename "$0") convert "$OUTBOUNDS_DIR/default/example.json"
 EOF
 }
@@ -84,7 +93,10 @@ run_proxylink() {
       "$PROXYLINK_BIN" -insecure -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
       ;;
     sub)
-      "$PROXYLINK_BIN" -sub "$value" -insecure -format singbox -dir "$target_dir" >> "$LOG_FILE" 2>&1
+      set -- -sub "$value" -insecure -format singbox -dir "$target_dir"
+      [ -n "$SUB_UA" ] && set -- "$@" -ua "$SUB_UA"
+      [ -n "$SUB_HWID" ] && set -- "$@" -hwid "$SUB_HWID"
+      "$PROXYLINK_BIN" "$@" >> "$LOG_FILE" 2>&1
       ;;
     convert)
       "$PROXYLINK_BIN" -singbox "$value" -format uri
@@ -185,10 +197,16 @@ refresh_subscription_dir() {
   local name="$1"
   local url="$2"
   local sub_dir="$3"
+  local ua="${4:-$SUB_UA}"
+  local hwid_val="${5:-$SUB_HWID}"
+
+  # 临时设置全局参数供 import_sub -> run_proxylink 使用
+  SUB_UA="$ua"
+  SUB_HWID="$hwid_val"
 
   clear_subscription_nodes "$sub_dir"
   import_sub "$url" "$sub_dir"
-  write_subscription_meta "$sub_dir" "$name" "$url"
+  write_subscription_meta "$sub_dir" "$name" "$url" "$ua" "$hwid_val"
 }
 
 #######################################
@@ -199,14 +217,14 @@ add_subscription() {
   local url="$2"
   local sub_dir
 
-  [ -n "$name" ] || die "用法: $(basename "$0") add <名称> <订阅链接>"
-  [ -n "$url" ] || die "用法: $(basename "$0") add <名称> <订阅链接>"
+  [ -n "$name" ] || die "用法: $(basename "$0") add <名称> <订阅链接> [-ua <UA>] [-hwid <HWID>]"
+  [ -n "$url" ] || die "用法: $(basename "$0") add <名称> <订阅链接> [-ua <UA>] [-hwid <HWID>]"
 
   sub_dir="$(subscription_dir_from_name "$OUTBOUNDS_DIR" "$name")"
   [ ! -d "$sub_dir" ] || die "订阅已存在: $name"
 
   ensure_dir "$sub_dir" "无法创建订阅目录: $sub_dir"
-  refresh_subscription_dir "$name" "$url" "$sub_dir"
+  refresh_subscription_dir "$name" "$url" "$sub_dir" "$SUB_UA" "$SUB_HWID"
   log "INFO" "订阅添加完成: $name"
 }
 
@@ -215,9 +233,9 @@ add_subscription() {
 #######################################
 update_subscription() {
   local name="$1"
-  local sub_dir meta_file url saved_name
+  local sub_dir meta_file url saved_name saved_ua saved_hwid
 
-  [ -n "$name" ] || die "用法: $(basename "$0") update <名称>"
+  [ -n "$name" ] || die "用法: $(basename "$0") update <名称> [-ua <UA>] [-hwid <HWID>]"
 
   sub_dir="$(subscription_dir_from_name "$OUTBOUNDS_DIR" "$name")"
   meta_file="$sub_dir/_meta.json"
@@ -225,11 +243,17 @@ update_subscription() {
   require_file "$meta_file" "订阅不存在: $name"
   saved_name="$(read_subscription_meta_value "$meta_file" "name" || true)"
   url="$(read_subscription_meta_value "$meta_file" "url" || true)"
+  saved_ua="$(read_subscription_meta_value "$meta_file" "ua" || true)"
+  saved_hwid="$(read_subscription_meta_value "$meta_file" "hwid" || true)"
 
   [ -n "$url" ] || die "无法读取订阅链接: $meta_file"
   [ -n "$saved_name" ] || saved_name="$name"
 
-  refresh_subscription_dir "$saved_name" "$url" "$sub_dir"
+  # 命令行参数优先，否则使用持久化值
+  [ -n "$SUB_UA" ] || SUB_UA="$saved_ua"
+  [ -n "$SUB_HWID" ] || SUB_HWID="$saved_hwid"
+
+  refresh_subscription_dir "$saved_name" "$url" "$sub_dir" "$SUB_UA" "$SUB_HWID"
   log "INFO" "订阅更新完成: $saved_name"
 }
 
@@ -237,7 +261,7 @@ update_subscription() {
 # 更新全部订阅
 #######################################
 update_all_subscriptions() {
-  local sub_dir meta_file name url count=0
+  local sub_dir meta_file name url saved_ua saved_hwid count=0
 
   for sub_dir in "$OUTBOUNDS_DIR"/sub_*; do
     [ -d "$sub_dir" ] || continue
@@ -249,7 +273,13 @@ update_all_subscriptions() {
     [ -n "$url" ] || continue
     [ -n "$name" ] || name="$(basename "$sub_dir")"
 
-    refresh_subscription_dir "$name" "$url" "$sub_dir"
+    # 命令行参数优先，否则使用各订阅各自的持久化值
+    saved_ua="$(read_subscription_meta_value "$meta_file" "ua" || true)"
+    saved_hwid="$(read_subscription_meta_value "$meta_file" "hwid" || true)"
+    local use_ua="${SUB_UA:-$saved_ua}"
+    local use_hwid="${SUB_HWID:-$saved_hwid}"
+
+    refresh_subscription_dir "$name" "$url" "$sub_dir" "$use_ua" "$use_hwid"
     count=$((count + 1))
   done
 
@@ -303,11 +333,37 @@ list_subscriptions() {
 }
 
 #######################################
-# 主入口
+# 解析全局选项 (-ua / -hwid)
 #######################################
+parse_global_options() {
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -ua)
+        SUB_UA="${2:-}"
+        shift 2
+        ;;
+      -hwid)
+        SUB_HWID="${2:-}"
+        shift 2
+        ;;
+      *)
+        # 收集非选项参数
+        POSITIONAL_ARGS="${POSITIONAL_ARGS:-} $1"
+        shift
+        ;;
+    esac
+  done
+}
+
 main() {
   local command="${1:-}"
   shift 2> /dev/null || true
+
+  # 解析 -ua / -hwid 全局选项
+  POSITIONAL_ARGS=""
+  parse_global_options "$@"
+  # shellcheck disable=SC2086
+  set -- $POSITIONAL_ARGS
 
   case "$command" in
     parse)
