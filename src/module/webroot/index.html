@@ -1,12 +1,253 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8">
-  <title>zashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NetProxy 诊断中心</title>
+  <style>
+    body {
+      background-color: #080808;
+      color: #d4d4d8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.6;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .terminal-container {
+      width: 100%;
+      max-width: 460px;
+      background-color: #030303;
+      border: 1px solid #1c1c1e;
+      border-radius: 8px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+      text-align: left;
+    }
+
+    .terminal-header {
+      background-color: #0d0d0d;
+      border-bottom: 1px solid #1c1c1e;
+      padding: 10px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+    }
+
+    .terminal-title {
+      color: #a1a1aa;
+      font-weight: 500;
+    }
+
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #a1a1aa;
+      position: relative;
+    }
+
+    .status-dot.active {
+      background-color: #22c55e;
+      box-shadow: 0 0 8px #22c55e;
+    }
+
+    .status-dot.warning {
+      background-color: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+      animation: pulse 1.5s infinite;
+    }
+
+    .status-dot.error {
+      background-color: #ef4444;
+      box-shadow: 0 0 8px #ef4444;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.4; }
+      50% { opacity: 1; }
+      100% { opacity: 0.4; }
+    }
+
+    .terminal-body {
+      padding: 18px;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .console-logs {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 24px;
+      text-align: left;
+    }
+
+    .log-line {
+      text-align: left;
+      word-break: break-all;
+    }
+
+    .log-time {
+      color: #52525b;
+      margin-right: 6px;
+      user-select: none;
+    }
+
+    .log-tag {
+      font-weight: bold;
+      text-transform: uppercase;
+      margin-right: 6px;
+      user-select: none;
+    }
+
+    .log-tag.info { color: #3b82f6; }
+    .log-tag.warn { color: #f59e0b; }
+    .log-tag.error { color: #ef4444; }
+    .log-tag.success { color: #22c55e; }
+
+    .log-content {
+      color: #e4e4e7;
+    }
+
+    .action-container {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn {
+      flex: 1;
+      background-color: #ffffff;
+      color: #000000;
+      border: 1px solid #ffffff;
+      border-radius: 6px;
+      padding: 10px;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background-color 0.2s, border-color 0.2s, color 0.2s;
+    }
+
+    .btn:hover {
+      background-color: #e4e4e7;
+      border-color: #e4e4e7;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 12px;
+      }
+      .terminal-container {
+        max-width: 100%;
+      }
+      .terminal-body {
+        padding: 12px;
+      }
+      body, .btn {
+        font-size: 12px;
+      }
+    }
+  </style>
 </head>
 <body>
+  <div class="terminal-container">
+    <div class="terminal-header">
+      <span class="terminal-title">netproxy_service_check</span>
+      <div class="status-group">
+        <span id="status-text" style="color: #71717a;">检测中</span>
+        <div id="status-dot" class="status-dot warning"></div>
+      </div>
+    </div>
+    <div class="terminal-body">
+      <div class="console-logs" id="logs-container">
+        <!-- Logs will be inserted here -->
+      </div>
+      <div class="action-container hidden" id="action-area">
+        <button onclick="location.reload();" class="btn">重新检测连接</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    window.location.replace("http://127.0.0.1:9999/ui/#/setup?hostname=127.0.0.1&port=9999&secret=singbox");
+    const targetUrl = "http://127.0.0.1:9999/ui/#/setup?hostname=127.0.0.1&port=9999&secret=singbox";
+    const testUrl = "http://127.0.0.1:9999/";
+    const logsContainer = document.getElementById('logs-container');
+    const statusText = document.getElementById('status-text');
+    const statusDot = document.getElementById('status-dot');
+    const actionArea = document.getElementById('action-area');
+
+    function getTimestamp() {
+      const now = new Date();
+      return now.toTimeString().split(' ')[0];
+    }
+
+    function addLog(level, content) {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.innerHTML = `
+        <span class="log-time">[${getTimestamp()}]</span>
+        <span class="log-tag ${level}">${level}</span><span class="log-content">${content}</span>
+      `;
+      logsContainer.appendChild(line);
+    }
+
+    function checkStatus() {
+      addLog('info', '正在初始化客户端连接测试...');
+      
+      setTimeout(() => {
+        addLog('info', 'GET http://127.0.0.1:9999/ ...');
+        
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000);
+
+        fetch(testUrl, { mode: 'no-cors', signal: controller.signal })
+          .then(() => {
+            clearTimeout(timeoutId);
+            addLog('success', '连接已建立。正在重定向至控制面板...');
+            statusDot.className = 'status-dot active';
+            statusText.innerText = '已连接';
+            statusText.style.color = '#22c55e';
+            setTimeout(() => {
+              window.location.replace(targetUrl);
+            }, 400);
+          })
+          .catch(() => {
+            clearTimeout(timeoutId);
+            addLog('error', '连接被拒绝，9999 端口处于关闭状态。');
+            addLog('warn', 'NetProxy 进程未启动或未在运行。');
+            addLog('info', '建议：请确认并启动服务。');
+            
+            statusDot.className = 'status-dot error';
+            statusText.innerText = '离线';
+            statusText.style.color = '#ef4444';
+            actionArea.classList.remove('hidden');
+          });
+      }, 300);
+    }
+
+    window.onload = checkStatus;
   </script>
 </body>
 </html>
