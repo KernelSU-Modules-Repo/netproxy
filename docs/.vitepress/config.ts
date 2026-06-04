@@ -7,7 +7,7 @@ export default defineConfig({
   base: '/',
 
   head: [
-    ['link', { rel: 'icon', href: '/logo.png' }],
+    ['link', { rel: 'icon', href: '/N.svg' }],
     [
       'script',
       {
@@ -19,7 +19,7 @@ export default defineConfig({
   ],
 
   themeConfig: {
-    logo: '/logo.png',
+    logo: '/N.svg',
 
     nav: [
       { text: '指南', link: '/guide/introduction' },

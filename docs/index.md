@@ -6,7 +6,7 @@ hero:
   text: Android sing-box 透明代理模块
   tagline: 以 sing-box 为核心，支持 Android 管理器、CLI、Clash API 和 zashboard 的 Android 透明代理模块。
   image:
-    src: /logo.png
+    src: /N.svg
     alt: NetProxy Logo
   actions:
     - theme: brand
