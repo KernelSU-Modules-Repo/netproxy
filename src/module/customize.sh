@@ -48,9 +48,9 @@ readonly EXECUTABLE_FILES="
 # 打印带分隔线的标题
 print_title() {
   ui_print ""
-  ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━"
   ui_print "  $1"
-  ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━"
 }
 
 # 打印步骤
@@ -247,24 +247,19 @@ set_permissions() {
 
 # 询问用户是否安装配套应用
 ask_install_app() {
+  print_title "是否安装 NetProxy 配套应用？"
   ui_print ""
-  ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  ui_print "  是否安装 NetProxy 配套应用？"
-  ui_print "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  ui_print ""
-  ui_print "  [音量+] 安装 (打开 Google Play)"
+  ui_print "  [音量+] 安装 (默认)"
   ui_print "  [音量-] 跳过"
   ui_print ""
 
   local timeout=10
-  local choice=""
+  local choice="install"
 
   while [ $timeout -gt 0 ]; do
-    # 读取音量键
     local key=$(getevent -lqc 1 2> /dev/null | grep -E "KEY_VOLUME(UP|DOWN)" | head -1)
 
     if echo "$key" | grep -q "VOLUMEUP"; then
-      choice="install"
       break
     elif echo "$key" | grep -q "VOLUMEDOWN"; then
       choice="skip"
@@ -275,13 +270,54 @@ ask_install_app() {
     timeout=$((timeout - 1))
   done
 
-  if [ "$choice" = "install" ]; then
+  if [ "$choice" = "skip" ]; then
+    print_step "已跳过安装"
+    rm -f "$MODPATH/NetProxy.apk"
+    return 0
+  fi
+
+  # 二次选择：模块内 or Google Play
+  sleep 1
+
+  print_title "选择安装来源"
+  ui_print ""
+  ui_print "  [音量+] 模块内安装 (默认，含广告)"
+  ui_print "  [音量-] Google Play (无广告)"
+  ui_print ""
+
+  timeout=10
+  local source="module"
+
+  while [ $timeout -gt 0 ]; do
+    local key=$(getevent -lqc 1 2> /dev/null | grep -E "KEY_VOLUME(UP|DOWN)" | head -1)
+
+    if echo "$key" | grep -q "VOLUMEUP"; then
+      break
+    elif echo "$key" | grep -q "VOLUMEDOWN"; then
+      source="play"
+      break
+    fi
+
+    sleep 1
+    timeout=$((timeout - 1))
+  done
+
+  if [ "$source" = "module" ] && [ -f "$MODPATH/NetProxy.apk" ]; then
+    print_step "正在安装模块内应用..."
+    pm install -r "$MODPATH/NetProxy.apk" > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+      print_ok "应用安装成功"
+    else
+      print_warn "应用安装失败，请手动安装"
+    fi
+  else
     print_step "正在打开 Google Play..."
     am start -a android.intent.action.VIEW -d "https://play.google.com/store/apps/details?id=com.fanjv.netproxy" > /dev/null 2>&1
     print_ok "已打开 Google Play"
-  else
-    print_step "已跳过安装"
   fi
+
+  # 清理安装包以减小模块体积
+  rm -f "$MODPATH/NetProxy.apk"
 
   return 0
 }
