@@ -53,26 +53,25 @@ api_request() {
   local method="$1"
   local path="$2"
   local data="${3:-}"
-  local controller secret
-
-  command_exists curl || return 1
+  local controller secret host port
 
   controller="$(api_controller)"
   secret="$(api_secret)"
+  host="${controller%%:*}"
+  port="${controller##*:}"
 
-  if [ -n "$data" ]; then
-    curl -fsS --connect-timeout 3 --max-time 10 \
-      -X "$method" \
-      -H "Authorization: Bearer $secret" \
-      -H "Content-Type: application/json" \
-      -d "$data" \
-      "http://$controller$path"
-  else
-    curl -fsS --connect-timeout 3 --max-time 10 \
-      -X "$method" \
-      -H "Authorization: Bearer $secret" \
-      "http://$controller$path"
-  fi
+  {
+    printf "%s %s HTTP/1.1\r\n" "$method" "$path"
+    printf "Host: %s\r\n" "$controller"
+    printf "Authorization: Bearer %s\r\n" "$secret"
+    if [ -n "$data" ]; then
+      printf "Content-Type: application/json\r\n"
+      printf "Content-Length: %d\r\n" "${#data}"
+    fi
+    printf "Connection: close\r\n"
+    printf "\r\n"
+    [ -n "$data" ] && printf "%s" "$data"
+  } | "$(detect_busybox)" nc "$host" "$port" 2>/dev/null | sed '1,/^\r$/d'
 }
 
 #######################################
