@@ -708,17 +708,18 @@ download_cn_ip_list() {
         log Info "Fetching latest China IP list from $CN_IP_URL"
 
         if ! download_file "$CN_IP_URL" "$CONFIG_DIR/$CN_IP_FILE.tmp"; then
-            log Error "Failed to download China IP list"
-            log Debug "[EXEC] rm -f $CONFIG_DIR/$CN_IP_FILE.tmp"
+            log Warn "Failed to download China IP list"
             rm -f "$CONFIG_DIR/$CN_IP_FILE.tmp"
-            return 1
-        fi
-
-        log Debug "[EXEC] mv $CONFIG_DIR/$CN_IP_FILE.tmp $CONFIG_DIR/$CN_IP_FILE"
-        if [ "$DRY_RUN" -eq 0 ]; then
+            if [ -f "$CONFIG_DIR/$CN_IP_FILE" ]; then
+                log Info "Falling back to existing China IP list"
+            else
+                log Error "No existing China IP list available"
+                return 1
+            fi
+        else
             mv "$CONFIG_DIR/$CN_IP_FILE.tmp" "$CONFIG_DIR/$CN_IP_FILE"
+            log Info "China IP list saved to $CONFIG_DIR/$CN_IP_FILE"
         fi
-        log Info "China IP list saved to $CONFIG_DIR/$CN_IP_FILE"
     else
         log Debug "Using existing China IP list: $CONFIG_DIR/$CN_IP_FILE"
     fi
@@ -730,17 +731,18 @@ download_cn_ip_list() {
             log Info "Fetching latest China IPv6 list from $CN_IPV6_URL"
 
             if ! download_file "$CN_IPV6_URL" "$CONFIG_DIR/$CN_IPV6_FILE.tmp"; then
-                log Error "Failed to download China IPv6 list"
-                log Debug "[EXEC] rm -f $CONFIG_DIR/$CN_IPV6_FILE.tmp"
+                log Warn "Failed to download China IPv6 list"
                 rm -f "$CONFIG_DIR/$CN_IPV6_FILE.tmp"
-                return 1
-            fi
-
-            log Debug "[EXEC] mv $CONFIG_DIR/$CN_IPV6_FILE.tmp $CONFIG_DIR/$CN_IPV6_FILE"
-            if [ "$DRY_RUN" -eq 0 ]; then
+                if [ -f "$CONFIG_DIR/$CN_IPV6_FILE" ]; then
+                    log Info "Falling back to existing China IPv6 list"
+                else
+                    log Error "No existing China IPv6 list available"
+                    return 1
+                fi
+            else
                 mv "$CONFIG_DIR/$CN_IPV6_FILE.tmp" "$CONFIG_DIR/$CN_IPV6_FILE"
+                log Info "China IPv6 list saved to $CONFIG_DIR/$CN_IPV6_FILE"
             fi
-            log Info "China IPv6 list saved to $CONFIG_DIR/$CN_IPV6_FILE"
         else
             log Debug "Using existing China IPv6 list: $CONFIG_DIR/$CN_IPV6_FILE"
         fi
