@@ -695,6 +695,60 @@ download_file() {
     fi
 }
 
+setup_static_bypass_ipset() {
+    if [ "$HAS_IPSET" -eq 0 ] || [ "$HAS_XT_SET" -eq 0 ]; then
+        log Debug "Kernel does not support ipset, static bypass ipset skipped"
+        return 0
+    fi
+
+    if ! command -v ipset > /dev/null 2>&1; then
+        log Warn "ipset command not found, skipping static bypass optimization"
+        return 1
+    fi
+
+    log Info "Setting up static bypass ipsets for default ranges"
+
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log Debug "[EXEC] ipset destroy bypass4_static (skipped, dry-run)"
+        log Debug "[EXEC] ipset restore -! (skipped, dry-run)"
+        return 0
+    fi
+
+    # Rebuild sets to ensure content matches current configuration
+    ipset destroy bypass4_static 2> /dev/null || true
+    ipset destroy bypass6_static 2> /dev/null || true
+
+    {
+        echo "create bypass4_static hash:net family inet hashsize 64 maxelem 256"
+        for ip in $BYPASS_IPv4_LIST; do
+            echo "add bypass4_static $ip"
+        done
+
+        if [ "$PROXY_IPV6" -eq 1 ]; then
+            echo "create bypass6_static hash:net family inet6 hashsize 64 maxelem 256"
+            for ip in $BYPASS_IPv6_LIST; do
+                echo "add bypass6_static $ip"
+            done
+        fi
+    } | ipset restore -!
+
+    if [ $? -eq 0 ]; then
+        return 0
+    else
+        log Error "Failed to populate static bypass ipsets"
+        return 1
+    fi
+}
+
+cleanup_static_bypass_ipset() {
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log Debug "[EXEC] ipset destroy bypass[46]_static (skipped, dry-run)"
+        return 0
+    fi
+    ipset destroy bypass4_static 2> /dev/null || true
+    ipset destroy bypass6_static 2> /dev/null || true
+}
+
 download_cn_ip_list() {
     if [ "$BYPASS_CN_IP" -eq 0 ]; then
         log Debug "CN IP bypass is disabled, download skipped"
@@ -993,18 +1047,35 @@ setup_proxy_chain() {
         log Info "Added local address type bypass"
     fi
 
-    if [ "$family" = "6" ]; then
-        for subnet6 in $BYPASS_IPv6_LIST; do
-            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" -p udp ! --dport 53 -j ACCEPT
-            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" ! -p udp -j ACCEPT
-        done
-        log Info "Added bypass rules for BYPASS IPv6 ranges"
+    local use_ipset=0
+    local ipset_name="bypass4_static"
+    [ "$family" = "6" ] && ipset_name="bypass6_static"
+
+    if [ "$HAS_IPSET" -eq 1 ] && [ "$HAS_XT_SET" -eq 1 ]; then
+        if ipset list "$ipset_name" > /dev/null 2>&1; then
+            use_ipset=1
+        fi
+    fi
+
+    if [ "$use_ipset" -eq 1 ]; then
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst -p udp ! --dport 53 -j ACCEPT
+        $cmd -t "$table" -A "BYPASS_IP$suffix" -m set --match-set "$ipset_name" dst ! -p udp -j ACCEPT
+        log Info "Added ipset-based ($ipset_name) bypass rules"
     else
-        for subnet4 in $BYPASS_IPv4_LIST; do
-            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" -p udp ! --dport 53 -j ACCEPT
-            $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" ! -p udp -j ACCEPT
-        done
-        log Info "Added bypass rules for BYPASS IPv4 ranges"
+        log Info "Using per-rule fallback for bypass ranges (ipset not available)"
+        if [ "$family" = "6" ]; then
+            for subnet6 in $BYPASS_IPv6_LIST; do
+                $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" -p udp ! --dport 53 -j ACCEPT
+                $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet6" ! -p udp -j ACCEPT
+            done
+            log Info "Added bypass rules for BYPASS IPv6 ranges"
+        else
+            for subnet4 in $BYPASS_IPv4_LIST; do
+                $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" -p udp ! --dport 53 -j ACCEPT
+                $cmd -t "$table" -A "BYPASS_IP$suffix" -d "$subnet4" ! -p udp -j ACCEPT
+            done
+            log Info "Added bypass rules for BYPASS IPv4 ranges"
+        fi
     fi
 
     if [ "$BYPASS_CN_IP" -eq 1 ]; then
@@ -1515,6 +1586,7 @@ detect_proxy_mode() {
 
 start_proxy() {
     log Info "Starting proxy setup..."
+    setup_static_bypass_ipset
     if [ "$BYPASS_CN_IP" -eq 1 ]; then
         if [ "$HAS_IPSET" -eq 0 ] || [ "$HAS_XT_SET" -eq 0 ]; then
             log Error "Kernel does not support ipset (CONFIG_IP_SET, CONFIG_NETFILTER_XT_SET). Cannot bypass CN IPs"
@@ -1572,6 +1644,7 @@ stop_proxy() {
             cleanup_redirect_chain6
         fi
     fi
+    cleanup_static_bypass_ipset
     cleanup_ipset
     log Info "Proxy stopped"
     block_loopback_traffic disable
