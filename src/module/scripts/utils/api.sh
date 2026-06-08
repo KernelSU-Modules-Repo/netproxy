@@ -8,6 +8,10 @@
 #       CLASH_API / CLASH_SECRET / SELECTOR_GROUP / DELAY_URL 常量。
 #######################################
 
+# busybox 路径：引入时探测一次并缓存 (沿用调用方已有的 BUSYBOX)，
+# 供 api_request 反复调用 nc 时复用，避免每次请求重复探测
+API_BUSYBOX="${BUSYBOX:-$(detect_busybox)}"
+
 #######################################
 # 读取控制器地址 (host:port)
 # 参数: 无
@@ -103,7 +107,7 @@ api_request() {
     printf "Connection: close\r\n"
     printf "\r\n"
     [ -n "$data" ] && printf "%s" "$data"
-  } | "$(detect_busybox)" nc "$host" "$port" 2>/dev/null )
+  } | "$API_BUSYBOX" nc "$host" "$port" 2>/dev/null )
   status=$?
 
   # 取首行状态行用于判断结果
