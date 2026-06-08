@@ -3,3 +3,6 @@
 # IDE 配置
 .idea/
 *.iml
+
+# Claude Code 本地项目指引 (不纳入仓库)
+CLAUDE.md
