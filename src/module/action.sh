@@ -46,7 +46,8 @@ if is_sing_box_running; then
   fi
 else
   log "INFO" "检测到 sing-box 未运行，准备执行启动操作..."
-  if sh "$SERVICE_SCRIPT" start; then
+  # su 包裹：让 sing-box 迁出冻结 cgroup，避免切后台断网
+  if su -c "sh \"$SERVICE_SCRIPT\" start"; then
     echo "==================================="
     echo " 操作结果: NetProxy 服务已启动"
     echo "==================================="

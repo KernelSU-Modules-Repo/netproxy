@@ -290,7 +290,8 @@ sync_to_live() {
 restart_proxy_if_needed() {
   if [ "$PROXY_WAS_RUNNING" = true ]; then
     print_step "重新启动代理服务..."
-    sh "$LIVE_DIR/scripts/core/service.sh" start > /dev/null 2>&1
+    # su 包裹：经管理器刷入时让 sing-box 迁出冻结 cgroup，避免切后台断网
+    su -c "sh \"$LIVE_DIR/scripts/core/service.sh\" start" > /dev/null 2>&1
     print_ok "服务已启动"
   fi
 
