@@ -126,7 +126,7 @@ wait_for_boot
 
 # 按配置决定是否开机自启服务
 if [ "$AUTO_START" = "1" ]; then
-  sh "$MODDIR/scripts/core/service.sh" start
+  su -c "sh \"$MODDIR/scripts/core/service.sh\" start"
 else
   log "INFO" "开机自启已禁用，跳过启动"
 fi
