@@ -78,9 +78,12 @@ jobs:
             rm -rf tmp-zashboard && mkdir -p tmp-zashboard
             if gh release download "$latest" --repo "$repo" --pattern "$pattern" --dir tmp-zashboard; then
               unzip -q tmp-zashboard/*.zip -d tmp-zashboard/extract
-              # 兼容压缩包顶层可能为 dist/ 的情况
+              # 若解压出单个顶层目录（dist/ 或 dist-no-fonts/ 等），进入它；否则用解压根
               srcdir="tmp-zashboard/extract"
-              [ -d "$srcdir/dist" ] && srcdir="$srcdir/dist"
+              inner="$(find "$srcdir" -mindepth 1 -maxdepth 1)"
+              if [ "$(printf '%s\n' "$inner" | grep -c .)" = "1" ] && [ -d "$inner" ]; then
+                srcdir="$inner"
+              fi
               rm -rf "$dest"
               mkdir -p "$dest"
               cp -r "$srcdir"/. "$dest"/
