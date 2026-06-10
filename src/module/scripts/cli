@@ -31,7 +31,6 @@ readonly SUB_LOG="$LOG_DIR/subscription.log"              # 订阅日志
 
 # 关键二进制与子脚本路径
 readonly SING_BOX_BIN="$MODDIR/bin/sing-box"
-readonly PROXYLINK_BIN="$MODDIR/bin/proxylink"
 readonly SERVICE_SCRIPT="$SCRIPTS_DIR/core/service.sh"
 readonly SWITCH_SCRIPT="$SCRIPTS_DIR/core/switch.sh"
 readonly SUB_SCRIPT="$SCRIPTS_DIR/core/subscription.sh"
