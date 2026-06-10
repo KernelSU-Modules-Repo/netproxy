@@ -1,6 +1,6 @@
 id=netproxy
 name=NetProxy
-version=v7.0.5
+version=v7.1.0
 versionCode=604
 author=Fanju
 description=基于 sing-box 内核的透明代理工具
