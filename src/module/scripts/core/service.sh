@@ -153,12 +153,17 @@ EOF
     die "sing-box 启动失败，请检查日志: $SINGBOX_LOG_FILE"
   fi
 
-  # 等待控制接口就绪后同步运行模式 (内部同步步骤静默)
-  api_wait_available 60 1 || die "控制接口不可用，启动失败"
-  LOG_STDERR=0 LOG_LEVEL=WARN SWITCH_ALLOW_RESTART=0 sh "$SWITCH_SCRIPT" mode "$CUR_OUTBOUND_MODE" || die "运行模式同步失败，启动中止"
-  # 手动选择模式下额外同步当前节点
-  if is_manual_selector "$CUR_SELECTOR_MODE"; then
-    LOG_STDERR=0 LOG_LEVEL=WARN SWITCH_ALLOW_RESTART=0 sh "$SWITCH_SCRIPT" config "$CUR_OUTBOUND_CONFIG" || die "节点配置同步失败，启动中止"
+  # 等待控制接口就绪后同步运行模式与节点 (尽力而为：失败仅告警，不中止启动)
+  if api_wait_available 30 1; then
+    LOG_STDERR=0 LOG_LEVEL=WARN SWITCH_ALLOW_RESTART=0 sh "$SWITCH_SCRIPT" mode "$CUR_OUTBOUND_MODE" \
+      || log "WARN" "运行模式同步失败，将沿用配置默认模式"
+    # 手动选择模式下额外同步当前节点
+    if is_manual_selector "$CUR_SELECTOR_MODE"; then
+      LOG_STDERR=0 LOG_LEVEL=WARN SWITCH_ALLOW_RESTART=0 sh "$SWITCH_SCRIPT" config "$CUR_OUTBOUND_CONFIG" \
+        || log "WARN" "节点配置同步失败，将沿用配置默认节点"
+    fi
+  else
+    log "WARN" "控制接口在超时时间内未就绪，跳过模式/节点同步"
   fi
 
   # 非跳过模式下加载透明代理规则
