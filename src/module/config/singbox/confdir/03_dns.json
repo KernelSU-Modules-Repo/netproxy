@@ -2,15 +2,53 @@
   "dns": {
     "servers": [
       {
+        "type": "hosts",
+        "tag": "hosts",
+        "predefined": {
+          "doh.pub": [
+            "120.53.53.53",
+            "1.12.12.12"
+          ]
+        }
+      },
+      {
+        "tag": "dns-proxy",
+        "type": "group",
+        "servers": [
+          "cloudflare",
+          "google"
+        ]
+      },
+      {
+        "tag": "dns-direct",
+        "type": "group",
+        "servers": [
+          "ali",
+          "tencent"
+        ]
+      },
+      {
         "tag": "cloudflare",
         "type": "https",
         "server": "1.1.1.1",
         "detour": "Proxy"
       },
       {
+        "tag": "google",
+        "type": "https",
+        "server": "8.8.8.8",
+        "detour": "Proxy"
+      },
+      {
         "tag": "ali",
         "type": "https",
-        "server": "223.5.5.5"
+        "server": "223.6.6.6"
+      },
+      {
+        "tag": "tencent",
+        "type": "https",
+        "server": "doh.pub",
+        "domain_resolver": "hosts"
       },
       {
         "tag": "remote",
@@ -23,12 +61,12 @@
       {
         "clash_mode": "Direct",
         "action": "route",
-        "server": "ali"
+        "server": "dns-direct"
       },
       {
         "clash_mode": "Global",
         "action": "route",
-        "server": "remote"
+        "server": "dns-proxy"
       },
       {
         "rule_set": [
@@ -44,7 +82,7 @@
           "proxy"
         ],
         "action": "route",
-        "server": "remote"
+        "server": "dns-proxy"
       },
       {
         "type": "logical",
@@ -69,7 +107,7 @@
           "cn-domain"
         ],
         "action": "route",
-        "server": "ali"
+        "server": "dns-direct"
       },
       {
         "query_type": [
@@ -80,6 +118,7 @@
         "server": "remote"
       }
     ],
-    "strategy": "ipv4_only"
+    "optimistic": true,
+    "strategy": "prefer_ipv4"
   }
 }

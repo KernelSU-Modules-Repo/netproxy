@@ -1,6 +1,6 @@
 {
   "route": {
-    "default_domain_resolver": "ali",
+    "default_domain_resolver": "dns-direct",
     "default_http_client": "rule-set-download",
     "rule_set": [
       {
@@ -148,7 +148,7 @@
       {
         "action": "resolve",
         "match_only": true,
-        "strategy": "ipv4_only",
+        "strategy": "prefer_ipv4",
         "server": "cloudflare"
       },
       {
