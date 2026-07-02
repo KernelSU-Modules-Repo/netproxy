@@ -39,6 +39,7 @@ readonly PRESERVE_CONFIGS="
 readonly EXECUTABLE_FILES="
     bin/sing-box
     bin/proxylink
+    bin/ebpf-matcher
     bin/IPSET-LKM/ko-loader
     bin/IPSET-LKM/ipset
     action.sh
